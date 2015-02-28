@@ -14,36 +14,27 @@ defmodule Sqlite.Ecto do
   @doc false
   def storage_up(opts) do
     database = get_name(opts)
-    cond do
-      inmemory?(database) -> :ok
-      File.exists?(database) -> {:error, :already_up}
-      true ->
-        case Sqlitex.open(database) do
-          {:ok, _} -> :ok
-          {:error, _msg} = err -> err
-        end
+    if File.exists?(database) do
+      {:error, :already_up}
+    else
+      case Sqlitex.open(database) do
+        {:ok, _} -> :ok
+        {:error, _msg} = err -> err
+      end
     end
   end
 
   @doc false
   def storage_down(opts) do
     database = get_name(opts)
-    if inmemory?(database) do
-      :ok
-    else
-      case File.rm(database) do
-        {:error, :enoent} -> {:error, :already_down}
-        result -> result
-      end
+    case File.rm(database) do
+      {:error, :enoent} -> {:error, :already_down}
+      result -> result
     end
   end
 
   def get_name(opts) do
-    opts |> Keyword.get(:database, "") |> String.to_char_list
-  end
-
-  defp inmemory?(name) do
-    name in ['', ':memory:', 'file::memory:']
+    opts |> Keyword.get(:database) |> String.to_char_list
   end
 
   @doc false

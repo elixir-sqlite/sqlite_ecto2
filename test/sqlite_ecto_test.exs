@@ -17,12 +17,4 @@ defmodule Sqlite.Ecto.Test do
     assert not File.exists?(tmp[:database])
     assert SQL.storage_down(tmp) == {:error, :already_down}
   end
-
-  test "storage up and down in-memory" do
-    mem = [database: ":memory:"]
-    assert SQL.storage_up(mem) == :ok
-    assert SQL.storage_up(mem) == :ok
-    assert SQL.storage_down(mem) == :ok
-    assert SQL.storage_down(mem) == :ok
-  end
 end
