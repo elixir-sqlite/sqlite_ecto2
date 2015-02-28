@@ -1,0 +1,4 @@
+SqliteEcto
+==========
+
+** TODO: Add description **
