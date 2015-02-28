@@ -25,6 +25,7 @@ defmodule SqliteEcto.Mixfile do
   #
   # Type `mix help deps` for more examples and options
   defp deps do
-    []
+    [{:ecto, "0.8.1"},
+     {:sqlitex, git: "https://github.com/jazzyb/sqlitex.git"}]
   end
 end
