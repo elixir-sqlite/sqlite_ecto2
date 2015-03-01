@@ -28,4 +28,12 @@ defmodule Sqlite.Ecto.Test do
     query = SQL.insert("model", [], [])
     assert query == ~s{INSERT INTO model DEFAULT VALUES}
   end
+
+  test "update" do
+    query = SQL.update("model", [:x, :y], [:id], [:z])
+    assert query == ~s{UPDATE model SET x = ?1, y = ?2 WHERE id = ?3; SELECT z FROM model WHERE id = ?3}
+
+    query = SQL.update("model", [:x, :y], [:id], [])
+    assert query == ~s{UPDATE model SET x = ?1, y = ?2 WHERE id = ?3}
+  end
 end
