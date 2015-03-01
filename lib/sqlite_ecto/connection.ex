@@ -11,8 +11,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       :ok
     end
 
-    def query(pid, sql, params, opts) do
-      case Sqlitex.query(pid, sql) do
+    def query(pid, sql, params \\ []) do
+      case Sqlitex.query(pid, sql, params) do
         rows when is_list(rows) -> {:ok, %{rows: rows, num_rows: length(rows)}}
         {:error, _} = err -> err
       end
@@ -41,7 +41,14 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     def delete_all(query) do
     end
 
+    def insert(table, [], returning) do
+      "INSERT INTO #{table} DEFAULT VALUES#{returning(table, returning)}"
+    end
     def insert(table, fields, returning) do
+      cols = Enum.join(fields, ",")
+      vals = 1..length(fields) |> Enum.map_join(",", &"?#{&1}")
+      rets = returning(table, returning)
+      "INSERT INTO #{table} (#{cols}) VALUES (#{vals})#{rets}"
     end
 
     def update(table, fields, filters, returning) do
@@ -51,5 +58,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     ## DDL
+
+    ## Helpers
+
+    defp returning(_table, []), do: ""
+    defp returning(table, returning) do
+      rets = Enum.join(returning, ",")
+      "; SELECT #{rets} FROM #{table} WHERE _ROWID_ = last_insert_rowid()"
+    end
   end
 end

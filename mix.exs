@@ -1,4 +1,4 @@
-defmodule SqliteEcto.Mixfile do
+defmodule Sqlite.Ecto.Mixfile do
   use Mix.Project
 
   def project do
