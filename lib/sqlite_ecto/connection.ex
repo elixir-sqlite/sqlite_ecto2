@@ -68,6 +68,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     def delete(table, filters, returning) do
+      where = where_filter(filters)
+      return = returning_clause(table, returning)
+      "DELETE FROM " <> table <> where <> return
     end
 
     ## DDL
@@ -194,7 +197,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       " RETURNING #{table}|#{Enum.join(returning, ",")}"
     end
 
-    #defp where_filter(filters), do: where_filter(filters, 1)
+    defp where_filter(filters), do: where_filter(filters, 1)
     defp where_filter([], _start), do: ""
     defp where_filter(filters, start) do
       filters

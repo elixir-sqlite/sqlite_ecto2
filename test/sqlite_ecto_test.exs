@@ -37,6 +37,14 @@ defmodule Sqlite.Ecto.Test do
     assert query == ~s{UPDATE model SET x = ?1, y = ?2 WHERE id = ?3}
   end
 
+  test "delete" do
+    query = SQL.delete("model", [:x, :y], [:z])
+    assert query == ~s{DELETE FROM model WHERE x = ?1 AND y = ?2 RETURNING model|z}
+
+    query = SQL.delete("model", [:x, :y], [])
+    assert query == ~s{DELETE FROM model WHERE x = ?1 AND y = ?2}
+  end
+
   test "query" do
     {:ok, sql} = SQL.connect(database: ":memory:")
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE model (id, x, y, z)")
