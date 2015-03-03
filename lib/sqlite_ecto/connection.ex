@@ -12,9 +12,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     def query(pid, sql, params \\ []) do
-      case Sqlitex.query(pid, sql, params) do
-        rows when is_list(rows) -> {:ok, %{rows: rows, num_rows: length(rows)}}
-        {:error, _} = err -> err
+      params = Enum.map(params, fn
+        %Ecto.Query.Tagged{value: value} -> value
+        value -> value
+      end)
+
+      if has_returning_clause?(sql) do
+        returning_query(pid, sql, params)
+      else
+        do_query(pid, sql, params)
       end
     end
 
@@ -42,12 +48,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     def insert(table, [], returning) do
-      "INSERT INTO #{table} DEFAULT VALUES" <> returning(table, returning)
+      rets = returning_clause(table, returning)
+      "INSERT INTO #{table} DEFAULT VALUES" <> rets
     end
     def insert(table, fields, returning) do
       cols = Enum.join(fields, ",")
       vals = 1..length(fields) |> Enum.map_join(",", &"?#{&1}")
-      rets = returning(table, returning)
+      rets = returning_clause(table, returning)
       "INSERT INTO #{table} (#{cols}) VALUES (#{vals})" <> rets
     end
 
@@ -55,26 +62,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       {vals, count} = Enum.map_reduce(fields, 1, fn (i, acc) ->
         {"#{i} = ?#{acc}", acc + 1}
       end)
-      where_clause = where_filter(filters, count)
-      rets = returning(table, returning, where_clause)
-
-      "UPDATE #{table} SET " <> Enum.join(vals, ", ") <> where_clause <> rets
-      # NOTE:  SQLite does not have a "returning clause" so we have to fake
-      # one by appending a "select statement" onto the end of our query (see
-      # above).  This works as expected for "insert", but the appended
-      # "select" will return the wrong values for "update" if the values in
-      # the filters list ("where clause") are also in the fields list.
-      #
-      # For example, take the code `update("t", [:x, :y], [:x], [:y])`.  This
-      # will produce the SQL query:
-      # "UPDATE t SET x = ?1, y = ?2 WHERE x = ?3; SELECT y FROM t WHERE x = ?3"
-      # This query will update the values in the x column of t that are equal
-      # to ?3, but when the select statement gets executed the values of the x
-      # column have changed, so the wrong values will be returned.
-      #
-      # Based on the tests in the Ecto repo, the filters list is typically
-      # used to find a particular row id.  Since the row id is unlikely to be
-      # updated, the risk of executing this bug should be small.
+      where = where_filter(filters, count)
+      rets = returning_clause(table, returning)
+      "UPDATE #{table} SET " <> Enum.join(vals, ", ") <> where <> rets
     end
 
     def delete(table, filters, returning) do
@@ -84,15 +74,127 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     ## Helpers
 
-    @default_where_clause " WHERE _ROWID_ = last_insert_rowid()"
-    defp returning(table, returning) do
-      returning(table, returning, @default_where_clause)
-    end
-    defp returning(_table, [], _where), do: ""
-    defp returning(table, returning, where) do
-      "; SELECT #{Enum.join(returning, ",")} FROM " <> table <> where
+    defp has_returning_clause?(sql) do
+      String.contains?(sql, " RETURNING ") and
+      (String.starts_with?(sql, "INSERT ") or
+       String.starts_with?(sql, "UPDATE ") or
+       String.starts_with?(sql, "DELETE "))
     end
 
+    # SQLite does not have any sort of "RETURNING" clause... so we have to
+    # fake one with the following transaction:
+    #
+    #   BEGIN TRANSACTION;
+    #   CREATE TEMP TABLE temp.t_<random> (<returning>);
+    #   CREATE TEMP TRIGGER tr_<random> AFTER UPDATE ON main.<table> BEGIN
+    #       INSERT INTO t_<random> SELECT NEW.<returning>;
+    #   END;
+    #   UPDATE ...;
+    #   DROP TRIGGER tr_<random>;
+    #   SELECT <returning> FROM temp.t_<random>;
+    #   DROP TABLE temp.t_<random>;
+    #   END TRANSACTION;
+    #
+    # which is implemented by the following code:
+    defp returning_query(pid, sql, params) do
+      {sql, table, returning} = parse_returning_clause(sql)
+      {query, ref} = parse_query_type(sql)
+
+      with_transaction(pid, fn ->
+        with_temp_table(pid, returning, fn (tmp_tbl) ->
+          err = with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, fn ->
+            do_query(pid, sql, params)
+          end)
+
+          case err do
+            {:error, _} -> err
+            _ ->
+              do_query(pid, "SELECT #{Enum.join(returning, ", ")} FROM #{tmp_tbl}")
+          end
+        end)
+      end)
+    end
+
+    defp parse_returning_clause(sql) do
+      [sql, returning_clause] = String.split(sql, " RETURNING ")
+      returning_clause
+      |> String.split("|")
+      |> (fn [table, rest] -> {sql, table, String.split(rest, ",")} end).()
+    end
+
+    defp parse_query_type(sql) do
+      case sql do
+        << "INSERT", _ :: binary >> -> {"INSERT", "NEW"}
+        << "UPDATE", _ :: binary >> -> {"UPDATE", "NEW"}
+        << "DELETE", _ :: binary >> -> {"DELETE", "OLD"}
+      end
+    end
+
+    defp with_transaction(pid, func) do
+      should_commit? = (do_exec(pid, "BEGIN TRANSACTION") == :ok)
+      result = func.()
+      error? = (is_tuple(result) and :erlang.element(1, result) == :error)
+
+      do_exec(pid, cond do
+        error? -> "ROLLBACK"
+        should_commit? -> "END TRANSACTION"
+        true -> "" # do nothing
+      end)
+      result
+    end
+
+    defp with_temp_table(pid, returning, func) do
+      tmp = "t_" <> (:random.uniform |> Float.to_string |> String.slice(2..10))
+      fields = Enum.join(returning, ", ")
+      results = case do_exec(pid, "CREATE TEMP TABLE #{tmp} (#{fields})") do
+        {:error, _} = err -> err
+        _ -> func.(tmp)
+      end
+      do_exec(pid, "DROP TABLE IF EXISTS #{tmp}")
+      results
+    end
+
+    defp with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, func) do
+      tmp = "tr_" <> (:random.uniform |> Float.to_string |> String.slice(2..10))
+      fields = Enum.map_join(returning, ", ", &"#{ref}.#{&1}")
+      sql = """
+      CREATE TEMP TRIGGER #{tmp} AFTER #{query} ON main.#{table} BEGIN
+          INSERT INTO #{tmp_tbl} SELECT #{fields};
+      END;
+      """
+      results = case do_exec(pid, sql) do
+        {:error, _} = err -> err
+        _ -> func.()
+      end
+      do_exec(pid, "DROP TRIGGER IF EXISTS #{tmp}")
+      results
+    end
+
+    defp do_query(pid, sql, params \\ []) do
+      case Sqlitex.Server.query(pid, sql, params) do
+        # busy error means another process is writing to the database; try again
+        {:error, {:busy, _}} -> do_query(pid, sql, params)
+        {:error, _} = error -> error
+        rows when is_list(rows) ->
+          {:ok, %{rows: rows, num_rows: length(rows)}}
+      end
+    end
+
+    defp do_exec(pid, sql) do
+      case Sqlitex.Server.exec(pid, sql) do
+        # busy error means another process is writing to the database; try again
+        {:error, {:busy, _}} -> do_exec(pid, sql)
+        {:error, _} = error -> error
+        :ok -> :ok
+      end
+    end
+
+    defp returning_clause(_table, []), do: ""
+    defp returning_clause(table, returning) do
+      " RETURNING #{table}|#{Enum.join(returning, ",")}"
+    end
+
+    #defp where_filter(filters), do: where_filter(filters, 1)
     defp where_filter([], _start), do: ""
     defp where_filter(filters, start) do
       filters
