@@ -1,5 +1,7 @@
 %{"decimal": {:hex, :decimal, "1.1.0"},
+  "earmark": {:hex, :earmark, "0.1.13"},
   "ecto": {:hex, :ecto, "0.8.1"},
   "esqlite": {:git, "https://github.com/jazzyb/esqlite.git", "2a32ad90e61403a593fcc2be315b9c35adc6e06e", []},
+  "ex_doc": {:hex, :ex_doc, "0.7.1"},
   "poolboy": {:hex, :poolboy, "1.4.2"},
   "sqlitex": {:git, "https://github.com/jazzyb/sqlitex.git", "d8999e8bb4265931e42aa2a64391575c6a394f42", []}}

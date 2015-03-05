@@ -1,4 +1,4 @@
-SqliteEcto
+Sqlite.Ecto
 ==========
 
 ** TODO: Add description **

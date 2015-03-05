@@ -1,6 +1,29 @@
 defmodule Sqlite.Ecto do
-  @moduledoc """
-  TODO
+  @moduledoc ~S"""
+  Ecto Adapter module for SQLite.
+
+  It uses Sqlitex and Esqlite for accessing the SQLite database.
+
+  ## Features
+
+  ## Options
+
+  There are a limited number of options available because SQLite is so simple to use.
+
+  ### Compile time options
+
+  These options should be set in the config file and require recompilation in
+  order to make an effect.
+
+    * `:adapter` - The adapter name, in this case, `Sqlite.Ecto`
+    * `:timeout` - The default timeout to use on queries, defaults to `5000`
+
+  ### Connection options
+
+    * `:database` - This option can take the form of a path to the SQLite
+      database file or `":memory:"` for an in-memory database.  See the
+      [SQLite docs](https://sqlite.org/uri.html) for more options.
+
   """
 
   # Inherit all behaviour from Ecto.Adapters.SQL
@@ -33,6 +56,7 @@ defmodule Sqlite.Ecto do
     end
   end
 
+  @doc false
   def get_name(opts) do
     opts |> Keyword.get(:database) |> String.to_char_list
   end
