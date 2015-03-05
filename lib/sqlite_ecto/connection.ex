@@ -146,15 +146,26 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # our changes.  Returns the result of the call to func.
     defp with_transaction(pid, func) do
       should_commit? = (do_exec(pid, "BEGIN TRANSACTION") == :ok)
-      result = func.()
+      result = safe_call(pid, func, should_commit?)
       error? = (is_tuple(result) and :erlang.element(1, result) == :error)
 
-      do_exec(pid, cond do
-        error? -> "ROLLBACK"
-        should_commit? -> "END TRANSACTION"
-        true -> "" # do nothing
-      end)
+      cond do
+        error? -> do_exec(pid, "ROLLBACK")
+        should_commit? -> do_exec(pid, "END TRANSACTION")
+      end
       result
+    end
+
+    # Call func.() and return the result.  If any exceptions are encountered,
+    # safely rollback the transaction.
+    defp safe_call(pid, func, should_rollback?) do
+      try do
+        func.()
+      rescue
+        e in RuntimeError ->
+          if should_rollback?, do: do_exec(pid, "ROLLBACK")
+          raise e
+      end
     end
 
     # Create a temp table to save the values we will write with our trigger
