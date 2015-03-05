@@ -79,13 +79,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     ## Helpers
 
-    defp has_returning_clause?(sql) do
-      String.contains?(sql, " RETURNING ") and
-      (String.starts_with?(sql, "INSERT ") or
-       String.starts_with?(sql, "UPDATE ") or
-       String.starts_with?(sql, "DELETE "))
-    end
-
     # SQLite does not have any sort of "RETURNING" clause... so we have to
     # fake one with the following transaction:
     #
@@ -120,6 +113,17 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end)
     end
 
+    # Does this SQL statement have a returning clause in it?
+    defp has_returning_clause?(sql) do
+      String.contains?(sql, " RETURNING ") and
+      (String.starts_with?(sql, "INSERT ") or
+       String.starts_with?(sql, "UPDATE ") or
+       String.starts_with?(sql, "DELETE "))
+    end
+
+    # Find our fake returning clause and return the SQL statement without it,
+    # table name, and returning fields that we saved from the call to
+    # insert(), update(), or delete().
     defp parse_returning_clause(sql) do
       [sql, returning_clause] = String.split(sql, " RETURNING ")
       returning_clause
@@ -127,6 +131,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       |> (fn [table, rest] -> {sql, table, String.split(rest, ",")} end).()
     end
 
+    # Determine whether our trigger should be concerned with the OLD or NEW
+    # values that our query will affect in the table.
     defp parse_query_type(sql) do
       case sql do
         << "INSERT", _ :: binary >> -> {"INSERT", "NEW"}
@@ -135,6 +141,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end
     end
 
+    # Initiate a transaction.  If we are already within a transaction, then do
+    # nothing.  If any error occurs when we call the func parameter, rollback
+    # our changes.  Returns the result of the call to func.
     defp with_transaction(pid, func) do
       should_commit? = (do_exec(pid, "BEGIN TRANSACTION") == :ok)
       result = func.()
@@ -148,6 +157,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       result
     end
 
+    # Create a temp table to save the values we will write with our trigger
+    # (below), call func.(), and drop the table afterwards.  Returns the
+    # result of func.().
     defp with_temp_table(pid, returning, func) do
       tmp = "t_" <> (:random.uniform |> Float.to_string |> String.slice(2..10))
       fields = Enum.join(returning, ", ")
@@ -159,6 +171,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       results
     end
 
+    # Create a trigger to capture the changes from our query, call func.(),
+    # and drop the trigger when done.  Returns the result of func.().
     defp with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, func) do
       tmp = "tr_" <> (:random.uniform |> Float.to_string |> String.slice(2..10))
       fields = Enum.map_join(returning, ", ", &"#{ref}.#{&1}")
@@ -194,11 +208,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end
     end
 
+    # SQLite does not have a returning clause, but we append one anyway so
+    # that query() can parse the string later and emulate it with a
+    # transaction and trigger.
     defp returning_clause(_table, []), do: ""
     defp returning_clause(table, returning) do
       " RETURNING #{table}|#{Enum.join(returning, ",")}"
     end
 
+    # Generate a where clause from the given filters.
     defp where_filter(filters), do: where_filter(filters, 1)
     defp where_filter([], _start), do: ""
     defp where_filter(filters, start) do
