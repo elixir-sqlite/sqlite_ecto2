@@ -201,7 +201,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp do_query(pid, sql, params \\ []) do
-      case Sqlitex.Server.query(pid, sql, params) do
+      case Sqlitex.Server.query(pid, sql, bind: params) do
         # busy error means another process is writing to the database; try again
         {:error, {:busy, _}} -> do_query(pid, sql, params)
         {:error, _} = error -> error
