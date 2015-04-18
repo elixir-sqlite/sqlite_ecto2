@@ -13,16 +13,16 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       :ok
     end
 
-    def query(pid, sql, params \\ []) do
+    def query(pid, sql, params, opts) do
       params = Enum.map(params, fn
         %Ecto.Query.Tagged{value: value} -> value
         value -> value
       end)
 
       if has_returning_clause?(sql) do
-        returning_query(pid, sql, params)
+        returning_query(pid, sql, params, opts)
       else
-        do_query(pid, sql, params)
+        do_query(pid, sql, params, opts)
       end
     end
 
@@ -96,20 +96,20 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     #   END TRANSACTION;
     #
     # which is implemented by the following code:
-    defp returning_query(pid, sql, params) do
+    defp returning_query(pid, sql, params, opts) do
       {sql, table, returning} = parse_returning_clause(sql)
       {query, ref} = parse_query_type(sql)
 
       with_transaction(pid, fn ->
         with_temp_table(pid, returning, fn (tmp_tbl) ->
           err = with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, fn ->
-            do_query(pid, sql, params)
+            do_query(pid, sql, params, opts)
           end)
 
           case err do
             {:error, _} -> err
             _ ->
-              do_query(pid, "SELECT #{Enum.join(returning, ", ")} FROM #{tmp_tbl}")
+              do_query(pid, "SELECT #{Enum.join(returning, ", ")} FROM #{tmp_tbl}", [], opts)
           end
         end)
       end)
@@ -199,10 +199,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       results
     end
 
-    defp do_query(pid, sql, params \\ []) do
-      case Sqlitex.Server.query(pid, sql, bind: params) do
+    defp do_query(pid, sql, params, opts) do
+      opts = Keyword.put(opts, :bind, params)
+      case Sqlitex.Server.query(pid, sql, opts) do
         # busy error means another process is writing to the database; try again
-        {:error, {:busy, _}} -> do_query(pid, sql, params)
+        {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
         {:error, _} = error -> error
         rows when is_list(rows) ->
           {:ok, %{rows: rows, num_rows: length(rows)}}

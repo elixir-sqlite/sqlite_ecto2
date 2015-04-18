@@ -31,7 +31,7 @@ defmodule Sqlite.Ecto.Mixfile do
   defp deps do
     [{:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.7", only: :dev},
-     {:ecto, "0.8.1"},
+     {:ecto, "0.10.2"},
      {:sqlitex, git: "https://github.com/jazzyb/sqlitex.git"}]
   end
 
