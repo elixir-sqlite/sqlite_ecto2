@@ -124,7 +124,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           case err do
             {:error, _} -> err
             _ ->
-              do_query(pid, "SELECT #{Enum.join(returning, ", ")} FROM #{tmp_tbl}", [], opts)
+              fields = returning |> Enum.map(&quote_id/1) |> Enum.join(", ")
+              do_query(pid, "SELECT #{fields} FROM #{tmp_tbl}", [], opts)
           end
         end)
       end)
@@ -187,7 +188,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # result of func.().
     defp with_temp_table(pid, returning, func) do
       tmp = "t_" <> (:random.uniform |> Float.to_string |> String.slice(2..10))
-      fields = Enum.join(returning, ", ")
+      fields = returning |> Enum.map(&quote_id/1) |> Enum.join(", ")
       results = case do_exec(pid, "CREATE TEMP TABLE #{tmp} (#{fields})") do
         {:error, _} = err -> err
         _ -> func.(tmp)
@@ -200,9 +201,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # and drop the trigger when done.  Returns the result of func.().
     defp with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, func) do
       tmp = "tr_" <> (:random.uniform |> Float.to_string |> String.slice(2..10))
-      fields = Enum.map_join(returning, ", ", &"#{ref}.#{&1}")
+      fields = Enum.map_join(returning, ", ", &"#{ref}.#{quote_id(&1)}")
       sql = """
-      CREATE TEMP TRIGGER #{tmp} AFTER #{query} ON main.#{table} BEGIN
+      CREATE TEMP TRIGGER #{tmp} AFTER #{query} ON main.#{quote_id(table)} BEGIN
           INSERT INTO #{tmp_tbl} SELECT #{fields};
       END;
       """
