@@ -41,8 +41,10 @@ defmodule Sqlite.Ecto do
       {:error, :already_up}
     else
       case Sqlitex.open(database) do
-        {:ok, _} -> :ok
         {:error, _msg} = err -> err
+        {:ok, db} ->
+          Sqlitex.close(db)
+          :ok
       end
     end
   end
