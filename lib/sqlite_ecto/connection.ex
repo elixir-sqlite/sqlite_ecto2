@@ -51,28 +51,28 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     def insert(table, [], returning) do
       rets = returning_clause(table, returning, "INSERT")
-      "INSERT INTO #{table} DEFAULT VALUES" <> rets
+      "INSERT INTO #{quote_id(table)} DEFAULT VALUES" <> rets
     end
     def insert(table, fields, returning) do
-      cols = Enum.join(fields, ",")
+      cols = fields |> Enum.map(&quote_id/1) |> Enum.join(",")
       vals = 1..length(fields) |> Enum.map_join(",", &"?#{&1}")
       rets = returning_clause(table, returning, "INSERT")
-      "INSERT INTO #{table} (#{cols}) VALUES (#{vals})" <> rets
+      "INSERT INTO #{quote_id(table)} (#{cols}) VALUES (#{vals})" <> rets
     end
 
     def update(table, fields, filters, returning) do
       {vals, count} = Enum.map_reduce(fields, 1, fn (i, acc) ->
-        {"#{i} = ?#{acc}", acc + 1}
+        {"#{quote_id(i)} = ?#{acc}", acc + 1}
       end)
       where = where_filter(filters, count)
       rets = returning_clause(table, returning, "UPDATE")
-      "UPDATE #{table} SET " <> Enum.join(vals, ", ") <> where <> rets
+      "UPDATE #{quote_id(table)} SET " <> Enum.join(vals, ", ") <> where <> rets
     end
 
     def delete(table, filters, returning) do
       where = where_filter(filters)
       return = returning_clause(table, returning, "DELETE")
-      "DELETE FROM " <> table <> where <> return
+      "DELETE FROM " <> quote_id(table) <> where <> return
     end
 
     ## DDL
@@ -129,6 +129,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         end)
       end)
     end
+
+    # Quote the given identifier.
+    defp quote_id(id), do: "\"#{id}\""
 
     # Does this SQL statement have a returning clause in it?
     defp has_returning_clause?(sql) do
@@ -245,6 +248,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp where_filter([], _start), do: ""
     defp where_filter(filters, start) do
       filters
+      |> Enum.map(&quote_id/1)
       |> Enum.map_reduce(start, fn (i, acc) -> {"#{i} = ?#{acc}", acc + 1} end)
       |> (fn ({filters, _acc}) -> filters end).()
       |> Enum.join(" AND ")
