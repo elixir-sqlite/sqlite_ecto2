@@ -6,7 +6,6 @@ defmodule Sqlite.Ecto.Test do
 
   setup do
     {:ok, sql} = SQL.connect(database: ":memory:")
-    #on_exit fn -> SQL.disconnect(sql) end
     {:ok, sql: sql}
   end
 
@@ -53,8 +52,7 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "query", context do
-    #sql = context[:sql]
-    {:ok, sql} = SQL.connect(database: ":memory:")
+    sql = context[:sql]
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE model (id, x, y, z)", [], [])
 
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "INSERT INTO model VALUES (1, 2, 3, 4)", [], [])
@@ -69,12 +67,10 @@ defmodule Sqlite.Ecto.Test do
     query = ~s{DELETE FROM model WHERE id = ?1 ;--RETURNING ON DELETE model,id,x,y,z}
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [1], [])
     assert row == [id: 1, x: "foo", y: "bar", z: 4]
-    SQL.disconnect(sql)
   end
 
   test "table exists", context do
-    #sql = context[:sql]
-    {:ok, sql} = SQL.connect(database: ":memory:")
+    sql = context[:sql]
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE model (id, x, y, z)", [], [])
     query = SQL.ddl_exists(%Table{name: "model"})
     assert query == "SELECT count(1) FROM sqlite_master WHERE name = 'model' AND type = 'table'"
@@ -83,7 +79,6 @@ defmodule Sqlite.Ecto.Test do
     query = SQL.ddl_exists(%Table{name: "not_model"})
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [], [])
     assert row == ["count(1)": 0]
-    SQL.disconnect(sql)
   end
 
   ## Helpers
