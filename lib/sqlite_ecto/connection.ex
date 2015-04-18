@@ -50,13 +50,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     def insert(table, [], returning) do
-      rets = returning_clause(table, returning)
+      rets = returning_clause(table, returning, "INSERT")
       "INSERT INTO #{table} DEFAULT VALUES" <> rets
     end
     def insert(table, fields, returning) do
       cols = Enum.join(fields, ",")
       vals = 1..length(fields) |> Enum.map_join(",", &"?#{&1}")
-      rets = returning_clause(table, returning)
+      rets = returning_clause(table, returning, "INSERT")
       "INSERT INTO #{table} (#{cols}) VALUES (#{vals})" <> rets
     end
 
@@ -65,13 +65,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         {"#{i} = ?#{acc}", acc + 1}
       end)
       where = where_filter(filters, count)
-      rets = returning_clause(table, returning)
+      rets = returning_clause(table, returning, "UPDATE")
       "UPDATE #{table} SET " <> Enum.join(vals, ", ") <> where <> rets
     end
 
     def delete(table, filters, returning) do
       where = where_filter(filters)
-      return = returning_clause(table, returning)
+      return = returning_clause(table, returning, "DELETE")
       "DELETE FROM " <> table <> where <> return
     end
 
@@ -89,10 +89,16 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     ## Helpers
 
-    @pseudo_returning_statement " ;--RETURNING "
+    @pseudo_returning_statement " ;--RETURNING ON "
 
-    # SQLite does not have any sort of "RETURNING" clause... so we have to
-    # fake one with the following transaction:
+    # SQLite does not have any sort of "RETURNING" clause upon which Ecto
+    # relies.  Therefore, we have made up our own with its own syntax:
+    #
+    #    ;-- RETURNING ON [INSERT | UPDATE | DELETE] <table>,<col>,<col>,...
+    #
+    # When the query/4 function is given a query with the above returning
+    # clause, (1) it strips it from the end of the query, (2) parses it, and
+    # (3) performs the query with the following transaction logic:
     #
     #   BEGIN TRANSACTION;
     #   CREATE TEMP TABLE temp.t_<random> (<returning>);
@@ -107,8 +113,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     #
     # which is implemented by the following code:
     defp returning_query(pid, sql, params, opts) do
-      {sql, table, returning} = parse_returning_clause(sql)
-      {query, ref} = parse_query_type(sql)
+      {sql, table, returning, query, ref} = parse_returning_clause(sql)
 
       with_transaction(pid, fn ->
         with_temp_table(pid, returning, fn (tmp_tbl) ->
@@ -135,18 +140,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # insert(), update(), or delete().
     defp parse_returning_clause(sql) do
       [sql, returning_clause] = String.split(sql, @pseudo_returning_statement)
-      returning_clause
-      |> String.split(",")
-      |> (fn [table | rest] -> {sql, table, rest} end).()
-    end
+      [query, values] = String.split(returning_clause, " ", parts: 2)
+      [table | cols] = String.split(values, ",")
 
-    # Determine whether our trigger should be concerned with the OLD or NEW
-    # values that our query will affect in the table.
-    defp parse_query_type(sql) do
-      case sql do
-        << "INSERT", _ :: binary >> -> {"INSERT", "NEW"}
-        << "UPDATE", _ :: binary >> -> {"UPDATE", "NEW"}
-        << "DELETE", _ :: binary >> -> {"DELETE", "OLD"}
+      # Determine whether our trigger should be concerned with the OLD or NEW
+      # values that our query will affect in the table.
+      if query == "DELETE" do
+        {sql, table, cols, query, "OLD"}
+      else
+        {sql, table, cols, query, "NEW"}
       end
     end
 
@@ -233,9 +235,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # that query() can parse the string later and emulate it with a
     # transaction and trigger.
     # See: returning_query()
-    defp returning_clause(_table, []), do: ""
-    defp returning_clause(table, returning) do
-      @pseudo_returning_statement <> Enum.join([table | returning], ",")
+    defp returning_clause(_table, [], _cmd), do: ""
+    defp returning_clause(table, returning, cmd) do
+      @pseudo_returning_statement <> cmd <> " " <> Enum.join([table | returning], ",")
     end
 
     # Generate a where clause from the given filters.
