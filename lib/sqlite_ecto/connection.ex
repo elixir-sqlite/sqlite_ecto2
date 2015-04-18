@@ -79,6 +79,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     ## Helpers
 
+    @pseudo_returning_statement " ;--RETURNING "
+
     # SQLite does not have any sort of "RETURNING" clause... so we have to
     # fake one with the following transaction:
     #
@@ -115,20 +117,17 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     # Does this SQL statement have a returning clause in it?
     defp has_returning_clause?(sql) do
-      String.contains?(sql, " RETURNING ") and
-      (String.starts_with?(sql, "INSERT ") or
-       String.starts_with?(sql, "UPDATE ") or
-       String.starts_with?(sql, "DELETE "))
+      String.contains?(sql, @pseudo_returning_statement)
     end
 
     # Find our fake returning clause and return the SQL statement without it,
     # table name, and returning fields that we saved from the call to
     # insert(), update(), or delete().
     defp parse_returning_clause(sql) do
-      [sql, returning_clause] = String.split(sql, " RETURNING ")
+      [sql, returning_clause] = String.split(sql, @pseudo_returning_statement)
       returning_clause
-      |> String.split("|")
-      |> (fn [table, rest] -> {sql, table, String.split(rest, ",")} end).()
+      |> String.split(",")
+      |> (fn [table | rest] -> {sql, table, rest} end).()
     end
 
     # Determine whether our trigger should be concerned with the OLD or NEW
@@ -219,12 +218,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end
     end
 
-    # SQLite does not have a returning clause, but we append one anyway so
+    # SQLite does not have a returning clause, but we append a pseudo one so
     # that query() can parse the string later and emulate it with a
     # transaction and trigger.
+    # See: returning_query()
     defp returning_clause(_table, []), do: ""
     defp returning_clause(table, returning) do
-      " RETURNING #{table}|#{Enum.join(returning, ",")}"
+      @pseudo_returning_statement <> Enum.join([table | returning], ",")
     end
 
     # Generate a where clause from the given filters.
