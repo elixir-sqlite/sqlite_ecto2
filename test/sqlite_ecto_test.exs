@@ -2,6 +2,13 @@ defmodule Sqlite.Ecto.Test do
   use ExUnit.Case, async: true
 
   alias Sqlite.Ecto.Connection, as: SQL
+  alias Ecto.Migration.Table
+
+  setup do
+    {:ok, sql} = SQL.connect(database: ":memory:")
+    #on_exit fn -> SQL.disconnect(sql) end
+    {:ok, sql: sql}
+  end
 
   test "storage up (twice)" do
     tmp = [database: tempfilename]
@@ -45,7 +52,8 @@ defmodule Sqlite.Ecto.Test do
     assert query == ~s{DELETE FROM model WHERE x = ?1 AND y = ?2}
   end
 
-  test "query" do
+  test "query", context do
+    #sql = context[:sql]
     {:ok, sql} = SQL.connect(database: ":memory:")
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE model (id, x, y, z)", [], [])
 
@@ -61,7 +69,20 @@ defmodule Sqlite.Ecto.Test do
     query = ~s{DELETE FROM model WHERE id = ?1 ;--RETURNING model,id,x,y,z}
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [1], [])
     assert row == [id: 1, x: "foo", y: "bar", z: 4]
+    SQL.disconnect(sql)
+  end
 
+  test "table exists", context do
+    #sql = context[:sql]
+    {:ok, sql} = SQL.connect(database: ":memory:")
+    {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE model (id, x, y, z)", [], [])
+    query = SQL.ddl_exists(%Table{name: "model"})
+    assert query == "SELECT count(1) FROM sqlite_master WHERE name = 'model' AND type = 'table'"
+    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [], [])
+    assert row == ["count(1)": 1]
+    query = SQL.ddl_exists(%Table{name: "not_model"})
+    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [], [])
+    assert row == ["count(1)": 0]
     SQL.disconnect(sql)
   end
 

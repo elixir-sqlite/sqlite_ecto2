@@ -77,6 +77,16 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     ## DDL
 
+    alias Ecto.Migration.Table
+    alias Ecto.Migration.Index
+
+    def ddl_exists(%Table{name: name}), do: sqlite_master_query(name, "table")
+    def ddl_exists(%Index{name: name}), do: sqlite_master_query(name, "index")
+
+    defp sqlite_master_query(name, type) do
+      "SELECT count(1) FROM sqlite_master WHERE name = '#{name}' AND type = '#{type}'"
+    end
+
     ## Helpers
 
     @pseudo_returning_statement " ;--RETURNING "
