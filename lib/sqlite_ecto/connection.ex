@@ -101,10 +101,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     # Alter a table.
     def execute_ddl({:alter, %Table{}=table, changes}) do
+      # TODO
     end
 
     # Create an index.
+    # NOTE Ignores concurrently and using values.
     def execute_ddl({:create, %Index{}=index}) do
+      [name, table] = Enum.map([index.name, index.table], &quote_id/1)
+      fields = Enum.map_join(index.columns, ", ", &quote_id/1)
+      "#{create_unique_index(index.unique)} #{name} ON #{table} (#{fields})"
     end
 
     # Drop an index.
@@ -184,6 +189,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
     defp column_constraints(_), do: ""
 
+    # Returns a create index prefix.
+    defp create_unique_index(true), do: "CREATE UNIQUE INDEX"
+    defp create_unique_index(false), do: "CREATE INDEX"
+
     @pseudo_returning_statement " ;--RETURNING ON "
 
     # SQLite does not have any sort of "RETURNING" clause upon which Ecto
@@ -219,7 +228,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           case err do
             {:error, _} -> err
             _ ->
-              fields = returning |> Enum.map(&quote_id/1) |> Enum.join(", ")
+              fields = Enum.map_join(returning, ", ", &quote_id/1)
               do_query(pid, "SELECT #{fields} FROM #{tmp_tbl}", [], opts)
           end
         end)

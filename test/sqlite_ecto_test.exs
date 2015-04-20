@@ -114,6 +114,18 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl({:drop, %Table{name: "posts"}}) == ~s{DROP TABLE "posts"}
   end
 
+  test "create index" do
+    create = {:create, index(:posts, [:category_id, :permalink])}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE INDEX "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")}
+  end
+
+  test "create unique index" do
+    create = {:create, index(:posts, [:permalink], unique: true)}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")}
+  end
+
   ## Helpers
 
   # return a unique temporary filename
