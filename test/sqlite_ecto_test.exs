@@ -81,6 +81,35 @@ defmodule Sqlite.Ecto.Test do
     assert row == ["count(1)": 0]
   end
 
+  import Ecto.Migration, only: [table: 1, index: 2, index: 3, references: 1]
+
+  test "create table" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :title, :string, []},
+                {:add, :created_at, :datetime, []}]}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "created_at" DATETIME)}
+  end
+
+  test "create table with reference" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_id, references(:categories), []} ]}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id"))}
+  end
+
+  test "create table with column options" do
+    create = {:create, table(:posts),
+               [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
+                {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
+                {:add, :on_hand, :integer, [default: 0, null: true]},
+                {:add, :is_active, :boolean, [default: true]}]}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE TABLE "posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL, "price" NUMERIC DEFAULT (expr), "on_hand" INTEGER DEFAULT 0, "is_active" BOOLEAN DEFAULT true)}
+  end
+
   ## Helpers
 
   # return a unique temporary filename

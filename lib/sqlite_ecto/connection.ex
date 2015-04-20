@@ -5,7 +5,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     @behaviour Ecto.Adapters.SQL.Connection
 
     def connect(opts) do
-      opts |> Sqlite.Ecto.get_name |> Sqlitex.Server.start_link
+      opts
+      |> Sqlite.Ecto.get_name
+      |> Sqlitex.Server.start_link
+      |> configure_foreign_keys
     end
 
     def disconnect(pid) do
@@ -49,12 +52,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     def delete_all(query) do
     end
 
+    # XXX How do we handle inserting datetime values?
     def insert(table, [], returning) do
       rets = returning_clause(table, returning, "INSERT")
       "INSERT INTO #{quote_id(table)} DEFAULT VALUES" <> rets
     end
     def insert(table, fields, returning) do
-      cols = fields |> Enum.map(&quote_id/1) |> Enum.join(",")
+      cols = Enum.map_join(fields, ",", &quote_id/1)
       vals = 1..length(fields) |> Enum.map_join(",", &"?#{&1}")
       rets = returning_clause(table, returning, "INSERT")
       "INSERT INTO #{quote_id(table)} (#{cols}) VALUES (#{vals})" <> rets
@@ -80,14 +84,104 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     alias Ecto.Migration.Table
     alias Ecto.Migration.Index
 
+    # Return a SQLite query to determine if the given table or index exists in
+    # the database.
     def ddl_exists(%Table{name: name}), do: sqlite_master_query(name, "table")
     def ddl_exists(%Index{name: name}), do: sqlite_master_query(name, "index")
 
+    # Create a table.
+    def execute_ddl({:create, %Table{name: name}, columns}) do
+      "CREATE TABLE #{quote_id(name)} (#{column_definitions(columns)})"
+    end
+
+    # Drop a table.
+    def execute_ddl({:drop, %Table{name: name}}) do
+    end
+
+    # Alter a table.
+    def execute_ddl({:alter, %Table{}=table, changes}) do
+    end
+
+    # Create an index.
+    def execute_ddl({:create, %Index{}=index}) do
+    end
+
+    # Drop an index.
+    def execute_ddl({:drop, %Index{}=index}) do
+    end
+
+    # XXX Can SQLite alter indices?
+
+    ## Helpers
+
+    # Called from connect/1.  If we are given a valid connection, enable and
+    # verify foreign key constraints.  Return the result from
+    # Sqlitex.Server.start_link/1.
+    defp configure_foreign_keys({:ok, pid}) do
+      :ok = Sqlitex.Server.exec(pid, "PRAGMA foreign_keys = ON")
+      [[foreign_keys: 1]] = Sqlitex.Server.query(pid, "PRAGMA foreign_keys")
+      {:ok, pid}
+    end
+    defp configure_foreign_keys(error_result), do: error_result
+
+    # called by ddl_exists/1 above
     defp sqlite_master_query(name, type) do
       "SELECT count(1) FROM sqlite_master WHERE name = '#{name}' AND type = '#{type}'"
     end
 
-    ## Helpers
+    defp column_definitions(cols) do
+      Enum.map_join(cols, ", ", &column_definition/1)
+    end
+
+    defp column_definition({:add, name, type, opts}) do
+      opts = Enum.into(opts, %{})
+      quote_id(name) <> column_type(type) <> column_constraints(type, opts)
+    end
+
+    alias Ecto.Migration.Reference
+
+    # Foreign keys:
+    defp column_type(%Reference{table: table, column: col}) do
+      " REFERENCES #{quote_id(table)}(#{quote_id(col)})"
+    end
+    # Simple column types.  Note that we ignore options like :size,
+    # :precision, etc. because columns do not have types, and SQLite will not
+    # coerce any stored value.  Thus, "strings" are all text and "numerics"
+    # have arbitrary precision regardless of the declared column type.
+    defp column_type(type) do
+      case type do
+        :boolean -> " BOOLEAN"
+        :datetime -> " DATETIME"
+        :integer -> " INTEGER"
+        :numeric -> " NUMERIC"
+        :serial -> " INTEGER"
+        :string -> " TEXT"
+      end
+    end
+
+    # NOTE SQLite requires autoincrement integers to be primary keys
+    # XXX Are there no other constraints we need to handle for serial cols?
+    defp column_constraints(:serial, _), do: " PRIMARY KEY AUTOINCREMENT"
+
+    # Return a string of constraints for the column.
+    # NOTE The order of these constraints does not matter to SQLite, but
+    # rearranging them may cause tests that rely on their order to fail.
+    defp column_constraints(_type, opts), do: column_constraints(opts)
+    defp column_constraints(opts=%{primary_key: true}) do
+      " PRIMARY KEY" <> column_constraints(Map.delete(opts, :primary_key))
+    end
+    defp column_constraints(opts=%{default: default}) do
+      val = case default do
+        {:fragment, expr} -> "(#{expr})"
+        string when is_binary(string) -> "'#{string}'"
+        other -> other
+      end
+      " DEFAULT #{val}" <> column_constraints(Map.delete(opts, :default))
+    end
+    defp column_constraints(opts=%{null: false}) do
+      " NOT NULL" <> column_constraints(Map.delete(opts, :null))
+    end
+    defp column_constraints(_), do: ""
 
     @pseudo_returning_statement " ;--RETURNING ON "
 
@@ -144,16 +238,21 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # insert(), update(), or delete().
     defp parse_returning_clause(sql) do
       [sql, returning_clause] = String.split(sql, @pseudo_returning_statement)
-      [query, values] = String.split(returning_clause, " ", parts: 2)
-      [table | cols] = String.split(values, ",")
+      {table, cols, query, ref} = parse_return_contents(returning_clause)
+      {sql, table, cols, query, ref}
+    end
 
-      # Determine whether our trigger should be concerned with the OLD or NEW
-      # values that our query will affect in the table.
-      if query == "DELETE" do
-        {sql, table, cols, query, "OLD"}
-      else
-        {sql, table, cols, query, "NEW"}
-      end
+    defp parse_return_contents(<<"INSERT", " ", values::binary>>) do
+      [table | cols] = String.split(values, ",")
+      {table, cols, "INSERT", "NEW"}
+    end
+    defp parse_return_contents(<<"UPDATE", " ", values::binary>>) do
+      [table | cols] = String.split(values, ",")
+      {table, cols, "UPDATE", "NEW"}
+    end
+    defp parse_return_contents(<<"DELETE", " ", values::binary>>) do
+      [table | cols] = String.split(values, ",")
+      {table, cols, "DELETE", "OLD"}
     end
 
     # Initiate a transaction.  If we are already within a transaction, then do
@@ -188,7 +287,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # result of func.().
     defp with_temp_table(pid, returning, func) do
       tmp = "t_" <> (:random.uniform |> Float.to_string |> String.slice(2..10))
-      fields = returning |> Enum.map(&quote_id/1) |> Enum.join(", ")
+      fields = Enum.map_join(returning, ", ", &quote_id/1)
       results = case do_exec(pid, "CREATE TEMP TABLE #{tmp} (#{fields})") do
         {:error, _} = err -> err
         _ -> func.(tmp)
