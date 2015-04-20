@@ -126,6 +126,11 @@ defmodule Sqlite.Ecto.Test do
     assert query == ~s{CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")}
   end
 
+  test "drop index" do
+    drop = {:drop, index(:posts, [:id], name: "posts$main")}
+    assert SQL.execute_ddl(drop) == ~s{DROP INDEX "posts$main"}
+  end
+
   ## Helpers
 
   # return a unique temporary filename

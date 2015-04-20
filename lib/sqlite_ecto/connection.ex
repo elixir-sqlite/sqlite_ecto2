@@ -113,7 +113,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     # Drop an index.
-    def execute_ddl({:drop, %Index{}=index}) do
+    def execute_ddl({:drop, %Index{name: name}}) do
+      "DROP INDEX #{quote_id(name)}"
     end
 
     # XXX Can SQLite alter indices?
