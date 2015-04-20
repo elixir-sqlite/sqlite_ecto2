@@ -110,6 +110,10 @@ defmodule Sqlite.Ecto.Test do
     assert query == ~s{CREATE TABLE "posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL, "price" NUMERIC DEFAULT (expr), "on_hand" INTEGER DEFAULT 0, "is_active" BOOLEAN DEFAULT true)}
   end
 
+  test "drop table" do
+    assert SQL.execute_ddl({:drop, %Table{name: "posts"}}) == ~s{DROP TABLE "posts"}
+  end
+
   ## Helpers
 
   # return a unique temporary filename

@@ -96,6 +96,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     # Drop a table.
     def execute_ddl({:drop, %Table{name: name}}) do
+      "DROP TABLE #{quote_id(name)}"
     end
 
     # Alter a table.
