@@ -23,15 +23,19 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     ## Transaction
 
-    def begin_transaction, do: "BEGIN"
+    alias Sqlite.Ecto.Transaction
 
-    def rollback, do: "ROLLBACK"
+    def begin_transaction, do: Transaction.begin_transaction
 
-    def commit, do: "COMMIT"
+    def rollback, do: Transaction.rollback
 
-    def savepoint(name), do: "SAVEPOINT " <> name
+    def commit, do: Transaction.commit
 
-    def rollback_to_savepoint(name), do: "ROLLBACK TO " <> name
+    def savepoint(name), do: Transaction.savepoint(name)
+
+    def rollback_to_savepoint(name) do
+      Transaction.rollback_to_savepoint(name)
+    end
 
     ## Query
 

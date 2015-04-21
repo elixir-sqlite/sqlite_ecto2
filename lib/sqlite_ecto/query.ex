@@ -1,4 +1,7 @@
 defmodule Sqlite.Ecto.Query do
+  import Sqlite.Ecto.Transaction, only: [with_savepoint: 2]
+  import Sqlite.Ecto.Util, only: [exec: 2, random_id: 0, quote_id: 1]
+
   def query(pid, sql, params, opts) do
     params = Enum.map(params, fn
       %Ecto.Query.Tagged{value: value} -> value
@@ -61,7 +64,7 @@ defmodule Sqlite.Ecto.Query do
   # clause, (1) it strips it from the end of the query, (2) parses it, and
   # (3) performs the query with the following transaction logic:
   #
-  #   BEGIN TRANSACTION;
+  #   SAVEPOINT sp_<random>;
   #   CREATE TEMP TABLE temp.t_<random> (<returning>);
   #   CREATE TEMP TRIGGER tr_<random> AFTER UPDATE ON main.<table> BEGIN
   #       INSERT INTO t_<random> SELECT NEW.<returning>;
@@ -70,13 +73,13 @@ defmodule Sqlite.Ecto.Query do
   #   DROP TRIGGER tr_<random>;
   #   SELECT <returning> FROM temp.t_<random>;
   #   DROP TABLE temp.t_<random>;
-  #   END TRANSACTION;
+  #   RELEASE sp_<random>;
   #
   # which is implemented by the following code:
   defp returning_query(pid, sql, params, opts) do
     {sql, table, returning, query, ref} = parse_returning_clause(sql)
 
-    with_transaction(pid, fn ->
+    with_savepoint(pid, fn ->
       with_temp_table(pid, returning, fn (tmp_tbl) ->
         err = with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, fn ->
           do_query(pid, sql, params, opts)
@@ -91,9 +94,6 @@ defmodule Sqlite.Ecto.Query do
       end)
     end)
   end
-
-  # Quote the given identifier.
-  defp quote_id(id), do: "\"#{id}\""
 
   # Does this SQL statement have a returning clause in it?
   defp has_returning_clause?(sql) do
@@ -122,62 +122,35 @@ defmodule Sqlite.Ecto.Query do
     {table, cols, "DELETE", "OLD"}
   end
 
-  # Initiate a transaction.  If we are already within a transaction, then do
-  # nothing.  If any error occurs when we call the func parameter, rollback
-  # our changes.  Returns the result of the call to func.
-  defp with_transaction(pid, func) do
-    should_commit? = (do_exec(pid, "BEGIN TRANSACTION") == :ok)
-    result = safe_call(pid, func, should_commit?)
-    error? = (is_tuple(result) and :erlang.element(1, result) == :error)
-
-    cond do
-      error? -> do_exec(pid, "ROLLBACK")
-      should_commit? -> do_exec(pid, "END TRANSACTION")
-    end
-    result
-  end
-
-  # Call func.() and return the result.  If any exceptions are encountered,
-  # safely rollback the transaction.
-  defp safe_call(pid, func, should_rollback?) do
-    try do
-      func.()
-    rescue
-      e in RuntimeError ->
-        if should_rollback?, do: do_exec(pid, "ROLLBACK")
-        raise e
-    end
-  end
-
   # Create a temp table to save the values we will write with our trigger
   # (below), call func.(), and drop the table afterwards.  Returns the
   # result of func.().
   defp with_temp_table(pid, returning, func) do
-    tmp = "t_" <> (:random.uniform |> Float.to_string |> String.slice(2..10))
+    tmp = "t_" <> random_id
     fields = Enum.map_join(returning, ", ", &quote_id/1)
-    results = case do_exec(pid, "CREATE TEMP TABLE #{tmp} (#{fields})") do
+    results = case exec(pid, "CREATE TEMP TABLE #{tmp} (#{fields})") do
       {:error, _} = err -> err
       _ -> func.(tmp)
     end
-    do_exec(pid, "DROP TABLE IF EXISTS #{tmp}")
+    exec(pid, "DROP TABLE IF EXISTS #{tmp}")
     results
   end
 
   # Create a trigger to capture the changes from our query, call func.(),
   # and drop the trigger when done.  Returns the result of func.().
   defp with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, func) do
-    tmp = "tr_" <> (:random.uniform |> Float.to_string |> String.slice(2..10))
+    tmp = "tr_" <> random_id
     fields = Enum.map_join(returning, ", ", &"#{ref}.#{quote_id(&1)}")
     sql = """
     CREATE TEMP TRIGGER #{tmp} AFTER #{query} ON main.#{quote_id(table)} BEGIN
         INSERT INTO #{tmp_tbl} SELECT #{fields};
     END;
     """
-    results = case do_exec(pid, sql) do
+    results = case exec(pid, sql) do
       {:error, _} = err -> err
       _ -> func.()
     end
-    do_exec(pid, "DROP TRIGGER IF EXISTS #{tmp}")
+    exec(pid, "DROP TRIGGER IF EXISTS #{tmp}")
     results
   end
 
@@ -189,15 +162,6 @@ defmodule Sqlite.Ecto.Query do
       {:error, _} = error -> error
       rows when is_list(rows) ->
         {:ok, %{rows: rows, num_rows: length(rows)}}
-    end
-  end
-
-  defp do_exec(pid, sql) do
-    case Sqlitex.Server.exec(pid, sql) do
-      # busy error means another process is writing to the database; try again
-      {:error, {:busy, _}} -> do_exec(pid, sql)
-      {:error, _} = error -> error
-      :ok -> :ok
     end
   end
 

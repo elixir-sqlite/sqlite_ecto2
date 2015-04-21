@@ -2,6 +2,7 @@ defmodule Sqlite.Ecto.DDL do
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
   alias Ecto.Migration.Reference
+  import Sqlite.Ecto.Util, only: [quote_id: 1]
 
   # Return a SQLite query to determine if the given table or index exists in
   # the database.
@@ -100,7 +101,4 @@ defmodule Sqlite.Ecto.DDL do
   # Returns a create index prefix.
   defp create_unique_index(true), do: "CREATE UNIQUE INDEX"
   defp create_unique_index(false), do: "CREATE INDEX"
-
-  # Quote the given identifier.
-  defp quote_id(id), do: "\"#{id}\""
 end
