@@ -131,6 +131,28 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(drop) == ~s{DROP INDEX "posts$main"}
   end
 
+#  test "show sql schema", context do
+#    sql = context[:sql]
+#    create = {:create, table(:posts),
+#               [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
+#                {:add, :price, :numeric, [precision: 8, scale: 2, default: 0.0]},
+#                {:add, :on_hand, :integer, [default: 0, null: true]},
+#                {:add, :is_active, :boolean, [default: true]}]}
+#    query = SQL.execute_ddl(create)
+#    IO.puts inspect(query)
+#    SQL.query(sql, query, [], [])
+#    IO.puts inspect(SQL.query(sql, "SELECT type, sql FROM sqlite_master WHERE tbl_name = 'posts'", [], []))
+#  end
+
+  test "alter table" do
+    alter = {:alter, table(:posts),
+               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
+                {:modify, :price, :numeric, [precision: 8, scale: 2]},
+                {:remove, :summary}]}
+    query = SQL.execute_ddl(alter)
+    assert query == ~s{ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL; ALTER TABLE "posts" ALTER COLUMN "price" NUMERIC; ALTER TABLE "posts" DROP COLUMN "summary"}
+  end
+
   ## Helpers
 
   # return a unique temporary filename

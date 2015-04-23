@@ -20,8 +20,10 @@ defmodule Sqlite.Ecto.DDL do
   end
 
   # Alter a table.
-  def execute_ddl({:alter, %Table{}=table, changes}) do
-    # TODO
+  def execute_ddl({:alter, %Table{name: name}, changes}) do
+    Enum.map_join(changes, "; ", fn (change) ->
+      "ALTER TABLE " <> quote_id(name) <> alter_table_suffix(change)
+    end)
   end
 
   # Create an index.
@@ -50,7 +52,7 @@ defmodule Sqlite.Ecto.DDL do
     Enum.map_join(cols, ", ", &column_definition/1)
   end
 
-  defp column_definition({:add, name, type, opts}) do
+  defp column_definition({_action, name, type, opts}) do
     opts = Enum.into(opts, %{})
     quote_id(name) <> column_type(type) <> column_constraints(type, opts)
   end
@@ -101,4 +103,14 @@ defmodule Sqlite.Ecto.DDL do
   # Returns a create index prefix.
   defp create_unique_index(true), do: "CREATE UNIQUE INDEX"
   defp create_unique_index(false), do: "CREATE INDEX"
+
+  defp alter_table_suffix(change={:add, _column, _type, _opts}) do
+    " ADD COLUMN " <> column_definition(change)
+  end
+  defp alter_table_suffix(change={:modify, _column, _type, _opts}) do
+    " ALTER COLUMN " <> column_definition(change)
+  end
+  defp alter_table_suffix({:remove, column}) do
+    " DROP COLUMN " <> quote_id(column)
+  end
 end
