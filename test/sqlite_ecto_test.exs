@@ -131,19 +131,6 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(drop) == ~s{DROP INDEX "posts$main"}
   end
 
-#  test "show sql schema", context do
-#    sql = context[:sql]
-#    create = {:create, table(:posts),
-#               [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
-#                {:add, :price, :numeric, [precision: 8, scale: 2, default: 0.0]},
-#                {:add, :on_hand, :integer, [default: 0, null: true]},
-#                {:add, :is_active, :boolean, [default: true]}]}
-#    query = SQL.execute_ddl(create)
-#    IO.puts inspect(query)
-#    SQL.query(sql, query, [], [])
-#    IO.puts inspect(SQL.query(sql, "SELECT type, sql FROM sqlite_master WHERE tbl_name = 'posts'", [], []))
-#  end
-
   test "alter table" do
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
@@ -151,6 +138,25 @@ defmodule Sqlite.Ecto.Test do
                 {:remove, :summary}]}
     query = SQL.execute_ddl(alter)
     assert query == ~s{ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL; ALTER TABLE "posts" ALTER COLUMN "price" NUMERIC; ALTER TABLE "posts" DROP COLUMN "summary"}
+  end
+
+  test "alter table query", context do
+    sql = context[:sql]
+    SQL.query(sql, ~s{CREATE TABLE "posts" ("author" TEXT, "price" INTEGER, "summary" TEXT, "body" TEXT)}, [], [])
+    SQL.query(sql, "INSERT INTO posts VALUES ('jazzyb', 2, 'short statement', 'Longer, more detailed statement.')", [], [])
+    alter = {:alter, table(:posts),
+               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
+                {:modify, :price, :numeric, [precision: 8, scale: 2]},
+                {:remove, :summary}]}
+    {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, SQL.execute_ddl(alter), [], [])
+    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE name = 'posts' AND type = 'table'", [], [])
+    assert row[:sql] == ~s{CREATE TABLE "posts" ("author" TEXT, "price" NUMERIC, "body" TEXT, "title" TEXT DEFAULT 'Untitled' NOT NULL)}
+    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, "SELECT * FROM posts", [], [])
+    assert "jazzyb" == Keyword.get(row, :author)
+    assert 2 == Keyword.get(row, :price)
+    assert "Longer, more detailed statement." == Keyword.get(row, :body)
+    assert "Untitled" == Keyword.get(row, :title)
+    assert not Keyword.has_key?(row, :summary)
   end
 
   ## Helpers

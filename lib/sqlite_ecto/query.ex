@@ -2,6 +2,9 @@ defmodule Sqlite.Ecto.Query do
   import Sqlite.Ecto.Transaction, only: [with_savepoint: 2]
   import Sqlite.Ecto.Util, only: [exec: 2, random_id: 0, quote_id: 1]
 
+  def query(pid, sql=<<"ALTER TABLE ", _::binary>>, _params, _opts) do
+    alter_table_query(pid, sql)
+  end
   def query(pid, sql, params, opts) do
     params = Enum.map(params, fn
       %Ecto.Query.Tagged{value: value} -> value
@@ -52,6 +55,115 @@ defmodule Sqlite.Ecto.Query do
   end
 
   ## Helpers
+
+  # for algorithm see: http://www.sqlite.org/lang_altertable.html
+  defp alter_table_query(pid, alter) do
+    {name, fields} = parse_alter_table_query(alter)
+    with_foreign_keys_disabled(pid, fn ->
+      with_savepoint(pid, fn ->
+        :ok = modify_table(pid, name, fields)
+        [] = Sqlitex.Server.query(pid, "PRAGMA foreign_key_check")
+      end)
+    end)
+    {:ok, %{num_rows: 0, rows: []}}
+  end
+
+  defp parse_alter_table_query(sql) do
+    name = parse_alter_table_name(sql)
+    {name, parse_alter_table_fields(name, sql)}
+  end
+
+  defp parse_alter_table_name("ALTER TABLE " <> rest) do
+    rest |> String.split("\"") |> Enum.at(1)
+  end
+
+  defp parse_alter_table_fields(name, sql) do
+    sql
+    |> String.split("; ")
+    |> Enum.map(fn alter ->
+      length = name |> quote_id |> bit_size
+      <<"ALTER TABLE ", _name::size(length), " ", suffix::binary>> = alter
+      to_field(suffix)
+    end)
+  end
+
+  defp to_field(<<"ADD COLUMN ", _::binary>> = stmt), do: {:add, stmt}
+  defp to_field("ALTER COLUMN " <> field), do: {:modify, field}
+  defp to_field("DROP COLUMN " <> col_name), do: {:remove, col_name}
+
+  defp with_foreign_keys_disabled(pid, func) do
+    :ok = exec(pid, "PRAGMA foreign_keys = OFF")
+    func.()
+    :ok = exec(pid, "PRAGMA foreign_keys = ON")
+  end
+
+  defp modify_table(pid, name, changes) do
+    # TODO save indices associated with table
+
+    # split the fields for the original table columns
+    length = name |> quote_id |> bit_size
+    <<"CREATE TABLE ", _name::size(length), " (", fields::binary>> = table_schema(pid, name)
+    fields = fields |> String.rstrip(?)) |> String.split(", ")
+
+    # go through each of the fields applying drops and modifications
+    {column_names, fields} = fields
+    |> Enum.reduce({[], []}, fn (col, {names, fields}) ->
+      col_name = col |> String.split("\"") |> Enum.at(1) |> quote_id
+      case find_matching_change(col_name, changes) do
+        {:modify, new_field} ->
+          {[col_name | names], [new_field | fields]}
+        {:remove, _} ->
+          {names, fields}
+        _ ->
+          {[col_name | names], [col | fields]}
+      end
+    end)
+    |> (fn ({names, fields}) -> {Enum.reverse(names), Enum.reverse(fields)} end).()
+
+    # reconstruct the table schema with new fields and create a new table
+    new_tbl = "tbl_" <> random_id
+    create_tbl = "CREATE TABLE #{new_tbl} (#{Enum.join(fields, ", ")})"
+    :ok = exec(pid, create_tbl)
+
+    # INSERT INTO new SELECT ... FROM name;
+    name = quote_id(name)
+    move_tbl = "INSERT INTO #{new_tbl} SELECT #{Enum.join(column_names, ",")} FROM #{name}"
+    :ok = exec(pid, move_tbl)
+
+    # DROP TABLE name;
+    :ok = exec(pid, "DROP TABLE #{name}")
+
+    # ALTER TABLE new RENAME TO name;
+    :ok = exec(pid, "ALTER TABLE #{new_tbl} RENAME TO #{name}")
+
+    # add new columns
+    for {:add, col} <- changes do
+      :ok = exec(pid, "ALTER TABLE #{name} #{col}")
+    end
+
+    # TODO restore saved indices
+
+    :ok
+  end
+
+  defp find_matching_change(name, changes) do
+    idx = Enum.find_index(changes, fn ({_action, stmt}) ->
+      String.starts_with?(stmt, name)
+    end)
+
+    if idx do
+      Enum.at(changes, idx)
+    else
+      nil
+    end
+  end
+
+  # find the schema for the table given by 'name'
+  defp table_schema(pid, name) do
+    query = "SELECT sql FROM sqlite_master WHERE name = '#{name}' AND type = 'table'"
+    [sql] = Sqlitex.Server.query(pid, query)
+    sql[:sql]
+  end
 
   @pseudo_returning_statement " ;--RETURNING ON "
 
