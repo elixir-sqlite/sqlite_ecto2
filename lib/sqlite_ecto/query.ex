@@ -98,7 +98,9 @@ defmodule Sqlite.Ecto.Query do
   end
 
   defp modify_table(pid, name, changes) do
-    # TODO save indices associated with table
+    # save indices associated with the table
+    query = "SELECT sql FROM sqlite_master WHERE tbl_name = '#{name}' AND type = 'index'"
+    create_indices = Sqlitex.Server.query(pid, query) |> Enum.map(fn row -> row[:sql] end)
 
     # split the fields for the original table columns
     length = name |> quote_id |> bit_size
@@ -141,7 +143,8 @@ defmodule Sqlite.Ecto.Query do
       :ok = exec(pid, "ALTER TABLE #{name} #{col}")
     end
 
-    # TODO restore saved indices
+    # restore saved indices
+    Enum.each(create_indices, fn sql -> :ok = exec(pid, sql) end)
 
     :ok
   end

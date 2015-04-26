@@ -143,20 +143,31 @@ defmodule Sqlite.Ecto.Test do
   test "alter table query", context do
     sql = context[:sql]
     SQL.query(sql, ~s{CREATE TABLE "posts" ("author" TEXT, "price" INTEGER, "summary" TEXT, "body" TEXT)}, [], [])
+    SQL.query(sql, "CREATE INDEX this_is_an_index ON posts(author)", [], [])
     SQL.query(sql, "INSERT INTO posts VALUES ('jazzyb', 2, 'short statement', 'Longer, more detailed statement.')", [], [])
+
+    # alter the table
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
                 {:modify, :price, :numeric, [precision: 8, scale: 2]},
                 {:remove, :summary}]}
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, SQL.execute_ddl(alter), [], [])
+
+    # verify the schema has been updated
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE name = 'posts' AND type = 'table'", [], [])
     assert row[:sql] == ~s{CREATE TABLE "posts" ("author" TEXT, "price" NUMERIC, "body" TEXT, "title" TEXT DEFAULT 'Untitled' NOT NULL)}
+
+    # verify the values have been preserved
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, "SELECT * FROM posts", [], [])
     assert "jazzyb" == Keyword.get(row, :author)
     assert 2 == Keyword.get(row, :price)
     assert "Longer, more detailed statement." == Keyword.get(row, :body)
     assert "Untitled" == Keyword.get(row, :title)
     assert not Keyword.has_key?(row, :summary)
+
+    # verify the index has been preserved
+    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE tbl_name = 'posts' AND type = 'index'", [], [])
+    assert row[:sql] == "CREATE INDEX this_is_an_index ON posts(author)"
   end
 
   ## Helpers
