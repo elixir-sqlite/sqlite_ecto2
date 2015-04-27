@@ -79,7 +79,7 @@ defmodule Sqlite.Ecto.Query do
   #       CREATE INDEX ...;
   #
   #   PRAGMA foreign_key_check; -- verify there are no violations
-  #   RELEASE <savepoint>
+  #   RELEASE <savepoint>;
   #   PRAGMA foreign_keys = ON;
   #
   # See: http://www.sqlite.org/lang_altertable.html
@@ -164,7 +164,7 @@ defmodule Sqlite.Ecto.Query do
     :ok = exec(pid, "DROP TABLE #{old_tbl}")
     :ok = exec(pid, "ALTER TABLE #{new_tbl} RENAME TO #{old_tbl}")
 
-    # add any columns new columns in 'changes'
+    # add new columns in change set
     for {:add, col} <- changes do
       :ok = exec(pid, "ALTER TABLE #{old_tbl} #{col}")
     end
@@ -248,7 +248,7 @@ defmodule Sqlite.Ecto.Query do
         case err do
           {:error, _} -> err
           _ ->
-            fields = Enum.map_join(returning, ", ", &quote_id/1)
+            fields = Enum.join(returning, ", ")
             do_query(pid, "SELECT #{fields} FROM #{tmp_tbl}", [], opts)
         end
       end)
@@ -287,7 +287,7 @@ defmodule Sqlite.Ecto.Query do
   # result of func.().
   defp with_temp_table(pid, returning, func) do
     tmp = "t_" <> random_id
-    fields = Enum.map_join(returning, ", ", &quote_id/1)
+    fields = Enum.join(returning, ", ")
     results = case exec(pid, "CREATE TEMP TABLE #{tmp} (#{fields})") do
       {:error, _} = err -> err
       _ -> func.(tmp)
@@ -300,9 +300,9 @@ defmodule Sqlite.Ecto.Query do
   # and drop the trigger when done.  Returns the result of func.().
   defp with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, func) do
     tmp = "tr_" <> random_id
-    fields = Enum.map_join(returning, ", ", &"#{ref}.#{quote_id(&1)}")
+    fields = Enum.map_join(returning, ", ", &"#{ref}.#{&1}")
     sql = """
-    CREATE TEMP TRIGGER #{tmp} AFTER #{query} ON main.#{quote_id(table)} BEGIN
+    CREATE TEMP TRIGGER #{tmp} AFTER #{query} ON main.#{table} BEGIN
         INSERT INTO #{tmp_tbl} SELECT #{fields};
     END;
     """
@@ -331,7 +331,9 @@ defmodule Sqlite.Ecto.Query do
   # See: returning_query()
   defp returning_clause(_table, [], _cmd), do: []
   defp returning_clause(table, returning, cmd) do
-    [String.strip(@pseudo_returning_statement), cmd, Enum.join([table | returning], ",")]
+    return = String.strip(@pseudo_returning_statement)
+    fields = Enum.map_join([table | returning], ",", &quote_id/1)
+    [return, cmd, fields]
   end
 
   # Generate a where clause from the given filters.

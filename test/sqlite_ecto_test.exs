@@ -26,10 +26,10 @@ defmodule Sqlite.Ecto.Test do
 
   test "insert" do
     query = SQL.insert("model", [:x, :y], [:id])
-    assert query == ~s{INSERT INTO "model" ("x","y") VALUES (?1,?2) ;--RETURNING ON INSERT model,id}
+    assert query == ~s{INSERT INTO "model" ("x","y") VALUES (?1,?2) ;--RETURNING ON INSERT "model","id"}
 
     query = SQL.insert("model", [], [:id])
-    assert query == ~s{INSERT INTO "model" DEFAULT VALUES ;--RETURNING ON INSERT model,id}
+    assert query == ~s{INSERT INTO "model" DEFAULT VALUES ;--RETURNING ON INSERT "model","id"}
 
     query = SQL.insert("model", [], [])
     assert query == ~s{INSERT INTO "model" DEFAULT VALUES}
@@ -37,7 +37,7 @@ defmodule Sqlite.Ecto.Test do
 
   test "update" do
     query = SQL.update("model", [:x, :y], [:id], [:x, :z])
-    assert query == ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE model,x,z}
+    assert query == ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "model","x","z"}
 
     query = SQL.update("model", [:x, :y], [:id], [])
     assert query == ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3}
@@ -45,7 +45,7 @@ defmodule Sqlite.Ecto.Test do
 
   test "delete" do
     query = SQL.delete("model", [:x, :y], [:z])
-    assert query == ~s{DELETE FROM "model" WHERE "x" = ?1 AND "y" = ?2 ;--RETURNING ON DELETE model,z}
+    assert query == ~s{DELETE FROM "model" WHERE "x" = ?1 AND "y" = ?2 ;--RETURNING ON DELETE "model","z"}
 
     query = SQL.delete("model", [:x, :y], [])
     assert query == ~s{DELETE FROM "model" WHERE "x" = ?1 AND "y" = ?2}
@@ -56,15 +56,15 @@ defmodule Sqlite.Ecto.Test do
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE model (id, x, y, z)", [], [])
 
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "INSERT INTO model VALUES (1, 2, 3, 4)", [], [])
-    query = ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE model,x,z}
+    query = ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "model","x","z"}
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [:foo, :bar, 1], [])
     assert row == [x: "foo", z: 4]
 
-    query = ~s{INSERT INTO "model" VALUES (?1, ?2, ?3, ?4) ;--RETURNING ON INSERT model,id}
+    query = ~s{INSERT INTO "model" VALUES (?1, ?2, ?3, ?4) ;--RETURNING ON INSERT "model","id"}
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [:a, :b, :c, :d], [])
     assert row == [id: "a"]
 
-    query = ~s{DELETE FROM "model" WHERE "id" = ?1 ;--RETURNING ON DELETE model,id,x,y,z}
+    query = ~s{DELETE FROM "model" WHERE "id" = ?1 ;--RETURNING ON DELETE "model","id","x","y","z"}
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [1], [])
     assert row == [id: 1, x: "foo", y: "bar", z: 4]
   end
