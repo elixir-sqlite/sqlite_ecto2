@@ -2,7 +2,7 @@ defmodule Sqlite.Ecto.DDL do
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
   alias Ecto.Migration.Reference
-  import Sqlite.Ecto.Util, only: [quote_id: 1]
+  import Sqlite.Ecto.Util, only: [assemble: 1, quote_id: 1]
 
   # Return a SQLite query to determine if the given table or index exists in
   # the database.
@@ -11,18 +11,18 @@ defmodule Sqlite.Ecto.DDL do
 
   # Create a table.
   def execute_ddl({:create, %Table{name: name}, columns}) do
-    "CREATE TABLE #{quote_id(name)} (#{column_definitions(columns)})"
+    assemble ["CREATE TABLE", quote_id(name), column_definitions(columns)]
   end
 
   # Drop a table.
   def execute_ddl({:drop, %Table{name: name}}) do
-    "DROP TABLE #{quote_id(name)}"
+    assemble ["DROP TABLE", quote_id(name)]
   end
 
   # Alter a table.
   def execute_ddl({:alter, %Table{name: name}, changes}) do
     Enum.map_join(changes, "; ", fn (change) ->
-      "ALTER TABLE " <> quote_id(name) <> alter_table_suffix(change)
+      assemble ["ALTER TABLE", quote_id(name), alter_table_suffix(change)]
     end)
   end
 
@@ -30,13 +30,13 @@ defmodule Sqlite.Ecto.DDL do
   # NOTE Ignores concurrently and using values.
   def execute_ddl({:create, %Index{}=index}) do
     [name, table] = Enum.map([index.name, index.table], &quote_id/1)
-    fields = Enum.map_join(index.columns, ", ", &quote_id/1)
-    "#{create_unique_index(index.unique)} #{name} ON #{table} (#{fields})"
+    fields = "(" <> Enum.map_join(index.columns, ", ", &quote_id/1) <> ")"
+    assemble [create_unique_index(index.unique), name, "ON", table, fields]
   end
 
   # Drop an index.
   def execute_ddl({:drop, %Index{name: name}}) do
-    "DROP INDEX #{quote_id(name)}"
+    assemble ["DROP INDEX", quote_id(name)]
   end
 
   # XXX Can SQLite alter indices?
@@ -49,17 +49,17 @@ defmodule Sqlite.Ecto.DDL do
   end
 
   defp column_definitions(cols) do
-    Enum.map_join(cols, ", ", &column_definition/1)
+    "(" <> Enum.map_join(cols, ", ", &column_definition/1) <> ")"
   end
 
   defp column_definition({_action, name, type, opts}) do
     opts = Enum.into(opts, %{})
-    quote_id(name) <> column_type(type) <> column_constraints(type, opts)
+    assemble [quote_id(name), column_type(type), column_constraints(type, opts)]
   end
 
   # Foreign keys:
   defp column_type(%Reference{table: table, column: col}) do
-    " REFERENCES #{quote_id(table)}(#{quote_id(col)})"
+    "REFERENCES #{quote_id(table)}(#{quote_id(col)})"
   end
   # Simple column types.  Note that we ignore options like :size, :precision,
   # etc. because columns do not have types, and SQLite will not coerce any
@@ -67,25 +67,26 @@ defmodule Sqlite.Ecto.DDL do
   # precision regardless of the declared column type.
   defp column_type(type) do
     case type do
-      :boolean -> " BOOLEAN"
-      :datetime -> " DATETIME"
-      :integer -> " INTEGER"
-      :numeric -> " NUMERIC"
-      :serial -> " INTEGER"
-      :string -> " TEXT"
+      :boolean -> "BOOLEAN"
+      :datetime -> "DATETIME"
+      :integer -> "INTEGER"
+      :numeric -> "NUMERIC"
+      :serial -> "INTEGER"
+      :string -> "TEXT"
     end
   end
 
   # NOTE SQLite requires autoincrement integers to be primary keys
   # XXX Are there no other constraints we need to handle for serial cols?
-  defp column_constraints(:serial, _), do: " PRIMARY KEY AUTOINCREMENT"
+  defp column_constraints(:serial, _), do: "PRIMARY KEY AUTOINCREMENT"
 
   # Return a string of constraints for the column.
   # NOTE The order of these constraints does not matter to SQLite, but
   # rearranging them may cause tests that rely on their order to fail.
   defp column_constraints(_type, opts), do: column_constraints(opts)
   defp column_constraints(opts=%{primary_key: true}) do
-    " PRIMARY KEY" <> column_constraints(Map.delete(opts, :primary_key))
+    other_constraints = opts |> Map.delete(:primary_key) |> column_constraints
+    ["PRIMARY KEY" | other_constraints]
   end
   defp column_constraints(opts=%{default: default}) do
     val = case default do
@@ -93,24 +94,26 @@ defmodule Sqlite.Ecto.DDL do
       string when is_binary(string) -> "'#{string}'"
       other -> other
     end
-    " DEFAULT #{val}" <> column_constraints(Map.delete(opts, :default))
+    other_constraints = opts |> Map.delete(:default) |> column_constraints
+    ["DEFAULT", val, other_constraints]
   end
   defp column_constraints(opts=%{null: false}) do
-    " NOT NULL" <> column_constraints(Map.delete(opts, :null))
+    other_constraints = opts |> Map.delete(:null) |> column_constraints
+    ["NOT NULL", other_constraints]
   end
-  defp column_constraints(_), do: ""
+  defp column_constraints(_), do: []
 
   # Returns a create index prefix.
   defp create_unique_index(true), do: "CREATE UNIQUE INDEX"
   defp create_unique_index(false), do: "CREATE INDEX"
 
   defp alter_table_suffix(change={:add, _column, _type, _opts}) do
-    " ADD COLUMN " <> column_definition(change)
+    ["ADD COLUMN", column_definition(change)]
   end
   defp alter_table_suffix(change={:modify, _column, _type, _opts}) do
-    " ALTER COLUMN " <> column_definition(change)
+    ["ALTER COLUMN", column_definition(change)]
   end
   defp alter_table_suffix({:remove, column}) do
-    " DROP COLUMN " <> quote_id(column)
+    ["DROP COLUMN", quote_id(column)]
   end
 end

@@ -16,4 +16,6 @@ defmodule Sqlite.Ecto.Util do
 
   # Quote the given identifier.
   def quote_id(id), do: "\"#{id}\""
+
+  def assemble(list), do: list |> List.flatten |> Enum.join(" ")
 end
