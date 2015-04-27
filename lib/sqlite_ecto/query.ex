@@ -1,6 +1,6 @@
 defmodule Sqlite.Ecto.Query do
   import Sqlite.Ecto.Transaction, only: [with_savepoint: 2]
-  import Sqlite.Ecto.Util, only: [exec: 2, random_id: 0, quote_id: 1]
+  import Sqlite.Ecto.Util, only: [assemble: 1, exec: 2, random_id: 0, quote_id: 1]
 
   def query(pid, sql=<<"ALTER TABLE ", _::binary>>, _params, _opts) do
     alter_table_query(pid, sql)
@@ -29,29 +29,30 @@ defmodule Sqlite.Ecto.Query do
 
   # XXX How do we handle inserting datetime values?
   def insert(table, [], returning) do
-    rets = returning_clause(table, returning, "INSERT")
-    "INSERT INTO #{quote_id(table)} DEFAULT VALUES" <> rets
+    return = returning_clause(table, returning, "INSERT")
+    assemble ["INSERT INTO", quote_id(table), "DEFAULT VALUES", return]
   end
   def insert(table, fields, returning) do
-    cols = Enum.map_join(fields, ",", &quote_id/1)
-    vals = 1..length(fields) |> Enum.map_join(",", &"?#{&1}")
-    rets = returning_clause(table, returning, "INSERT")
-    "INSERT INTO #{quote_id(table)} (#{cols}) VALUES (#{vals})" <> rets
+    cols = "(" <> Enum.map_join(fields, ",", &quote_id/1) <> ")"
+    vals = "(" <> Enum.map_join(1..length(fields), ",", &"?#{&1}") <> ")"
+    return = returning_clause(table, returning, "INSERT")
+    assemble ["INSERT INTO", quote_id(table), cols, "VALUES", vals, return]
   end
 
   def update(table, fields, filters, returning) do
     {vals, count} = Enum.map_reduce(fields, 1, fn (i, acc) ->
       {"#{quote_id(i)} = ?#{acc}", acc + 1}
     end)
+    vals = Enum.join(vals, ", ")
     where = where_filter(filters, count)
-    rets = returning_clause(table, returning, "UPDATE")
-    "UPDATE #{quote_id(table)} SET " <> Enum.join(vals, ", ") <> where <> rets
+    return = returning_clause(table, returning, "UPDATE")
+    assemble ["UPDATE", quote_id(table), "SET", vals, where, return]
   end
 
   def delete(table, filters, returning) do
     where = where_filter(filters)
     return = returning_clause(table, returning, "DELETE")
-    "DELETE FROM " <> quote_id(table) <> where <> return
+    assemble ["DELETE FROM", quote_id(table), where, return]
   end
 
   ## Helpers
@@ -328,9 +329,9 @@ defmodule Sqlite.Ecto.Query do
   # that query() can parse the string later and emulate it with a
   # transaction and trigger.
   # See: returning_query()
-  defp returning_clause(_table, [], _cmd), do: ""
+  defp returning_clause(_table, [], _cmd), do: []
   defp returning_clause(table, returning, cmd) do
-    @pseudo_returning_statement <> cmd <> " " <> Enum.join([table | returning], ",")
+    [String.strip(@pseudo_returning_statement), cmd, Enum.join([table | returning], ",")]
   end
 
   # Generate a where clause from the given filters.
@@ -342,6 +343,6 @@ defmodule Sqlite.Ecto.Query do
     |> Enum.map_reduce(start, fn (i, acc) -> {"#{i} = ?#{acc}", acc + 1} end)
     |> (fn ({filters, _acc}) -> filters end).()
     |> Enum.join(" AND ")
-    |> (fn (clause) -> " WHERE " <> clause end).()
+    |> (fn (clause) -> "WHERE " <> clause end).()
   end
 end
