@@ -24,6 +24,15 @@ defmodule Sqlite.Ecto.Test do
     assert Sqlite.Ecto.storage_down(tmp) == {:error, :already_down}
   end
 
+  # return a unique temporary filename
+  defp tempfilename do
+    :erlang.now |> :random.seed
+    1..10
+    |> Enum.map(fn(_) -> :random.uniform(10) - 1 end)
+    |> Enum.join
+    |> (fn(name) -> "/tmp/test_" <> name <> ".db" end).()
+  end
+
   test "insert" do
     query = SQL.insert("model", [:x, :y], [:id])
     assert query == ~s{INSERT INTO "model" ("x","y") VALUES (?1,?2) ;--RETURNING ON INSERT "model","id"}
@@ -170,14 +179,289 @@ defmodule Sqlite.Ecto.Test do
     assert row[:sql] == "CREATE INDEX this_is_an_index ON posts(author)"
   end
 
-  ## Helpers
+  ## Tests stolen from PostgreSQL adapter:
 
-  # return a unique temporary filename
-  defp tempfilename do
-    :erlang.now |> :random.seed
-    1..10
-    |> Enum.map(fn(_) -> :random.uniform(10) - 1 end)
-    |> Enum.join
-    |> (fn(name) -> "/tmp/test_" <> name <> ".db" end).()
+  import Ecto.Query
+
+  alias Ecto.Queryable
+
+  defmodule Model do
+    use Ecto.Model
+
+    schema "model" do
+      field :x, :integer
+      field :y, :integer
+
+      has_many :comments, Sqlite.Ecto.Test.Model2,
+        references: :x,
+        foreign_key: :z
+      has_one :permalink, Sqlite.Ecto.Test.Model3,
+        references: :y,
+        foreign_key: :id
+    end
   end
+
+  defmodule Model2 do
+    use Ecto.Model
+
+    schema "model2" do
+      belongs_to :post, Sqlite.Ecto.Test.Model,
+        references: :x,
+        foreign_key: :z
+    end
+  end
+
+  defmodule Model3 do
+    use Ecto.Model
+
+    schema "model3" do
+      field :list1, {:array, :string}
+      field :list2, {:array, :integer}
+      field :binary, :binary
+    end
+  end
+
+  defp normalize(query) do
+    {query, _params} = Ecto.Query.Planner.prepare(query, [])
+    Ecto.Query.Planner.normalize(query, [], [])
+  end
+
+  test "from" do
+    query = Model |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
+  end
+
+  test "from without model" do
+    query = "posts" |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
+  end
+
+#  test "from with schema source" do
+#    query = "public.posts" |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT p0."x" FROM "public"."posts" AS p0}
+#  end
+#
+  test "select" do
+    query = Model |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
+
+    query = Model |> select([r], [r.x, r.y]) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
+  end
+
+  test "distinct" do
+    query = Model |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT ON (m0."x") m0."x", m0."y" FROM "model" AS m0}
+
+    query = Model |> distinct([r], 2) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT ON (2) m0."x" FROM "model" AS m0}
+
+    query = Model |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT ON (m0."x", m0."y") m0."x", m0."y" FROM "model" AS m0}
+
+    query = Model |> distinct([r], true) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT m0."x", m0."y" FROM "model" AS m0}
+
+    query = Model |> distinct([r], false) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
+
+    query = Model |> distinct([], true) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT m0."x", m0."y" FROM "model" AS m0}
+
+    query = Model |> distinct([], false) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
+  end
+
+#  test "where" do
+#    query = Model |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 WHERE (m0."x" = 42) AND (m0."y" != 43)}
+#  end
+#
+#  test "order by" do
+#    query = Model |> order_by([r], r.x) |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x"}
+#
+#    query = Model |> order_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y"}
+#
+#    query = Model |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y" DESC}
+#
+#    query = Model |> order_by([r], [r.y]) |> distinct([r], r.x) |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT DISTINCT ON (m0."x") m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y"}
+#
+#    query = Model |> order_by([r], []) |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
+#  end
+#
+#  test "limit and offset" do
+#    query = Model |> limit([r], 3) |> select([], 0) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3}
+#
+#    query = Model |> offset([r], 5) |> select([], 0) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 OFFSET 5}
+#
+#    query = Model |> offset([r], 5) |> limit([r], 3) |> select([], 0) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3 OFFSET 5}
+#  end
+#
+#  test "lock" do
+#    query = Model |> lock("FOR SHARE NOWAIT") |> select([], 0) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 FOR SHARE NOWAIT}
+#  end
+#
+#  test "string escape" do
+#    query = Model |> select([], "'\\  ") |> normalize
+#    assert SQL.all(query) == ~s{SELECT '''\\  ' FROM "model" AS m0}
+#
+#    query = Model |> select([], "'") |> normalize
+#    assert SQL.all(query) == ~s{SELECT '''' FROM "model" AS m0}
+#  end
+#
+#  test "binary ops" do
+#    query = Model |> select([r], r.x == 2) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" = 2 FROM "model" AS m0}
+#
+#    query = Model |> select([r], r.x != 2) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" != 2 FROM "model" AS m0}
+#
+#    query = Model |> select([r], r.x <= 2) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" <= 2 FROM "model" AS m0}
+#
+#    query = Model |> select([r], r.x >= 2) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" >= 2 FROM "model" AS m0}
+#
+#    query = Model |> select([r], r.x < 2) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" < 2 FROM "model" AS m0}
+#
+#    query = Model |> select([r], r.x > 2) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" > 2 FROM "model" AS m0}
+#  end
+#
+#  test "is_nil" do
+#    query = Model |> select([r], is_nil(r.x)) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" IS NULL FROM "model" AS m0}
+#
+#    query = Model |> select([r], not is_nil(r.x)) |> normalize
+#    assert SQL.all(query) == ~s{SELECT NOT (m0."x" IS NULL) FROM "model" AS m0}
+#  end
+#
+#  test "fragments" do
+#    query = Model |> select([r], fragment("downcase(?)", r.x)) |> normalize
+#    assert SQL.all(query) == ~s{SELECT downcase(m0."x") FROM "model" AS m0}
+#
+#    value = 13
+#    query = Model |> select([r], fragment("downcase(?, ?)", r.x, ^value)) |> normalize
+#    assert SQL.all(query) == ~s{SELECT downcase(m0."x", $1) FROM "model" AS m0}
+#  end
+#
+#  test "literals" do
+#    query = Model |> select([], nil) |> normalize
+#    assert SQL.all(query) == ~s{SELECT NULL FROM "model" AS m0}
+#
+#    query = Model |> select([], true) |> normalize
+#    assert SQL.all(query) == ~s{SELECT TRUE FROM "model" AS m0}
+#
+#    query = Model |> select([], false) |> normalize
+#    assert SQL.all(query) == ~s{SELECT FALSE FROM "model" AS m0}
+#
+#    query = Model |> select([], "abc") |> normalize
+#    assert SQL.all(query) == ~s{SELECT 'abc' FROM "model" AS m0}
+#
+#    query = Model |> select([], 123) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 123 FROM "model" AS m0}
+#
+#    query = Model |> select([], 123.0) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 123.0::float FROM "model" AS m0}
+#  end
+#
+#  test "tagged type" do
+#    query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)) |> normalize
+#    assert SQL.all(query) == ~s{SELECT $1::uuid FROM "model" AS m0}
+#
+#    query = Model |> select([], type(^1, Custom.Permalink)) |> normalize
+#    assert SQL.all(query) == ~s{SELECT $1::integer FROM "model" AS m0}
+#
+#    query = Model |> select([], type(^[1,2,3], {:array, Custom.Permalink})) |> normalize
+#    assert SQL.all(query) == ~s{SELECT $1::integer[] FROM "model" AS m0}
+#  end
+#
+#  test "nested expressions" do
+#    z = 123
+#    query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
+#    assert SQL.all(query) == ~s{SELECT ((m0."x" > 0) AND (m0."y" > $1)) OR TRUE FROM "model" AS m0}
+#  end
+#
+#  test "in expression" do
+#    query = Model |> select([e], 1 in []) |> normalize
+#    assert SQL.all(query) == ~s{SELECT false FROM "model" AS m0}
+#
+#    query = Model |> select([e], 1 in [1,e.x,3]) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 1 IN (1,m0."x",3) FROM "model" AS m0}
+#
+#    query = Model |> select([e], 1 in ^[]) |> normalize
+#    assert SQL.all(query) == ~s{SELECT false FROM "model" AS m0}
+#
+#    query = Model |> select([e], 1 in ^[1, 2, 3]) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 1 IN ($1,$2,$3) FROM "model" AS m0}
+#
+#    query = Model |> select([e], 1 in [1, ^2, 3]) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 1 IN (1,$1,3) FROM "model" AS m0}
+#  end
+#
+#  test "having" do
+#    query = Model |> having([p], p.x == p.x) |> select([], 0) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x")}
+#
+#    query = Model |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], 0) |> normalize
+#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x") AND (m0."y" = m0."y")}
+#  end
+#
+#  test "group by" do
+#    query = Model |> group_by([r], r.x) |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x"}
+#
+#    query = Model |> group_by([r], 2) |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY 2}
+#
+#    query = Model |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y"}
+#
+#    query = Model |> group_by([r], []) |> select([r], r.x) |> normalize
+#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
+#  end
+#
+#  test "arrays and sigils" do
+#    query = Model |> select([], fragment("?", [1, 2, 3])) |> normalize
+#    assert SQL.all(query) == ~s{SELECT ARRAY[1,2,3] FROM "model" AS m0}
+#
+#    query = Model |> select([], fragment("?", ~w(abc def))) |> normalize
+#    assert SQL.all(query) == ~s{SELECT ARRAY['abc','def'] FROM "model" AS m0}
+#  end
+#
+#  test "interpolated values" do
+#    query = Model
+#            |> select([], ^0)
+#            |> join(:inner, [], Model2, ^true)
+#            |> join(:inner, [], Model2, ^false)
+#            |> where([], ^true)
+#            |> where([], ^false)
+#            |> group_by([], ^1)
+#            |> group_by([], ^2)
+#            |> having([], ^true)
+#            |> having([], ^false)
+#            |> order_by([], fragment("?", ^3))
+#            |> order_by([], ^:x)
+#            |> limit([], ^4)
+#            |> offset([], ^5)
+#            |> normalize
+#
+#    result =
+#      "SELECT $1 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON $2 " <>
+#      "INNER JOIN \"model2\" AS m2 ON $3 WHERE ($4) AND ($5) " <>
+#      "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
+#      "ORDER BY $10, m0.\"x\" LIMIT $11 OFFSET $12"
+#
+#    assert SQL.all(query) == String.rstrip(result)
+#  end
 end

@@ -19,6 +19,13 @@ defmodule Sqlite.Ecto.Query do
   end
 
   def all(query) do
+    sources = create_names(query)
+    distinct = query.distinct
+    distinct_exprs = distinct_exprs(distinct, sources)
+
+    select = select(query.select, distinct, distinct_exprs, sources)
+    from = from(sources)
+    assemble [select, from]
   end
 
   def update_all(query, values) do
@@ -55,7 +62,7 @@ defmodule Sqlite.Ecto.Query do
     assemble ["DELETE FROM", quote_id(table), where, return]
   end
 
-  ## Helpers
+  ## Alter Table Helpers
 
   # Sqlite does not implement the full ALTER TABLE statement.  It allows one
   # to add columns and rename tables but not alter or drop columns.  This
@@ -213,6 +220,8 @@ defmodule Sqlite.Ecto.Query do
     sql[:sql]
   end
 
+  ## Returning Clause Helpers
+
   @pseudo_returning_statement " ;--RETURNING ON "
 
   # SQLite does not have any sort of "RETURNING" clause upon which Ecto
@@ -334,6 +343,36 @@ defmodule Sqlite.Ecto.Query do
     return = String.strip(@pseudo_returning_statement)
     fields = Enum.map_join([table | returning], ",", &quote_id/1)
     [return, cmd, fields]
+  end
+
+  ## Generic Query Helpers
+
+  defp create_names(%{sources: sources}) do
+    create_names(sources, 0, tuple_size(sources)) |> List.to_tuple()
+  end
+  defp create_names(sources, pos, limit) when pos < limit do
+    {table, model} = elem(sources, pos)
+    id = String.first(table) <> Integer.to_string(pos)
+    [{table, id, model} | create_names(sources, pos + 1, limit)]
+  end
+  defp create_names(_, pos, pos), do: []
+
+  defp distinct_exprs(_, _), do: []
+
+  defp select(%Ecto.Query.SelectExpr{fields: fields}, distinct, distinct_exprs, sources) do
+    distinct = distinct_exprs(distinct, distinct_exprs)
+    fields = Enum.map_join(fields, ", ", &expr(&1, sources))
+    ["SELECT", distinct, fields]
+  end
+
+  def from(sources) do
+    {table, id, _model} = elem(sources, 0)
+    ["FROM", quote_id(table), "AS", id]
+  end
+
+  defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
+    {_, name, _} = elem(sources, idx)
+    "#{name}.#{quote_id(field)}"
   end
 
   # Generate a where clause from the given filters.
