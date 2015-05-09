@@ -302,14 +302,14 @@ defmodule Sqlite.Ecto.Test do
     end
   end
 
-#  test "string escape" do
-#    query = Model |> select([], "'\\  ") |> normalize
-#    assert SQL.all(query) == ~s{SELECT '''\\  ' FROM "model" AS m0}
-#
-#    query = Model |> select([], "'") |> normalize
-#    assert SQL.all(query) == ~s{SELECT '''' FROM "model" AS m0}
-#  end
-#
+  test "string escape" do
+    query = Model |> select([], "'\\  ") |> normalize
+    assert SQL.all(query) == ~s{SELECT '''\\  ' FROM "model" AS m0}
+
+    query = Model |> select([], "'") |> normalize
+    assert SQL.all(query) == ~s{SELECT '''' FROM "model" AS m0}
+  end
+
 #  test "binary ops" do
 #    query = Model |> select([r], r.x == 2) |> normalize
 #    assert SQL.all(query) == ~s{SELECT m0."x" = 2 FROM "model" AS m0}

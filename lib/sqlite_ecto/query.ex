@@ -415,6 +415,10 @@ defmodule Sqlite.Ecto.Query do
     String.Chars.Integer.to_string(literal)
   end
 
+  defp expr(literal, _sources) when is_binary(literal) do
+    "'#{:binary.replace(literal, "'", "''", [:global])}'"
+  end
+
   defp op_to_binary({op, _, [_, _]} = expr, sources) when op in @binary_ops do
     ["(", expr(expr, sources), ")"]
   end
