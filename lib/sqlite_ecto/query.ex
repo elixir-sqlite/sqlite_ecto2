@@ -23,7 +23,8 @@ defmodule Sqlite.Ecto.Query do
 
     select = select(query.select, query.distinct, sources)
     from = from(sources)
-    assemble [select, from]
+    where = where(query.wheres, sources)
+    assemble [select, from, where]
   end
 
   def update_all(query, values) do
@@ -343,6 +344,21 @@ defmodule Sqlite.Ecto.Query do
     [return, cmd, fields]
   end
 
+  ## Query generation
+
+  binary_ops =
+    [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
+     and: "AND", or: "OR",
+     ilike: "ILIKE", like: "LIKE"]
+
+  @binary_ops Keyword.keys(binary_ops)
+
+  Enum.map(binary_ops, fn {op, str} ->
+    defp handle_call(unquote(op), 2), do: {:binary_op, unquote(str)}
+  end)
+
+  defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
+
   ## Generic Query Helpers
 
   defp create_names(%{sources: sources}) do
@@ -375,6 +391,39 @@ defmodule Sqlite.Ecto.Query do
   defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
     {_, name, _} = elem(sources, idx)
     "#{name}.#{quote_id(field)}"
+  end
+
+  defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do
+    case handle_call(fun, length(args)) do
+      {:binary_op, op} ->
+        [left, right] = args
+        [op_to_binary(left, sources), op, op_to_binary(right, sources)]
+
+      {:fun, fun} ->
+        [fun, "(", Enum.map_join(args, ", ", &expr(&1, sources)), ")"]
+    end
+  end
+
+  defp expr(literal, _sources) when is_integer(literal) do
+    String.Chars.Integer.to_string(literal)
+  end
+
+  defp op_to_binary({op, _, [_, _]} = expr, sources) when op in @binary_ops do
+    ["(", expr(expr, sources), ")"]
+  end
+
+  defp op_to_binary(expr, sources) do
+    expr(expr, sources)
+  end
+
+  defp where([], _), do: []
+  defp where(query_exprs, sources) do
+    exprs = query_exprs
+    |> Enum.map(fn %Ecto.Query.QueryExpr{expr: expr} ->
+      ["(", expr(expr, sources), ")"]
+    end)
+    |> Enum.intersperse("AND")
+    ["WHERE", exprs]
   end
 
   # Generate a where clause from the given filters.
