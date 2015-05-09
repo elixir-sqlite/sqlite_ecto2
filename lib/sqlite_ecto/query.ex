@@ -19,14 +19,19 @@ defmodule Sqlite.Ecto.Query do
   end
 
   def all(query) do
+    if query.lock do
+      raise ArgumentError, "locks are not supported by SQLite"
+    end
+
     sources = create_names(query)
 
     select = select(query.select, query.distinct, sources)
     from = from(sources)
     where = where(query.wheres, sources)
     order_by = order_by(query.order_bys, sources)
+    limit = limit(query.limit, query.offset, sources)
 
-    assemble [select, from, where, order_by]
+    assemble [select, from, where, order_by, limit]
   end
 
   def update_all(query, values) do
@@ -456,5 +461,15 @@ defmodule Sqlite.Ecto.Query do
   defp ordering_term({:asc, expr}, sources), do: assemble(expr(expr, sources))
   defp ordering_term({:desc, expr}, sources) do
     assemble(expr(expr, sources)) <> " DESC"
+  end
+
+  defp limit(nil, _offset, _sources), do: []
+  defp limit(%Ecto.Query.QueryExpr{expr: expr}, offset, sources) do
+    ["LIMIT", expr(expr, sources), offset(offset, sources)]
+  end
+
+  defp offset(nil, _sources), do: []
+  defp offset(%Ecto.Query.QueryExpr{expr: expr}, sources) do
+    ["OFFSET", expr(expr, sources)]
   end
 end

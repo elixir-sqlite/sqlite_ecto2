@@ -287,22 +287,21 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
   end
 
-#  test "limit and offset" do
-#    query = Model |> limit([r], 3) |> select([], 0) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3}
-#
-#    query = Model |> offset([r], 5) |> select([], 0) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 OFFSET 5}
-#
-#    query = Model |> offset([r], 5) |> limit([r], 3) |> select([], 0) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3 OFFSET 5}
-#  end
-#
-#  test "lock" do
-#    query = Model |> lock("FOR SHARE NOWAIT") |> select([], 0) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 FOR SHARE NOWAIT}
-#  end
-#
+  test "limit and offset" do
+    query = Model |> limit([r], 3) |> select([], 0) |> normalize
+    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3}
+
+    query = Model |> offset([r], 5) |> limit([r], 3) |> select([], 0) |> normalize
+    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3 OFFSET 5}
+  end
+
+  test "lock" do
+    assert_raise ArgumentError, "locks are not supported by SQLite", fn ->
+      query = Model |> lock("FOR SHARE NOWAIT") |> select([], 0) |> normalize
+      assert SQL.all(query)
+    end
+  end
+
 #  test "string escape" do
 #    query = Model |> select([], "'\\  ") |> normalize
 #    assert SQL.all(query) == ~s{SELECT '''\\  ' FROM "model" AS m0}
