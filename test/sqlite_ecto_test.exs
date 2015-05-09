@@ -273,23 +273,20 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 WHERE ( m0."x" = 42 ) AND ( m0."y" != 43 )}
   end
 
-#  test "order by" do
-#    query = Model |> order_by([r], r.x) |> select([r], r.x) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x"}
-#
-#    query = Model |> order_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y"}
-#
-#    query = Model |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y" DESC}
-#
-#    query = Model |> order_by([r], [r.y]) |> distinct([r], r.x) |> select([r], r.x) |> normalize
-#    assert SQL.all(query) == ~s{SELECT DISTINCT ON (m0."x") m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y"}
-#
-#    query = Model |> order_by([r], []) |> select([r], r.x) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
-#  end
-#
+  test "order by" do
+    query = Model |> order_by([r], r.x) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x"}
+
+    query = Model |> order_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y"}
+
+    query = Model |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y" DESC}
+
+    query = Model |> order_by([r], []) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
+  end
+
 #  test "limit and offset" do
 #    query = Model |> limit([r], 3) |> select([], 0) |> normalize
 #    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3}

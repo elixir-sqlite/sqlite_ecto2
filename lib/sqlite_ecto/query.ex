@@ -24,7 +24,9 @@ defmodule Sqlite.Ecto.Query do
     select = select(query.select, query.distinct, sources)
     from = from(sources)
     where = where(query.wheres, sources)
-    assemble [select, from, where]
+    order_by = order_by(query.order_bys, sources)
+
+    assemble [select, from, where, order_by]
   end
 
   def update_all(query, values) do
@@ -436,5 +438,23 @@ defmodule Sqlite.Ecto.Query do
     |> (fn ({filters, _acc}) -> filters end).()
     |> Enum.join(" AND ")
     |> (fn (clause) -> "WHERE " <> clause end).()
+  end
+
+  defp order_by(order_bys, sources) do
+    exprs = order_bys
+    |> Enum.map_join(", ", fn %Ecto.Query.QueryExpr{expr: expr} ->
+      Enum.map_join(expr, ", ", &ordering_term(&1, sources))
+    end)
+
+    if exprs == "" do
+      []
+    else
+      ["ORDER BY", exprs]
+    end
+  end
+
+  defp ordering_term({:asc, expr}, sources), do: assemble(expr(expr, sources))
+  defp ordering_term({:desc, expr}, sources) do
+    assemble(expr(expr, sources)) <> " DESC"
   end
 end
