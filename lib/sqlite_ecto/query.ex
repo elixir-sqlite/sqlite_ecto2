@@ -20,10 +20,8 @@ defmodule Sqlite.Ecto.Query do
 
   def all(query) do
     sources = create_names(query)
-    distinct = query.distinct
-    distinct_exprs = distinct_exprs(distinct, sources)
 
-    select = select(query.select, distinct, distinct_exprs, sources)
+    select = select(query.select, query.distinct, sources)
     from = from(sources)
     assemble [select, from]
   end
@@ -357,12 +355,16 @@ defmodule Sqlite.Ecto.Query do
   end
   defp create_names(_, pos, pos), do: []
 
-  defp distinct_exprs(_, _), do: []
-
-  defp select(%Ecto.Query.SelectExpr{fields: fields}, distinct, distinct_exprs, sources) do
-    distinct = distinct_exprs(distinct, distinct_exprs)
+  defp select(%Ecto.Query.SelectExpr{fields: fields}, distinct, sources) do
     fields = Enum.map_join(fields, ", ", &expr(&1, sources))
-    ["SELECT", distinct, fields]
+    ["SELECT", distinct(distinct), fields]
+  end
+
+  defp distinct(nil), do: []
+  defp distinct(%Ecto.Query.QueryExpr{expr: true}), do: "DISTINCT"
+  defp distinct(%Ecto.Query.QueryExpr{expr: false}), do: []
+  defp distinct(%Ecto.Query.QueryExpr{expr: exprs}) when is_list(exprs) do
+    raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite"
   end
 
   def from(sources) do
