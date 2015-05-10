@@ -28,10 +28,11 @@ defmodule Sqlite.Ecto.Query do
     select = select(query.select, query.distinct, sources)
     from = from(sources)
     where = where(query.wheres, sources)
+    group_by = group_by(query.group_bys, query.havings, sources)
     order_by = order_by(query.order_bys, sources)
     limit = limit(query.limit, query.offset, sources)
 
-    assemble [select, from, where, order_by, limit]
+    assemble [select, from, where, group_by, order_by, limit]
   end
 
   def update_all(query, values) do
@@ -531,5 +532,28 @@ defmodule Sqlite.Ecto.Query do
   defp offset(nil, _sources), do: []
   defp offset(%Ecto.Query.QueryExpr{expr: expr}, sources) do
     ["OFFSET", expr(expr, sources)]
+  end
+
+  defp group_by(group_bys, havings, sources) do
+    exprs = group_bys
+    |> Enum.map_join(", ", fn %Ecto.Query.QueryExpr{expr: expr} ->
+      Enum.map_join(expr, ", ", &assemble(expr(&1, sources)))
+    end)
+
+    if exprs == "" do
+      []
+    else
+      ["GROUP BY", exprs, having(havings, sources)]
+    end
+  end
+
+  defp having([], _sources), do: []
+  defp having(havings, sources) do
+    exprs = havings
+    |> Enum.map(fn %Ecto.Query.QueryExpr{expr: expr} ->
+      ["(", expr(expr, sources), ")"]
+    end)
+    |> Enum.intersperse("AND")
+    ["HAVING", exprs]
   end
 end

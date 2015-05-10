@@ -405,36 +405,26 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT 1 IN ( 1, ?, 3 ) FROM "model" AS m0}
   end
 
-#  test "having" do
-#    query = Model |> having([p], p.x == p.x) |> select([], 0) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x")}
-#
-#    query = Model |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], 0) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x") AND (m0."y" = m0."y")}
-#  end
-#
-#  test "group by" do
-#    query = Model |> group_by([r], r.x) |> select([r], r.x) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x"}
-#
-#    query = Model |> group_by([r], 2) |> select([r], r.x) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY 2}
-#
-#    query = Model |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y"}
-#
-#    query = Model |> group_by([r], []) |> select([r], r.x) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
-#  end
-#
-#  test "arrays and sigils" do
-#    query = Model |> select([], fragment("?", [1, 2, 3])) |> normalize
-#    assert SQL.all(query) == ~s{SELECT ARRAY[1,2,3] FROM "model" AS m0}
-#
-#    query = Model |> select([], fragment("?", ~w(abc def))) |> normalize
-#    assert SQL.all(query) == ~s{SELECT ARRAY['abc','def'] FROM "model" AS m0}
-#  end
-#
+  test "group by" do
+    query = Model |> group_by([r], r.x) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x"}
+
+    query = Model |> group_by([r], r.x) |> having([r], r.x == r.x) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x" HAVING ( m0."x" = m0."x" )}
+
+    query = Model |> group_by([r], 2) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY 2}
+
+    query = Model |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y"}
+
+    query = Model |> group_by([r], [r.x, r.y]) |> having([r], r.x == r.x) |> having([r], r.y == r.y) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y" HAVING ( m0."x" = m0."x" ) AND ( m0."y" = m0."y" )}
+
+    query = Model |> group_by([r], []) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
+  end
+
 #  test "interpolated values" do
 #    query = Model
 #            |> select([], ^0)
