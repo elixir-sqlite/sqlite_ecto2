@@ -379,7 +379,9 @@ defmodule Sqlite.Ecto.Query do
   defp create_names(_, pos, pos), do: []
 
   defp select(%Ecto.Query.SelectExpr{fields: fields}, distinct, sources) do
-    fields = Enum.map_join(fields, ", ", &expr(&1, sources))
+    fields = Enum.map_join(fields, ", ", fn (f) ->
+      assemble(expr(f, sources))
+    end)
     ["SELECT", distinct(distinct), fields]
   end
 

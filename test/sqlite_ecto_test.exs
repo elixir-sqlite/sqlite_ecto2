@@ -310,26 +310,26 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT '''' FROM "model" AS m0}
   end
 
-#  test "binary ops" do
-#    query = Model |> select([r], r.x == 2) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" = 2 FROM "model" AS m0}
-#
-#    query = Model |> select([r], r.x != 2) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" != 2 FROM "model" AS m0}
-#
-#    query = Model |> select([r], r.x <= 2) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" <= 2 FROM "model" AS m0}
-#
-#    query = Model |> select([r], r.x >= 2) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" >= 2 FROM "model" AS m0}
-#
-#    query = Model |> select([r], r.x < 2) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" < 2 FROM "model" AS m0}
-#
-#    query = Model |> select([r], r.x > 2) |> normalize
-#    assert SQL.all(query) == ~s{SELECT m0."x" > 2 FROM "model" AS m0}
-#  end
-#
+  test "binary ops" do
+    query = Model |> select([r], r.x == 2) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" = 2 FROM "model" AS m0}
+
+    query = Model |> select([r], r.x != 2) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" != 2 FROM "model" AS m0}
+
+    query = Model |> select([r], r.x <= 2) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" <= 2 FROM "model" AS m0}
+
+    query = Model |> select([r], r.x >= 2) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" >= 2 FROM "model" AS m0}
+
+    query = Model |> select([r], r.x < 2) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" < 2 FROM "model" AS m0}
+
+    query = Model |> select([r], r.x > 2) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" > 2 FROM "model" AS m0}
+  end
+
 #  test "is_nil" do
 #    query = Model |> select([r], is_nil(r.x)) |> normalize
 #    assert SQL.all(query) == ~s{SELECT m0."x" IS NULL FROM "model" AS m0}
