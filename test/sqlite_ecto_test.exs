@@ -382,29 +382,29 @@ defmodule Sqlite.Ecto.Test do
     end
   end
 
-#  test "nested expressions" do
-#    z = 123
-#    query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
-#    assert SQL.all(query) == ~s{SELECT ((m0."x" > 0) AND (m0."y" > $1)) OR TRUE FROM "model" AS m0}
-#  end
-#
-#  test "in expression" do
-#    query = Model |> select([e], 1 in []) |> normalize
-#    assert SQL.all(query) == ~s{SELECT false FROM "model" AS m0}
-#
-#    query = Model |> select([e], 1 in [1,e.x,3]) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 1 IN (1,m0."x",3) FROM "model" AS m0}
-#
-#    query = Model |> select([e], 1 in ^[]) |> normalize
-#    assert SQL.all(query) == ~s{SELECT false FROM "model" AS m0}
-#
-#    query = Model |> select([e], 1 in ^[1, 2, 3]) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 1 IN ($1,$2,$3) FROM "model" AS m0}
-#
-#    query = Model |> select([e], 1 in [1, ^2, 3]) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 1 IN (1,$1,3) FROM "model" AS m0}
-#  end
-#
+  test "nested expressions" do
+    z = 123
+    query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
+    assert SQL.all(query) == ~s{SELECT ( ( m0."x" > 0 ) AND ( m0."y" > ? ) ) OR TRUE FROM "model" AS m0}
+  end
+
+  test "in expression" do
+    query = Model |> select([e], 1 in []) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 IN ( ) FROM "model" AS m0}
+
+    query = Model |> select([e], 1 in [1,e.x,3]) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 IN ( 1, m0."x", 3 ) FROM "model" AS m0}
+
+    query = Model |> select([e], 1 in ^[]) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 IN ( ) FROM "model" AS m0}
+
+    query = Model |> select([e], 1 in ^[1, 2, 3]) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 IN ( ?, ?, ? ) FROM "model" AS m0}
+
+    query = Model |> select([e], 1 in [1, ^2, 3]) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 IN ( 1, ?, 3 ) FROM "model" AS m0}
+  end
+
 #  test "having" do
 #    query = Model |> having([p], p.x == p.x) |> select([], 0) |> normalize
 #    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x")}
