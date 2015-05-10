@@ -425,29 +425,29 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
   end
 
-#  test "interpolated values" do
-#    query = Model
-#            |> select([], ^0)
-#            |> join(:inner, [], Model2, ^true)
-#            |> join(:inner, [], Model2, ^false)
-#            |> where([], ^true)
-#            |> where([], ^false)
-#            |> group_by([], ^1)
-#            |> group_by([], ^2)
-#            |> having([], ^true)
-#            |> having([], ^false)
-#            |> order_by([], fragment("?", ^3))
-#            |> order_by([], ^:x)
-#            |> limit([], ^4)
-#            |> offset([], ^5)
-#            |> normalize
-#
-#    result =
-#      "SELECT $1 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON $2 " <>
-#      "INNER JOIN \"model2\" AS m2 ON $3 WHERE ($4) AND ($5) " <>
-#      "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
-#      "ORDER BY $10, m0.\"x\" LIMIT $11 OFFSET $12"
-#
-#    assert SQL.all(query) == String.rstrip(result)
-#  end
+  test "interpolated values" do
+    query = Model
+            |> select([], ^0)
+            |> join(:inner, [], Model2, ^true)
+            |> join(:inner, [], Model2, ^false)
+            |> where([], ^true)
+            |> where([], ^false)
+            |> group_by([], ^1)
+            |> group_by([], ^2)
+            |> having([], ^true)
+            |> having([], ^false)
+            |> order_by([], fragment("?", ^3))
+            |> order_by([], ^:x)
+            |> limit([], ^4)
+            |> offset([], ^5)
+            |> normalize
+
+    result =
+      "SELECT ? FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON ? " <>
+      "INNER JOIN \"model2\" AS m2 ON ? WHERE ( ? ) AND ( ? ) " <>
+      "GROUP BY ?, ? HAVING ( ? ) AND ( ? ) " <>
+      "ORDER BY ?, m0.\"x\" LIMIT ? OFFSET ?"
+
+    assert SQL.all(query) == String.rstrip(result)
+  end
 end

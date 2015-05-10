@@ -27,12 +27,13 @@ defmodule Sqlite.Ecto.Query do
 
     select = select(query.select, query.distinct, sources)
     from = from(sources)
+    join = join(query.joins, sources)
     where = where(query.wheres, sources)
     group_by = group_by(query.group_bys, query.havings, sources)
     order_by = order_by(query.order_bys, sources)
     limit = limit(query.limit, query.offset, sources)
 
-    assemble [select, from, where, group_by, order_by, limit]
+    assemble [select, from, join, where, group_by, order_by, limit]
   end
 
   def update_all(query, values) do
@@ -555,5 +556,27 @@ defmodule Sqlite.Ecto.Query do
     end)
     |> Enum.intersperse("AND")
     ["HAVING", exprs]
+  end
+
+  defp join([], _sources), do: []
+  defp join(joins, sources) do
+    Enum.map(joins, fn
+      %Ecto.Query.JoinExpr{on: %Ecto.Query.QueryExpr{expr: expr}, qual: qual, ix: ix} ->
+        {table, name, _model} = elem(sources, ix)
+
+        on   = expr(expr, sources)
+        qual = join_qual(qual)
+
+        [qual, "JOIN", quote_id(table), "AS", name, "ON", on]
+    end)
+  end
+
+  defp join_qual(:inner), do: "INNER"
+  defp join_qual(:left),  do: "LEFT"
+  defp join_qual(:right) do
+    raise ArgumentError, "RIGHT OUTER JOIN not supported by SQLite"
+  end
+  defp join_qual(:full) do
+    raise ArgumentError, "FULL OUTER JOIN not supported by SQLite"
   end
 end
