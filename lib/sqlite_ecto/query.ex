@@ -432,6 +432,10 @@ defmodule Sqlite.Ecto.Query do
     end
   end
 
+  defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
+    ["CAST (", expr(other, sources), "AS", ecto_to_sqlite_type(type), ")"]
+  end
+
   defp expr(nil, _sources),   do: "NULL"
   defp expr(true, _sources),  do: "TRUE"
   defp expr(false, _sources), do: "FALSE"
@@ -454,6 +458,17 @@ defmodule Sqlite.Ecto.Query do
 
   defp op_to_binary(expr, sources) do
     expr(expr, sources)
+  end
+
+  defp ecto_to_sqlite_type(type) do
+    case type do
+      {:array, t} -> raise ArgumentError, "Array type is not supported by SQLite"
+      :uuid -> raise ArgumentError, "UUID is not supported by SQLite"
+      :binary -> "BLOB"
+      :float -> "NUMERIC"
+      :string -> "TEXT"
+      other -> other |> Atom.to_string |> String.upcase
+    end
   end
 
   defp where([], _), do: []
