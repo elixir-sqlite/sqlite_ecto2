@@ -402,6 +402,14 @@ defmodule Sqlite.Ecto.Query do
     "#{name}.#{quote_id(field)}"
   end
 
+  defp expr({:is_nil, _, [arg]}, sources) do
+    [expr(arg, sources), "IS", "NULL"]
+  end
+
+  defp expr({:not, _, [expr]}, sources) do
+    ["NOT (", expr(expr, sources), ")"]
+  end
+
   defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do
     case handle_call(fun, length(args)) do
       {:binary_op, op} ->
