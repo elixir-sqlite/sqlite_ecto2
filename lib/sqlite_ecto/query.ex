@@ -397,6 +397,10 @@ defmodule Sqlite.Ecto.Query do
     ["FROM", quote_id(table), "AS", id]
   end
 
+  defp expr({:^, [], [_ix]}, _sources) do
+    "?"
+  end
+
   defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
     {_, name, _} = elem(sources, idx)
     "#{name}.#{quote_id(field)}"
@@ -408,6 +412,13 @@ defmodule Sqlite.Ecto.Query do
 
   defp expr({:not, _, [expr]}, sources) do
     ["NOT (", expr(expr, sources), ")"]
+  end
+
+  defp expr({:fragment, _, parts}, sources) do
+    Enum.map_join(parts, "", fn
+      part when is_binary(part) -> part
+      expr -> expr(expr, sources)
+    end)
   end
 
   defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do

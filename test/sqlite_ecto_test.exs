@@ -338,15 +338,15 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT NOT ( m0."x" IS NULL ) FROM "model" AS m0}
   end
 
-#  test "fragments" do
-#    query = Model |> select([r], fragment("downcase(?)", r.x)) |> normalize
-#    assert SQL.all(query) == ~s{SELECT downcase(m0."x") FROM "model" AS m0}
-#
-#    value = 13
-#    query = Model |> select([r], fragment("downcase(?, ?)", r.x, ^value)) |> normalize
-#    assert SQL.all(query) == ~s{SELECT downcase(m0."x", $1) FROM "model" AS m0}
-#  end
-#
+  test "fragments" do
+    query = Model |> select([r], fragment("ltrim(?)", r.x)) |> normalize
+    assert SQL.all(query) == ~s{SELECT ltrim(m0."x") FROM "model" AS m0}
+
+    value = 13
+    query = Model |> select([r], fragment("ltrim(?, ?)", r.x, ^value)) |> normalize
+    assert SQL.all(query) == ~s{SELECT ltrim(m0."x", ?) FROM "model" AS m0}
+  end
+
 #  test "literals" do
 #    query = Model |> select([], nil) |> normalize
 #    assert SQL.all(query) == ~s{SELECT NULL FROM "model" AS m0}
