@@ -476,7 +476,7 @@ defmodule Sqlite.Ecto.Query do
 
   defp ecto_to_sqlite_type(type) do
     case type do
-      {:array, t} -> raise ArgumentError, "Array type is not supported by SQLite"
+      {:array, _} -> raise ArgumentError, "Array type is not supported by SQLite"
       :uuid -> raise ArgumentError, "UUID is not supported by SQLite"
       :binary -> "BLOB"
       :float -> "NUMERIC"

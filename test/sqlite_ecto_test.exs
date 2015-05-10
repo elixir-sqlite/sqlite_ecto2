@@ -450,4 +450,58 @@ defmodule Sqlite.Ecto.Test do
 
     assert SQL.all(query) == String.rstrip(result)
   end
+
+  ## Joins
+
+  test "join" do
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], 0) |> normalize
+    assert SQL.all(query) ==
+           ~s{SELECT 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z"}
+
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z)
+                  |> join(:inner, [], Model, true) |> select([], 0) |> normalize
+    assert SQL.all(query) ==
+           ~s{SELECT 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z" } <>
+           ~s{INNER JOIN "model" AS m2 ON TRUE}
+  end
+
+  test "join with nothing bound" do
+    query = Model |> join(:inner, [], q in Model2, q.z == q.z) |> select([], 0) |> normalize
+    assert SQL.all(query) ==
+           ~s{SELECT 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m1."z" = m1."z"}
+  end
+
+  test "join without model" do
+    query = "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], 0) |> normalize
+    assert SQL.all(query) ==
+           ~s{SELECT 0 FROM "posts" AS p0 INNER JOIN "comments" AS c1 ON p0."x" = c1."z"}
+  end
+
+  ## Associations
+
+  test "association join belongs_to" do
+    query = Model2 |> join(:inner, [c], p in assoc(c, :post)) |> select([], 0) |> normalize
+    assert SQL.all(query) ==
+           "SELECT 0 FROM \"model2\" AS m0 INNER JOIN \"model\" AS m1 ON m1.\"x\" = m0.\"z\""
+  end
+
+  test "association join has_many" do
+    query = Model |> join(:inner, [p], c in assoc(p, :comments)) |> select([], 0) |> normalize
+    assert SQL.all(query) ==
+           "SELECT 0 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON m1.\"z\" = m0.\"x\""
+  end
+
+  test "association join has_one" do
+    query = Model |> join(:inner, [p], pp in assoc(p, :permalink)) |> select([], 0) |> normalize
+    assert SQL.all(query) ==
+           "SELECT 0 FROM \"model\" AS m0 INNER JOIN \"model3\" AS m1 ON m1.\"id\" = m0.\"y\""
+  end
+
+  test "join produces correct bindings" do
+    query = from(p in Model, join: c in Model2, on: true)
+    query = from(p in query, join: c in Model2, on: true, select: {p.id, c.id})
+    query = normalize(query)
+    assert SQL.all(query) ==
+           "SELECT m0.\"id\", m2.\"id\" FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON TRUE INNER JOIN \"model2\" AS m2 ON TRUE"
+  end
 end
