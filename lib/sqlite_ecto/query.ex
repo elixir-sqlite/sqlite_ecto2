@@ -432,8 +432,16 @@ defmodule Sqlite.Ecto.Query do
     end
   end
 
+  defp expr(nil, _sources),   do: "NULL"
+  defp expr(true, _sources),  do: "TRUE"
+  defp expr(false, _sources), do: "FALSE"
+
   defp expr(literal, _sources) when is_integer(literal) do
     String.Chars.Integer.to_string(literal)
+  end
+
+  defp expr(literal, _sources) when is_float(literal) do
+    String.Chars.Float.to_string(literal)
   end
 
   defp expr(literal, _sources) when is_binary(literal) do

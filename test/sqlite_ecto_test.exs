@@ -347,26 +347,26 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT ltrim(m0."x", ?) FROM "model" AS m0}
   end
 
-#  test "literals" do
-#    query = Model |> select([], nil) |> normalize
-#    assert SQL.all(query) == ~s{SELECT NULL FROM "model" AS m0}
-#
-#    query = Model |> select([], true) |> normalize
-#    assert SQL.all(query) == ~s{SELECT TRUE FROM "model" AS m0}
-#
-#    query = Model |> select([], false) |> normalize
-#    assert SQL.all(query) == ~s{SELECT FALSE FROM "model" AS m0}
-#
-#    query = Model |> select([], "abc") |> normalize
-#    assert SQL.all(query) == ~s{SELECT 'abc' FROM "model" AS m0}
-#
-#    query = Model |> select([], 123) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 123 FROM "model" AS m0}
-#
-#    query = Model |> select([], 123.0) |> normalize
-#    assert SQL.all(query) == ~s{SELECT 123.0::float FROM "model" AS m0}
-#  end
-#
+  test "literals" do
+    query = Model |> select([], nil) |> normalize
+    assert SQL.all(query) == ~s{SELECT NULL FROM "model" AS m0}
+
+    query = Model |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT TRUE FROM "model" AS m0}
+
+    query = Model |> select([], false) |> normalize
+    assert SQL.all(query) == ~s{SELECT FALSE FROM "model" AS m0}
+
+    query = Model |> select([], "abc") |> normalize
+    assert SQL.all(query) == ~s{SELECT 'abc' FROM "model" AS m0}
+
+    query = Model |> select([], 123) |> normalize
+    assert SQL.all(query) == ~s{SELECT 123 FROM "model" AS m0}
+
+    query = Model |> select([], 123.0) |> normalize
+    assert SQL.all(query) == ~s{SELECT 123.0 FROM "model" AS m0}
+  end
+
 #  test "tagged type" do
 #    query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)) |> normalize
 #    assert SQL.all(query) == ~s{SELECT $1::uuid FROM "model" AS m0}
