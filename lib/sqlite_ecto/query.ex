@@ -37,6 +37,18 @@ defmodule Sqlite.Ecto.Query do
   end
 
   def update_all(query, values) do
+    if query.joins != [] do
+      raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite"
+    end
+
+    sources = create_names(query, :update)
+    {table, _name, _model} = elem(sources, 0)
+
+    fields = Enum.map_join(values, ", ", fn {field, expr} ->
+      "#{quote_id(field)} = #{expr(expr, sources)}"
+    end)
+    where = where(query.wheres, sources)
+    assemble ["UPDATE", quote_id(table), "SET", fields, where]
   end
 
   def delete_all(query) do
@@ -370,15 +382,19 @@ defmodule Sqlite.Ecto.Query do
 
   ## Generic Query Helpers
 
-  defp create_names(%{sources: sources}) do
-    create_names(sources, 0, tuple_size(sources)) |> List.to_tuple()
+  defp create_names(%{sources: sources}, stmt \\ :select) do
+    create_names(sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
   end
-  defp create_names(sources, pos, limit) when pos < limit do
+  defp create_names(sources, pos, limit, stmt) when pos < limit do
     {table, model} = elem(sources, pos)
-    id = String.first(table) <> Integer.to_string(pos)
-    [{table, id, model} | create_names(sources, pos + 1, limit)]
+    if stmt == :select do
+      id = String.first(table) <> Integer.to_string(pos)
+    else
+      id = nil
+    end
+    [{table, id, model} | create_names(sources, pos + 1, limit, stmt)]
   end
-  defp create_names(_, pos, pos), do: []
+  defp create_names(_, pos, pos, _stmt), do: []
 
   defp select(%Ecto.Query.SelectExpr{fields: fields}, distinct, sources) do
     fields = Enum.map_join(fields, ", ", fn (f) ->
@@ -405,7 +421,11 @@ defmodule Sqlite.Ecto.Query do
 
   defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
     {_, name, _} = elem(sources, idx)
-    "#{name}.#{quote_id(field)}"
+    if name do
+      "#{name}.#{quote_id(field)}"
+    else
+      quote_id(field)
+    end
   end
 
   defp expr({:in, _, [left, right]}, sources) when is_list(right) do

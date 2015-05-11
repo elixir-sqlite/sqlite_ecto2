@@ -504,4 +504,40 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) ==
            "SELECT m0.\"id\", m2.\"id\" FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON TRUE INNER JOIN \"model2\" AS m2 ON TRUE"
   end
+
+  test "update all" do
+    query = Model |> Queryable.to_query |> normalize
+    assert SQL.update_all(query, [x: 0]) == ~s{UPDATE "model" SET "x" = 0}
+
+    query = from(e in Model, where: e.x == 123) |> normalize
+    assert SQL.update_all(query, [x: 0]) == ~s{UPDATE "model" SET "x" = 0 WHERE ( "x" = 123 )}
+
+    query = Model |> Queryable.to_query |> normalize
+    assert SQL.update_all(query, [x: 0, y: "123"]) == ~s{UPDATE "model" SET "x" = 0, "y" = '123'}
+
+    query = Model |> Queryable.to_query |> normalize
+    assert SQL.update_all(query, [x: quote(do: ^0)]) == ~s{UPDATE "model" SET "x" = ?}
+
+    assert_raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite", fn ->
+      query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
+      assert SQL.update_all(query, [x: 0])
+    end
+  end
+
+#  test "delete all" do
+#    query = Model |> Queryable.to_query |> normalize
+#    assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0}
+#
+#    query = from(e in Model, where: e.x == 123) |> normalize
+#    assert SQL.delete_all(query) ==
+#           ~s{DELETE FROM "model" AS m0 WHERE (m0."x" = 123)}
+#
+#    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
+#    assert SQL.delete_all(query) ==
+#           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z"}
+#
+#    query = from(e in Model, where: e.x == 123, join: q in Model2, on: e.x == q.z) |> normalize
+#    assert SQL.delete_all(query) ==
+#           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z" AND (m0."x" = 123)}
+#  end
 end
