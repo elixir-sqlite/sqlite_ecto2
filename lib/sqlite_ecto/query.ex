@@ -52,6 +52,14 @@ defmodule Sqlite.Ecto.Query do
   end
 
   def delete_all(query) do
+    if query.joins != [] do
+      raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite"
+    end
+
+    sources = create_names(query, :delete)
+    {table, _name, _model} = elem(sources, 0)
+    where = where(query.wheres, sources)
+    assemble ["DELETE FROM", quote_id(table), where]
   end
 
   # XXX How do we handle inserting datetime values?
@@ -390,7 +398,7 @@ defmodule Sqlite.Ecto.Query do
     if stmt == :select do
       id = String.first(table) <> Integer.to_string(pos)
     else
-      id = nil
+      id = quote_id(table)
     end
     [{table, id, model} | create_names(sources, pos + 1, limit, stmt)]
   end
@@ -421,11 +429,7 @@ defmodule Sqlite.Ecto.Query do
 
   defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
     {_, name, _} = elem(sources, idx)
-    if name do
-      "#{name}.#{quote_id(field)}"
-    else
-      quote_id(field)
-    end
+    "#{name}.#{quote_id(field)}"
   end
 
   defp expr({:in, _, [left, right]}, sources) when is_list(right) do

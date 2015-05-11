@@ -252,7 +252,7 @@ defmodule Sqlite.Ecto.Test do
   test "distinct" do
     assert_raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite", fn ->
       query = Model |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
-      assert SQL.all(query)
+      SQL.all(query)
     end
 
     query = Model |> distinct([r], true) |> select([r], {r.x, r.y}) |> normalize
@@ -298,7 +298,7 @@ defmodule Sqlite.Ecto.Test do
   test "lock" do
     assert_raise ArgumentError, "locks are not supported by SQLite", fn ->
       query = Model |> lock("FOR SHARE NOWAIT") |> select([], 0) |> normalize
-      assert SQL.all(query)
+      SQL.all(query)
     end
   end
 
@@ -370,7 +370,7 @@ defmodule Sqlite.Ecto.Test do
   test "tagged type" do
     assert_raise ArgumentError, "UUID is not supported by SQLite", fn ->
       query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)) |> normalize
-      assert SQL.all(query)
+      SQL.all(query)
     end
 
     query = Model |> select([], type(^1, :float)) |> normalize
@@ -378,7 +378,7 @@ defmodule Sqlite.Ecto.Test do
 
     assert_raise ArgumentError, "Array type is not supported by SQLite", fn ->
       query = Model |> select([], type(^[1,2,3], {:array, :integer})) |> normalize
-      assert SQL.all(query)
+      SQL.all(query)
     end
   end
 
@@ -510,7 +510,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.update_all(query, [x: 0]) == ~s{UPDATE "model" SET "x" = 0}
 
     query = from(e in Model, where: e.x == 123) |> normalize
-    assert SQL.update_all(query, [x: 0]) == ~s{UPDATE "model" SET "x" = 0 WHERE ( "x" = 123 )}
+    assert SQL.update_all(query, [x: 0]) == ~s{UPDATE "model" SET "x" = 0 WHERE ( "model"."x" = 123 )}
 
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, [x: 0, y: "123"]) == ~s{UPDATE "model" SET "x" = 0, "y" = '123'}
@@ -520,24 +520,33 @@ defmodule Sqlite.Ecto.Test do
 
     assert_raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite", fn ->
       query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
-      assert SQL.update_all(query, [x: 0])
+      SQL.update_all(query, [x: 0])
     end
   end
 
-#  test "delete all" do
-#    query = Model |> Queryable.to_query |> normalize
-#    assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0}
-#
-#    query = from(e in Model, where: e.x == 123) |> normalize
-#    assert SQL.delete_all(query) ==
-#           ~s{DELETE FROM "model" AS m0 WHERE (m0."x" = 123)}
-#
+  test "delete all" do
+    query = Model |> Queryable.to_query |> normalize
+    assert SQL.delete_all(query) == ~s{DELETE FROM "model"}
+
+    query = from(e in Model, where: e.x == 123) |> normalize
+    assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE ( "model"."x" = 123 )}
+
+    assert_raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite", fn ->
+      query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
+      SQL.delete_all(query)
+    end
+
+    # The assertions commented out below represent how joins *could* be
+    # handled in SQLite to produce the same effect.  Evenually, joins should
+    # be converted to the below output.  Until then, joins should raise
+    # exceptions.
+
 #    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
-#    assert SQL.delete_all(query) ==
-#           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z"}
+#    #assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z"}
+#    assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE "model"."x" IN ( SELECT m1."z" FROM "model2" AS m1 )}
 #
 #    query = from(e in Model, where: e.x == 123, join: q in Model2, on: e.x == q.z) |> normalize
-#    assert SQL.delete_all(query) ==
-#           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z" AND (m0."x" = 123)}
-#  end
+#    #assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z" AND (m0."x" = 123)}
+#    assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE "model"."x" IN ( SELECT m1."z" FROM "model2" AS m1 ) AND ( "model"."x" = 123 )}
+  end
 end
