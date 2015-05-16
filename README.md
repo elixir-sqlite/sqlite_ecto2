@@ -1,7 +1,11 @@
 Sqlite.Ecto [![Build Status](https://travis-ci.org/jazzyb/sqlite_ecto.svg?branch=master "Build Status")](https://travis-ci.org/jazzyb/sqlite_ecto)
 ==========
 
-`Sqlite.Ecto` is a SQLite3 Adapter for Ecto.  Here is an example usage:
+`Sqlite.Ecto` is a SQLite3 Adapter for Ecto.
+
+## Example
+
+Here is an example usage:
 
 ```elixir
 # In your config/config.exs file
@@ -39,7 +43,7 @@ end
 
 ## Usage
 
-Add Tds as a dependency in your `mix.exs` file.
+Add `Sqlite.Ecto` as a dependency in your `mix.exs` file.
 
 ```elixir
 def deps do
