@@ -39,7 +39,7 @@ defmodule Sqlite.Ecto.Mixfile do
 
   defp package do
     [contributors: ["Jason M Barnes"],
-      licenses: [],
+      licenses: ["MIT"],
       links: %{"Github" => "https://github.com/jazzyb/sqlite_ecto"}]
   end
 end
