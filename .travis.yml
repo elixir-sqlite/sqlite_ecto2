@@ -4,7 +4,6 @@ elixir:
 otp_release:
         - 17.3
         - 17.4
-        - 17.5
 sudo: false
 script:
         - mix test
