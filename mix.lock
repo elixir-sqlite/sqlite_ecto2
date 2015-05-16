@@ -4,4 +4,4 @@
   "esqlite": {:hex, :esqlite, "0.1.0"},
   "ex_doc": {:hex, :ex_doc, "0.7.2"},
   "poolboy": {:hex, :poolboy, "1.5.1"},
-  "sqlitex": {:git, "https://github.com/jazzyb/sqlitex.git", "c1018e34b82d2d6cf9ea09ff5688a5a40fa00c3b", []}}
+  "sqlitex": {:hex, :sqlitex, "0.3.0"}}

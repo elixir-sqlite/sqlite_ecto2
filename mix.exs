@@ -32,7 +32,7 @@ defmodule Sqlite.Ecto.Mixfile do
     [{:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.7", only: :dev},
      {:ecto, "0.11.2"},
-     {:sqlitex, git: "https://github.com/jazzyb/sqlitex.git"}]
+     {:sqlitex, "~> 0.3"}]
   end
 
   defp description, do: "SQLite adapter for Ecto"
