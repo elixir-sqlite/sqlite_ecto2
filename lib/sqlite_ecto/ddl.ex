@@ -65,6 +65,9 @@ defmodule Sqlite.Ecto.DDL do
   # etc. because columns do not have types, and SQLite will not coerce any
   # stored value.  Thus, "strings" are all text and "numerics" have arbitrary
   # precision regardless of the declared column type.
+  # FIXME A bug in Sqlitex prevents captitalized "DATETIME" from being parsed
+  # correctly.  When that bug is fixed, remove this line.
+  defp column_type(:datetime), do: "datetime"
   defp column_type(:serial), do: "INTEGER"
   defp column_type(:string), do: "TEXT"
   defp column_type(type), do: type |> Atom.to_string |> String.upcase

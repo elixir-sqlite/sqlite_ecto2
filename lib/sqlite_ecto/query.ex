@@ -8,6 +8,7 @@ defmodule Sqlite.Ecto.Query do
   def query(pid, sql, params, opts) do
     params = Enum.map(params, fn
       %Ecto.Query.Tagged{value: value} -> value
+      # FIXME handle datetime conversions
       {{yr, mo, da}, {hr, mi, se, _}} -> datetime_to_string(yr, mo, da, hr, mi, se)
       value -> value
     end)
@@ -366,7 +367,15 @@ defmodule Sqlite.Ecto.Query do
   defp query_result(pid, <<"UPDATE ", _::binary>>, []), do: changes_result(pid)
   defp query_result(pid, <<"DELETE ", _::binary>>, []), do: changes_result(pid)
   defp query_result(_pid, _sql, rows) do
-    rows = Enum.map(rows, fn row -> row |> Keyword.values |> List.to_tuple end)
+    rows = Enum.map(rows, fn row ->
+      row
+      |> Keyword.values
+      # FIXME handle datetime conversions
+      |> Enum.map(fn {{_, _, _}=date, {hr, mi, se}} -> {date, {hr, mi, se, 0}}
+                     other -> other
+      end)
+      |> List.to_tuple
+    end)
     {:ok, %{rows: rows, num_rows: length(rows)}}
   end
 
@@ -404,7 +413,6 @@ defmodule Sqlite.Ecto.Query do
   ## Generic Query Helpers
 
   defp datetime_to_string(yr, mo, da, hr, mi, se) do
-    #<<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2), " ", hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".0">>
     [zero_pad(yr, 4), "-", zero_pad(mo, 2), "-", zero_pad(da, 2), " ", zero_pad(hr, 2), ":", zero_pad(mi, 2), ":", zero_pad(se, 2), ".000000"]
     |> Enum.join
   end
