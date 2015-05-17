@@ -65,16 +65,9 @@ defmodule Sqlite.Ecto.DDL do
   # etc. because columns do not have types, and SQLite will not coerce any
   # stored value.  Thus, "strings" are all text and "numerics" have arbitrary
   # precision regardless of the declared column type.
-  defp column_type(type) do
-    case type do
-      :boolean -> "BOOLEAN"
-      :datetime -> "DATETIME"
-      :integer -> "INTEGER"
-      :numeric -> "NUMERIC"
-      :serial -> "INTEGER"
-      :string -> "TEXT"
-    end
-  end
+  defp column_type(:serial), do: "INTEGER"
+  defp column_type(:string), do: "TEXT"
+  defp column_type(type), do: type |> Atom.to_string |> String.upcase
 
   # NOTE SQLite requires autoincrement integers to be primary keys
   # XXX Are there no other constraints we need to handle for serial cols?
