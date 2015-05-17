@@ -24,13 +24,6 @@ defmodule Sqlite.Ecto.Test do
     assert Sqlite.Ecto.storage_down(tmp) == {:error, :already_down}
   end
 
-  test "DDL exists?", context do
-    sql = context[:sql]
-    assert not Sqlite.Ecto.ddl_exists?(sql, %Table{name: "test"}, [])
-    {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE test (a, b, c)", [], [])
-    assert Sqlite.Ecto.ddl_exists?(sql, %Table{name: "test"}, [])
-  end
-
   # return a unique temporary filename
   defp tempfilename do
     :erlang.now |> :random.seed
@@ -71,7 +64,7 @@ defmodule Sqlite.Ecto.Test do
     sql = context[:sql]
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE model (id, x, y, z)", [], [])
 
-    {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "INSERT INTO model VALUES (1, 2, 3, 4)", [], [])
+    {:ok, %{num_rows: 1, rows: nil}} = SQL.query(sql, "INSERT INTO model VALUES (1, 2, 3, 4)", [], [])
     query = ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "model","x","z"}
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [:foo, :bar, 1], [])
     assert row == [x: "foo", z: 4]

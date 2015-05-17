@@ -8,6 +8,7 @@ defmodule Sqlite.Ecto.Query do
   def query(pid, sql, params, opts) do
     params = Enum.map(params, fn
       %Ecto.Query.Tagged{value: value} -> value
+      {{yr, mo, da}, {hr, mi, se, _}} -> datetime_to_string(yr, mo, da, hr, mi, se)
       value -> value
     end)
 
@@ -357,9 +358,20 @@ defmodule Sqlite.Ecto.Query do
       # busy error means another process is writing to the database; try again
       {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
       {:error, _} = error -> error
-      rows when is_list(rows) ->
-        {:ok, %{rows: rows, num_rows: length(rows)}}
+      rows when is_list(rows) -> query_result(pid, sql, rows)
     end
+  end
+
+  defp query_result(pid, <<"INSERT ", _::binary>>, []), do: changes_result(pid)
+  defp query_result(pid, <<"UPDATE ", _::binary>>, []), do: changes_result(pid)
+  defp query_result(pid, <<"DELETE ", _::binary>>, []), do: changes_result(pid)
+  defp query_result(_pid, _sql, rows) do
+    {:ok, %{rows: rows, num_rows: length(rows)}}
+  end
+
+  defp changes_result(pid) do
+    [["changes()": count]] = Sqlitex.Server.query(pid, "SELECT changes()")
+    {:ok, %{rows: nil, num_rows: count}}
   end
 
   # SQLite does not have a returning clause, but we append a pseudo one so
@@ -389,6 +401,17 @@ defmodule Sqlite.Ecto.Query do
   defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
   ## Generic Query Helpers
+
+  defp datetime_to_string(yr, mo, da, hr, mi, se) do
+    #<<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2), " ", hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".0">>
+    [zero_pad(yr, 4), "-", zero_pad(mo, 2), "-", zero_pad(da, 2), " ", zero_pad(hr, 2), ":", zero_pad(mi, 2), ":", zero_pad(se, 2), ".000000"]
+    |> Enum.join
+  end
+
+  defp zero_pad(num, len) do
+    str = Integer.to_string num
+    String.duplicate("0", len - String.length(str)) <> str
+  end
 
   defp create_names(%{sources: sources}, stmt \\ :select) do
     create_names(sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
