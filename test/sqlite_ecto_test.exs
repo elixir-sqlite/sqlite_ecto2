@@ -67,15 +67,15 @@ defmodule Sqlite.Ecto.Test do
     {:ok, %{num_rows: 1, rows: nil}} = SQL.query(sql, "INSERT INTO model VALUES (1, 2, 3, 4)", [], [])
     query = ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "model","x","z"}
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [:foo, :bar, 1], [])
-    assert row == [x: "foo", z: 4]
+    assert row == {"foo", 4}
 
     query = ~s{INSERT INTO "model" VALUES (?1, ?2, ?3, ?4) ;--RETURNING ON INSERT "model","id"}
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [:a, :b, :c, :d], [])
-    assert row == [id: "a"]
+    assert row == {"a"}
 
     query = ~s{DELETE FROM "model" WHERE "id" = ?1 ;--RETURNING ON DELETE "model","id","x","y","z"}
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [1], [])
-    assert row == [id: 1, x: "foo", y: "bar", z: 4]
+    assert row == {1, "foo", "bar", 4}
   end
 
   test "table exists", context do
@@ -84,10 +84,10 @@ defmodule Sqlite.Ecto.Test do
     query = SQL.ddl_exists(%Table{name: "model"})
     assert query == "SELECT count(1) FROM sqlite_master WHERE name = 'model' AND type = 'table'"
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [], [])
-    assert row == ["count(1)": 1]
+    assert row == {1}
     query = SQL.ddl_exists(%Table{name: "not_model"})
     {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [], [])
-    assert row == ["count(1)": 0]
+    assert row == {0}
   end
 
   import Ecto.Migration, only: [table: 1, index: 2, index: 3, references: 1]
@@ -163,11 +163,11 @@ defmodule Sqlite.Ecto.Test do
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, SQL.execute_ddl(alter), [], [])
 
     # verify the schema has been updated
-    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE name = 'posts' AND type = 'table'", [], [])
-    assert row[:sql] == ~s{CREATE TABLE "posts" ("author" TEXT, "price" NUMERIC, "body" TEXT, "title" TEXT DEFAULT 'Untitled' NOT NULL)}
+    {:ok, %{num_rows: 1, rows: [{stmt}]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE name = 'posts' AND type = 'table'", [], [])
+    assert stmt == ~s{CREATE TABLE "posts" ("author" TEXT, "price" NUMERIC, "body" TEXT, "title" TEXT DEFAULT 'Untitled' NOT NULL)}
 
     # verify the values have been preserved
-    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, "SELECT * FROM posts", [], [])
+    [row] = Sqlitex.Server.query(sql, "SELECT * FROM posts")
     assert "jazzyb" == Keyword.get(row, :author)
     assert 2 == Keyword.get(row, :price)
     assert "Longer, more detailed statement." == Keyword.get(row, :body)
@@ -175,8 +175,8 @@ defmodule Sqlite.Ecto.Test do
     assert not Keyword.has_key?(row, :summary)
 
     # verify the index has been preserved
-    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE tbl_name = 'posts' AND type = 'index'", [], [])
-    assert row[:sql] == "CREATE INDEX this_is_an_index ON posts(author)"
+    {:ok, %{num_rows: 1, rows: [{stmt}]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE tbl_name = 'posts' AND type = 'index'", [], [])
+    assert stmt == "CREATE INDEX this_is_an_index ON posts(author)"
   end
 
   ## Tests stolen from PostgreSQL adapter:

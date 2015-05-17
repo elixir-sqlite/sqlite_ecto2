@@ -366,6 +366,7 @@ defmodule Sqlite.Ecto.Query do
   defp query_result(pid, <<"UPDATE ", _::binary>>, []), do: changes_result(pid)
   defp query_result(pid, <<"DELETE ", _::binary>>, []), do: changes_result(pid)
   defp query_result(_pid, _sql, rows) do
+    rows = Enum.map(rows, fn row -> row |> Keyword.values |> List.to_tuple end)
     {:ok, %{rows: rows, num_rows: length(rows)}}
   end
 

@@ -60,10 +60,4 @@ defmodule Sqlite.Ecto do
 
   @doc false
   def supports_ddl_transaction?, do: true
-
-  def ddl_exists?(repo, object, opts) do
-    sql = Sqlite.Ecto.Connection.ddl_exists(object)
-    %{num_rows: 1, rows: [["count(1)": count]]} = Ecto.Adapters.SQL.query(repo, sql, [], opts)
-    count > 0
-  end
 end
