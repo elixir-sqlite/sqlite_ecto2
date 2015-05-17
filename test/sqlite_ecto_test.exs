@@ -24,6 +24,13 @@ defmodule Sqlite.Ecto.Test do
     assert Sqlite.Ecto.storage_down(tmp) == {:error, :already_down}
   end
 
+  test "DDL exists?", context do
+    sql = context[:sql]
+    assert not Sqlite.Ecto.ddl_exists?(sql, %Table{name: "test"}, [])
+    {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE test (a, b, c)", [], [])
+    assert Sqlite.Ecto.ddl_exists?(sql, %Table{name: "test"}, [])
+  end
+
   # return a unique temporary filename
   defp tempfilename do
     :erlang.now |> :random.seed
