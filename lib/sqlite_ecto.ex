@@ -36,7 +36,7 @@ defmodule Sqlite.Ecto do
 
   @doc false
   def storage_up(opts) do
-    database = get_name(opts)
+    database = Keyword.get(opts, :database)
     if File.exists?(database) do
       {:error, :already_up}
     else
@@ -51,16 +51,11 @@ defmodule Sqlite.Ecto do
 
   @doc false
   def storage_down(opts) do
-    database = get_name(opts)
+    database = Keyword.get(opts, :database)
     case File.rm(database) do
       {:error, :enoent} -> {:error, :already_down}
       result -> result
     end
-  end
-
-  @doc false
-  def get_name(opts) do
-    opts |> Keyword.get(:database) |> String.to_char_list
   end
 
   @doc false

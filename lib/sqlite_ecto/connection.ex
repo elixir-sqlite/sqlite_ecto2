@@ -7,7 +7,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # Connect to a new Sqlite.Server.  Enable and verify the foreign key
     # constraints for the connection.
     def connect(opts) do
-      conn = opts |> Sqlite.Ecto.get_name |> Sqlitex.Server.start_link
+      {database, opts} = Keyword.pop(opts, :database)
+      conn = Sqlitex.Server.start_link(database, opts)
       if :ok == elem(conn, 0) do
         pid = elem(conn, 1)
         :ok = Sqlitex.Server.exec(pid, "PRAGMA foreign_keys = ON")
