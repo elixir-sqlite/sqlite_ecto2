@@ -98,7 +98,7 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :title, :string, []},
                 {:add, :created_at, :datetime, []}]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "created_at" DATETIME)}
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "created_at" datetime)}
   end
 
   test "create table with reference" do
@@ -368,11 +368,6 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "tagged type" do
-    assert_raise ArgumentError, "UUID is not supported by SQLite", fn ->
-      query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)) |> normalize
-      SQL.all(query)
-    end
-
     query = Model |> select([], type(^1, :float)) |> normalize
     assert SQL.all(query) == ~s{SELECT CAST ( ? AS NUMERIC ) FROM "model" AS m0}
 
