@@ -313,6 +313,12 @@ defmodule Sqlite.Ecto.Query do
     "#{name}.#{quote_id(field)}"
   end
 
+  defp expr({:&, _, [idx]}, sources) do
+    {_table, name, model} = elem(sources, idx)
+    fields = model.__schema__(:fields)
+    Enum.map_join(fields, ", ", &"#{name}.#{quote_id(&1)}")
+  end
+
   defp expr({:in, _, [left, right]}, sources) when is_list(right) do
     args = Enum.map_join(right, ", ", &expr(&1, sources))
     if args == "", do: args = []
