@@ -143,28 +143,25 @@ defmodule Sqlite.Ecto.Test do
   test "alter table" do
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:modify, :price, :numeric, [precision: 8, scale: 2]},
-                {:remove, :summary}]}
+                {:add, :email, :string, []}]}
     query = SQL.execute_ddl(alter)
-    assert query == ~s{ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL; ALTER TABLE "posts" ALTER COLUMN "price" NUMERIC; ALTER TABLE "posts" DROP COLUMN "summary"}
+    assert query == ~s{ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL; ALTER TABLE "posts" ADD COLUMN "email" TEXT}
   end
 
   test "alter table query", context do
     sql = context[:sql]
     SQL.query(sql, ~s{CREATE TABLE "posts" ("author" TEXT, "price" INTEGER, "summary" TEXT, "body" TEXT)}, [], [])
-    SQL.query(sql, "CREATE INDEX this_is_an_index ON posts(author)", [], [])
     SQL.query(sql, "INSERT INTO posts VALUES ('jazzyb', 2, 'short statement', 'Longer, more detailed statement.')", [], [])
 
     # alter the table
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:modify, :price, :numeric, [precision: 8, scale: 2]},
-                {:remove, :summary}]}
+                {:add, :email, :string, []}]}
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, SQL.execute_ddl(alter), [], [])
 
     # verify the schema has been updated
     {:ok, %{num_rows: 1, rows: [{stmt}]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE name = 'posts' AND type = 'table'", [], [])
-    assert stmt == ~s{CREATE TABLE "posts" ("author" TEXT, "price" NUMERIC, "body" TEXT, "title" TEXT DEFAULT 'Untitled' NOT NULL)}
+    assert stmt == ~s{CREATE TABLE "posts" ("author" TEXT, "price" INTEGER, "summary" TEXT, "body" TEXT, "title" TEXT DEFAULT 'Untitled' NOT NULL, "email" TEXT)}
 
     # verify the values have been preserved
     [row] = Sqlitex.Server.query(sql, "SELECT * FROM posts")
@@ -172,11 +169,22 @@ defmodule Sqlite.Ecto.Test do
     assert 2 == Keyword.get(row, :price)
     assert "Longer, more detailed statement." == Keyword.get(row, :body)
     assert "Untitled" == Keyword.get(row, :title)
-    assert not Keyword.has_key?(row, :summary)
+    assert nil == Keyword.get(row, :email)
+    assert "short statement" == Keyword.get(row, :summary)
+  end
 
-    # verify the index has been preserved
-    {:ok, %{num_rows: 1, rows: [{stmt}]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE tbl_name = 'posts' AND type = 'index'", [], [])
-    assert stmt == "CREATE INDEX this_is_an_index ON posts(author)"
+  test "alter column errors" do
+    alter = {:alter, table(:posts), [{:modify, :price, :numeric, [precision: 8, scale: 2]}]}
+    assert_raise ArgumentError, "ALTER COLUMN not supported by SQLite", fn ->
+      SQL.execute_ddl(alter)
+    end
+  end
+
+  test "drop column errors" do
+    alter = {:alter, table(:posts), [{:remove, :summary}]}
+    assert_raise ArgumentError, "DROP COLUMN not supported by SQLite", fn ->
+      SQL.execute_ddl(alter)
+    end
   end
 
   ## Tests stolen from PostgreSQL adapter:
@@ -531,7 +539,7 @@ defmodule Sqlite.Ecto.Test do
       SQL.delete_all(query)
     end
 
-    # The assertions commented out below represent how joins *could* be
+    # NOTE:  The assertions commented out below represent how joins *could* be
     # handled in SQLite to produce the same effect.  Evenually, joins should
     # be converted to the below output.  Until then, joins should raise
     # exceptions.
