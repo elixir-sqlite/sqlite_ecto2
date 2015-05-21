@@ -1,4 +1,6 @@
 defmodule Sqlite.Ecto.DDL do
+  @moduledoc false
+
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
   alias Ecto.Migration.Reference

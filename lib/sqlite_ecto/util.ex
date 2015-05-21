@@ -1,5 +1,5 @@
 defmodule Sqlite.Ecto.Util do
-  "Common utilties used by many Sqlite.Ecto modules."
+  @moduledoc "Common utilties used by many Sqlite.Ecto modules."
 
   # Execute a SQL query.
   def exec(pid, sql) do

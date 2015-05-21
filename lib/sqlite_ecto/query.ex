@@ -1,4 +1,6 @@
 defmodule Sqlite.Ecto.Query do
+  @moduledoc false
+
   import Sqlite.Ecto.Transaction, only: [with_savepoint: 2]
   import Sqlite.Ecto.Util, only: [assemble: 1, exec: 2, random_id: 0, quote_id: 1]
 
@@ -71,7 +73,6 @@ defmodule Sqlite.Ecto.Query do
     assemble ["DELETE FROM", quote_id(table), where]
   end
 
-  # XXX How do we handle inserting datetime values?
   def insert(table, [], returning) do
     return = returning_clause(table, returning, "INSERT")
     assemble ["INSERT INTO", quote_id(table), "DEFAULT VALUES", return]

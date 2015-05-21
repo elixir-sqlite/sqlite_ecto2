@@ -22,7 +22,8 @@ defmodule Sqlite.Ecto do
 
     * `:database` - This option can take the form of a path to the SQLite
       database file or `":memory:"` for an in-memory database.  See the
-      [SQLite docs](https://sqlite.org/uri.html) for more options.
+      [SQLite docs](https://sqlite.org/uri.html) for more options such as
+      shared memory caches.
 
   """
 
