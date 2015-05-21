@@ -4,7 +4,9 @@ Sqlite.Ecto [![Build Status](https://travis-ci.org/jazzyb/sqlite_ecto.svg?branch
 `Sqlite.Ecto` is a SQLite3 Adapter for Ecto.
 
 Read [the tutorial](https://github.com/jazzyb/sqlite_ecto/wiki/Basic-Sqlite.Ecto-Tutorial)
-for an example of how to setup and use a SQLite repo with Ecto.
+for a detailed example of how to setup and use a SQLite repo with Ecto, or
+just check-out the CliffsNotes in the sections below if you want to get
+started quickly.
 
 ## Example
 
