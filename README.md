@@ -8,6 +8,12 @@ for a detailed example of how to setup and use a SQLite repo with Ecto, or
 just check-out the CliffsNotes in the sections below if you want to get
 started quickly.
 
+## Dependencies
+
+`Sqlite.Ecto` relies on [Sqlitex](https://github.com/mmmries/sqlitex) and
+[esqlite](https://github.com/mmzeeman/esqlite).  Since esqlite uses
+Erlang NIFs, you will need a valid C compiler to build the library.
+
 ## Example
 
 Here is an example usage:
