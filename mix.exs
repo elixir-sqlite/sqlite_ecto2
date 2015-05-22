@@ -31,11 +31,11 @@ defmodule Sqlite.Ecto.Mixfile do
   defp deps do
     [{:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.7", only: :dev},
-     {:ecto, "0.11.2"},
+     {:ecto, "~> 0.11"},
      {:sqlitex, "~> 0.3"}]
   end
 
-  defp description, do: "SQLite adapter for Ecto"
+  defp description, do: "SQLite3 adapter for Ecto"
 
   defp package do
     [contributors: ["Jason M Barnes"],
