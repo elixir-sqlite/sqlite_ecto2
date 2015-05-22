@@ -108,10 +108,10 @@ defmodule Sqlite.Ecto.DDL do
   defp alter_table_suffix(change={:add, _column, _type, _opts}) do
     ["ADD COLUMN", column_definition(change)]
   end
-  defp alter_table_suffix(change={:modify, _column, _type, _opts}) do
+  defp alter_table_suffix({:modify, _column, _type, _opts}) do
     raise ArgumentError, "ALTER COLUMN not supported by SQLite"
   end
-  defp alter_table_suffix({:remove, column}) do
+  defp alter_table_suffix({:remove, _column}) do
     raise ArgumentError, "DROP COLUMN not supported by SQLite"
   end
 end
