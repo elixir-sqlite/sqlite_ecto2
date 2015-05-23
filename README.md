@@ -20,7 +20,9 @@ Here is an example usage:
 
 ```elixir
 # In your config/config.exs file
-config :my_app, Repo, database: "db/ecto_simple.sqlite3"
+config :my_app, Repo,
+  adapter: Sqlite.Ecto,
+  database: "ecto_simple.sqlite3"
 
 # In your application code
 defmodule Repo do
@@ -58,7 +60,7 @@ Add `Sqlite.Ecto` as a dependency in your `mix.exs` file.
 
 ```elixir
 def deps do
-  [{:sqlite_ecto, "~> 0.1"}]
+  [{:sqlite_ecto, "~> 0.0.2"}]
 end
 ```
 
