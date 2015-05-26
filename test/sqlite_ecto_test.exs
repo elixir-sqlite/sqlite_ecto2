@@ -12,6 +12,7 @@ defmodule Sqlite.Ecto.Test do
   test "storage up (twice)" do
     tmp = [database: tempfilename]
     assert Sqlite.Ecto.storage_up(tmp) == :ok
+    assert File.exists? tmp[:database]
     assert Sqlite.Ecto.storage_up(tmp) == {:error, :already_up}
     File.rm(tmp[:database])
   end
@@ -20,7 +21,7 @@ defmodule Sqlite.Ecto.Test do
     tmp = [database: tempfilename]
     assert Sqlite.Ecto.storage_up(tmp) == :ok
     assert Sqlite.Ecto.storage_down(tmp) == :ok
-    assert not File.exists?(tmp[:database])
+    assert not File.exists? tmp[:database]
     assert Sqlite.Ecto.storage_down(tmp) == {:error, :already_down}
   end
 

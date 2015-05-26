@@ -41,7 +41,8 @@ defmodule Sqlite.Ecto.DDL do
     assemble ["DROP INDEX", quote_id(name)]
   end
 
-  # XXX Can SQLite alter indices?
+  # Default:
+  def execute_ddl(default) when is_binary(default), do: default
 
   ## Helpers
 
@@ -72,6 +73,7 @@ defmodule Sqlite.Ecto.DDL do
   defp column_type(:datetime), do: "datetime"
   defp column_type(:serial), do: "INTEGER"
   defp column_type(:string), do: "TEXT"
+  defp column_type({:array, _}), do: raise(ArgumentError, "Array type is not supported by SQLite")
   defp column_type(type), do: type |> Atom.to_string |> String.upcase
 
   # NOTE SQLite requires autoincrement integers to be primary keys
