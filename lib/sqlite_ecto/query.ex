@@ -216,14 +216,7 @@ defmodule Sqlite.Ecto.Query do
   defp query_result(pid, <<"DELETE ", _::binary>>, []), do: changes_result(pid)
   defp query_result(_pid, _sql, rows) do
     rows = Enum.map(rows, fn row ->
-      row
-      |> cast_any_datetimes
-      |> Keyword.values
-      # handle datetime conversions when Ecto expects usecs
-      |> Enum.map(fn {{_, _, _}=date, {hr, mi, se}} -> {date, {hr, mi, se, 0}}
-                     other -> other
-      end)
-      |> List.to_tuple
+      row |> cast_any_datetimes |> Keyword.values |> List.to_tuple
     end)
     {:ok, %{rows: rows, num_rows: length(rows)}}
   end
@@ -251,8 +244,8 @@ defmodule Sqlite.Ecto.Query do
   end
 
   defp string_to_datetime(str) do
-    <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2), " ", hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", _fr::binary-size(6)>> = str
-    {{String.to_integer(yr), String.to_integer(mo), String.to_integer(da)},{String.to_integer(hr), String.to_integer(mi), String.to_integer(se)}}
+    <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2), " ", hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary-size(6)>> = str
+    {{String.to_integer(yr), String.to_integer(mo), String.to_integer(da)},{String.to_integer(hr), String.to_integer(mi), String.to_integer(se), String.to_integer(fr)}}
   end
 
   # SQLite does not have a returning clause, but we append a pseudo one so

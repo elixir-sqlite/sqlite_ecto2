@@ -3,8 +3,7 @@ ExUnit.start exclude: [:array_type,
                        :read_after_writes,
                        :update_with_join,
                        :delete_with_join,
-                       :right_outer_join,
-                       :uses_usec]
+                       :right_outer_join]
 
 # Basic test repo
 alias Sqlite.Ecto.Integration.TestRepo
