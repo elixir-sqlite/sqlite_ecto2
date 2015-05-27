@@ -7,7 +7,7 @@ defmodule Sqlite.Ecto.Integration.Post do
     field :title, :string
     field :counter, :integer
     field :text, :binary
-    field :uuid, :uuid
+    #field :uuid, :uuid
     field :temp, :string, default: "temp", virtual: true
     field :public, :boolean, default: true
     field :cost, :decimal

@@ -1,16 +1,16 @@
-defmodule Ecto.Integration.RepoTest do
-  use Ecto.Integration.Case
+defmodule Sqlite.Ecto.Integration.RepoTest do
+  use Sqlite.Ecto.Integration.Case
 
-  require Ecto.Integration.TestRepo, as: TestRepo
+  require Sqlite.Ecto.Integration.TestRepo, as: TestRepo
   import Ecto.Query
 
-  alias Ecto.Integration.Post
-  alias Ecto.Integration.PostUsecTimestamps
-  alias Ecto.Integration.Comment
-  alias Ecto.Integration.Permalink
-  alias Ecto.Integration.User
-  alias Ecto.Integration.Custom
-  alias Ecto.Integration.Barebone
+  alias Sqlite.Ecto.Integration.Post
+  alias Sqlite.Ecto.Integration.PostUsecTimestamps
+  alias Sqlite.Ecto.Integration.Comment
+  alias Sqlite.Ecto.Integration.Permalink
+  alias Sqlite.Ecto.Integration.User
+  alias Sqlite.Ecto.Integration.Custom
+  alias Sqlite.Ecto.Integration.Barebone
   alias Ecto.Schema.Metadata
 
   test "returns already started for started repos" do
@@ -116,7 +116,6 @@ defmodule Ecto.Integration.RepoTest do
   @tag :read_after_writes
   test "insert and update with changeset read after writes" do
     changeset = Ecto.Changeset.cast(%Custom{uuid: "0123456789abcdef"}, %{}, ~w(), ~w())
-
     # There is no dirty tracking on insert, even with changesets,
     # so database defaults kick in only with nil read after writes.
     # counter should be 10, visits should be nil, even with same defaults.
@@ -211,14 +210,17 @@ defmodule Ecto.Integration.RepoTest do
     assert nil = TestRepo.get(Custom, "03abcdef03abcdef")
   end
 
-  test "get(!) with custom source" do
-    custom = %Custom{uuid: "01abcdef01abcdef"}
-    custom = Ecto.Model.put_source(custom, "posts")
-    TestRepo.insert(custom)
-
-    assert %Custom{uuid: "01abcdef01abcdef", __meta__: %{source: "posts"}} =
-           TestRepo.get(from(c in {"posts", Custom}), "01abcdef01abcdef")
-  end
+# FIXME Add this test back in once we move to Ecto 0.12.  The test relies on
+# Ecto.model.put_source/2.
+#
+#  test "get(!) with custom source" do
+#    custom = %Custom{uuid: "01abcdef01abcdef"}
+#    custom = Ecto.Model.put_source(custom, "posts")
+#    TestRepo.insert(custom)
+#
+#    assert %Custom{uuid: "01abcdef01abcdef", __meta__: %{source: "posts"}} =
+#           TestRepo.get(from(c in {"posts", Custom}), "01abcdef01abcdef")
+#  end
 
   test "get_by(!)" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
@@ -288,6 +290,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: "y"} = TestRepo.get(Post, id3)
   end
 
+  @tag :update_with_join
   test "update all with joins" do
     user = TestRepo.insert(%User{name: "Tester"})
     post = TestRepo.insert(%Post{title: "foo"})
@@ -380,6 +383,7 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Post{}] = TestRepo.all(Post)
   end
 
+  @tag :delete_with_join
   test "delete all with joins" do
     user = TestRepo.insert(%User{name: "Tester"})
     post = TestRepo.insert(%Post{title: "foo"})

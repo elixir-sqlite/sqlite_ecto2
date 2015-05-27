@@ -1,5 +1,5 @@
 Logger.configure(level: :info)
-ExUnit.start exclude: [:array_type]
+ExUnit.start exclude: [:array_type, :read_after_writes, :update_with_join, :delete_with_join, :uses_usec]
 
 # Basic test repo
 alias Sqlite.Ecto.Integration.TestRepo
