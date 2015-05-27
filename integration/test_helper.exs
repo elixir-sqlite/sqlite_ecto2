@@ -12,8 +12,7 @@ alias Sqlite.Ecto.Integration.TestRepo
 Application.put_env(:sqlite_ecto, TestRepo,
   adapter: Sqlite.Ecto,
   database: "/tmp/test_repo.db",
-  size: 1,
-  max_overflow: 0)
+  size: 1, max_overflow: 0)
 
 defmodule Sqlite.Ecto.Integration.TestRepo do
   use Ecto.Repo, otp_app: :sqlite_ecto
@@ -24,7 +23,7 @@ alias Sqlite.Ecto.Integration.PoolRepo
 
 Application.put_env(:sqlite_ecto, PoolRepo,
   adapter: Sqlite.Ecto,
-  database: "/tmp/pool_repo.db",
+  database: "/tmp/test_repo.db",
   size: 10)
 
 defmodule Sqlite.Ecto.Integration.PoolRepo do
