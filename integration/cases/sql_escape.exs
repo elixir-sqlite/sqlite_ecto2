@@ -1,9 +1,9 @@
-defmodule Ecto.Integration.SQLEscapeTest do
-  use Ecto.Integration.Case
+defmodule Sqlite.Ecto.Integration.SQLEscapeTest do
+  use Sqlite.Ecto.Integration.Case
 
-  require Ecto.Integration.TestRepo, as: TestRepo
+  require Sqlite.Ecto.Integration.TestRepo, as: TestRepo
   import Ecto.Query
-  alias Ecto.Integration.Post
+  alias Sqlite.Ecto.Integration.Post
 
   test "Repo.all escape" do
     TestRepo.insert(%Post{title: "hello"})
