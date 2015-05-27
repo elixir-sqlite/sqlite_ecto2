@@ -361,10 +361,10 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT NULL FROM "model" AS m0}
 
     query = Model |> select([], true) |> normalize
-    assert SQL.all(query) == ~s{SELECT TRUE FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0}
 
     query = Model |> select([], false) |> normalize
-    assert SQL.all(query) == ~s{SELECT FALSE FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0}
 
     query = Model |> select([], "abc") |> normalize
     assert SQL.all(query) == ~s{SELECT 'abc' FROM "model" AS m0}
@@ -389,7 +389,7 @@ defmodule Sqlite.Ecto.Test do
   test "nested expressions" do
     z = 123
     query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
-    assert SQL.all(query) == ~s{SELECT ( ( m0."x" > 0 ) AND ( m0."y" > ? ) ) OR TRUE FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT ( ( m0."x" > 0 ) AND ( m0."y" > ? ) ) OR 1 FROM "model" AS m0}
   end
 
   test "in expression" do
@@ -466,7 +466,7 @@ defmodule Sqlite.Ecto.Test do
                   |> join(:inner, [], Model, true) |> select([], 0) |> normalize
     assert SQL.all(query) ==
            ~s{SELECT 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z" } <>
-           ~s{INNER JOIN "model" AS m2 ON TRUE}
+           ~s{INNER JOIN "model" AS m2 ON 1}
   end
 
   test "join with nothing bound" do
@@ -506,7 +506,7 @@ defmodule Sqlite.Ecto.Test do
     query = from(p in query, join: c in Model2, on: true, select: {p.id, c.id})
     query = normalize(query)
     assert SQL.all(query) ==
-           "SELECT m0.\"id\", m2.\"id\" FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON TRUE INNER JOIN \"model2\" AS m2 ON TRUE"
+           "SELECT m0.\"id\", m2.\"id\" FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON 1 INNER JOIN \"model2\" AS m2 ON 1"
   end
 
   test "update all" do
