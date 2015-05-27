@@ -1,11 +1,11 @@
-defmodule Ecto.Integration.TypeTest do
-  use Ecto.Integration.Case
+defmodule Sqlite.Ecto.Integration.TypeTest do
+  use Sqlite.Ecto.Integration.Case
 
-  require Ecto.Integration.TestRepo, as: TestRepo
+  require Sqlite.Ecto.Integration.TestRepo, as: TestRepo
   import Ecto.Query
 
-  alias Ecto.Integration.Post
-  alias Ecto.Integration.Tag
+  alias Sqlite.Ecto.Integration.Post
+  alias Sqlite.Ecto.Integration.Tag
 
   test "primitive types" do
     integer  = 1

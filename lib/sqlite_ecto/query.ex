@@ -17,8 +17,6 @@ defmodule Sqlite.Ecto.Query do
   def query(pid, sql, params, opts) do
     params = Enum.map(params, fn
       %Ecto.Query.Tagged{value: value} -> value
-      # FIXME handle datetime conversions
-      {{yr, mo, da}, {hr, mi, se, _}} -> datetime_to_string(yr, mo, da, hr, mi, se)
       value -> value
     end)
 
@@ -220,7 +218,7 @@ defmodule Sqlite.Ecto.Query do
     rows = Enum.map(rows, fn row ->
       row
       |> Keyword.values
-      # FIXME handle datetime conversions
+      # handle datetime conversions when Ecto expects usecs
       |> Enum.map(fn {{_, _, _}=date, {hr, mi, se}} -> {date, {hr, mi, se, 0}}
                      other -> other
       end)
@@ -261,16 +259,6 @@ defmodule Sqlite.Ecto.Query do
   defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
   ## Generic Query Helpers
-
-  defp datetime_to_string(yr, mo, da, hr, mi, se) do
-    [zero_pad(yr, 4), "-", zero_pad(mo, 2), "-", zero_pad(da, 2), " ", zero_pad(hr, 2), ":", zero_pad(mi, 2), ":", zero_pad(se, 2), ".000000"]
-    |> Enum.join
-  end
-
-  defp zero_pad(num, len) do
-    str = Integer.to_string num
-    String.duplicate("0", len - String.length(str)) <> str
-  end
 
   defp create_names(%{sources: sources}, stmt \\ :select) do
     create_names(sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
