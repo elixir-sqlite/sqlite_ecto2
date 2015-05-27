@@ -1,14 +1,14 @@
-defmodule Ecto.Integration.PreloadTest do
-  use Ecto.Integration.Case
+defmodule Sqlite.Ecto.Integration.PreloadTest do
+  use Sqlite.Ecto.Integration.Case
 
-  require Ecto.Integration.TestRepo, as: TestRepo
+  require Sqlite.Ecto.Integration.TestRepo, as: TestRepo
   import Ecto.Query
 
-  alias Ecto.Integration.Post
-  alias Ecto.Integration.Comment
-  alias Ecto.Integration.Permalink
-  alias Ecto.Integration.User
-  alias Ecto.Integration.Custom
+  alias Sqlite.Ecto.Integration.Post
+  alias Sqlite.Ecto.Integration.Comment
+  alias Sqlite.Ecto.Integration.Permalink
+  alias Sqlite.Ecto.Integration.User
+  alias Sqlite.Ecto.Integration.Custom
 
   test "preload empty" do
     assert TestRepo.preload([], :anything_goes) == []
@@ -306,6 +306,7 @@ defmodule Ecto.Integration.PreloadTest do
     assert [] = p3.comments
   end
 
+  @tag :right_outer_join
   test "preload keyword query with missing entries" do
     %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
     %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
