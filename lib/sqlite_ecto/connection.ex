@@ -26,60 +26,40 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     alias Sqlite.Ecto.Transaction
 
-    def begin_transaction, do: Transaction.begin_transaction
+    defdelegate begin_transaction, to: Transaction
 
-    def rollback, do: Transaction.rollback
+    defdelegate rollback, to: Transaction
 
-    def commit, do: Transaction.commit
+    defdelegate commit, to: Transaction
 
-    def savepoint(name), do: Transaction.savepoint(name)
+    defdelegate savepoint(name), to: Transaction
 
-    def rollback_to_savepoint(name) do
-      Transaction.rollback_to_savepoint(name)
-    end
+    defdelegate rollback_to_savepoint(name), to: Transaction
 
     ## Query
 
     alias Sqlite.Ecto.Query
 
-    def query(pid, sql, params, opts) do
-      Query.query(pid, sql, params, opts)
-    end
+    defdelegate query(pid, sql, params, opts), to: Query
 
-    def all(query) do
-      Query.all(query)
-    end
+    defdelegate all(query), to: Query
 
-    def update_all(query, values) do
-      Query.update_all(query, values)
-    end
+    defdelegate update_all(query, values), to: Query
 
-    def delete_all(query) do
-      Query.delete_all(query)
-    end
+    defdelegate delete_all(query), to: Query
 
-    def insert(table, fields, returning) do
-      Query.insert(table, fields, returning)
-    end
+    defdelegate insert(table, fields, returning), to: Query
 
-    def update(table, fields, filters, returning) do
-      Query.update(table, fields, filters, returning)
-    end
+    defdelegate update(table, fields, filters, returning), to: Query
 
-    def delete(table, filters, returning) do
-      Query.delete(table, filters, returning)
-    end
+    defdelegate delete(table, filters, returning), to: Query
 
     ## DDL
 
     alias Sqlite.Ecto.DDL
 
-    def ddl_exists(ddl) do
-      DDL.ddl_exists(ddl)
-    end
+    defdelegate ddl_exists(ddl), to: DDL
 
-    def execute_ddl(ddl) do
-      DDL.execute_ddl(ddl)
-    end
+    defdelegate execute_ddl(ddl), to: DDL
   end
 end
