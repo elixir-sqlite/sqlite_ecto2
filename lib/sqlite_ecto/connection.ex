@@ -8,13 +8,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # constraints for the connection.
     def connect(opts) do
       {database, opts} = Keyword.pop(opts, :database)
-      conn = Sqlitex.Server.start_link(database, opts)
-      if :ok == elem(conn, 0) do
-        pid = elem(conn, 1)
-        :ok = Sqlitex.Server.exec(pid, "PRAGMA foreign_keys = ON")
-        [[foreign_keys: 1]] = Sqlitex.Server.query(pid, "PRAGMA foreign_keys")
+      case Sqlitex.Server.start_link(database, opts) do
+        {:ok, pid} ->
+          :ok = Sqlitex.Server.exec(pid, "PRAGMA foreign_keys = ON")
+          [[foreign_keys: 1]] = Sqlitex.Server.query(pid, "PRAGMA foreign_keys")
+          {:ok, pid}
+        error -> error
       end
-      conn
     end
 
     def disconnect(pid) do

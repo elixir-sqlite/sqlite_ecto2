@@ -4,7 +4,7 @@ defmodule Sqlite.Ecto.DDL do
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
   alias Ecto.Migration.Reference
-  import Sqlite.Ecto.Util, only: [assemble: 1, quote_id: 1]
+  import Sqlite.Ecto.Util, only: [assemble: 1, map_intersperse: 3, quote_id: 1]
 
   # Return a SQLite query to determine if the given table or index exists in
   # the database.
@@ -31,9 +31,10 @@ defmodule Sqlite.Ecto.DDL do
   # Create an index.
   # NOTE Ignores concurrently and using values.
   def execute_ddl({:create, %Index{}=index}) do
+    create_index = create_unique_index(index.unique)
     [name, table] = Enum.map([index.name, index.table], &quote_id/1)
-    fields = "(" <> Enum.map_join(index.columns, ", ", &quote_id/1) <> ")"
-    assemble [create_unique_index(index.unique), name, "ON", table, fields]
+    fields = map_intersperse(index.columns, ",", &quote_id/1)
+    assemble [create_index, name, "ON", table, "(", fields, ")"]
   end
 
   # Drop an index.
@@ -52,12 +53,12 @@ defmodule Sqlite.Ecto.DDL do
   end
 
   defp column_definitions(cols) do
-    "(" <> Enum.map_join(cols, ", ", &column_definition/1) <> ")"
+    ["(", map_intersperse(cols, ",", &column_definition/1), ")"]
   end
 
   defp column_definition({_action, name, type, opts}) do
     opts = Enum.into(opts, %{})
-    assemble [quote_id(name), column_type(type), column_constraints(type, opts)]
+    [quote_id(name), column_type(type), column_constraints(type, opts)]
   end
 
   # Foreign keys:
@@ -68,16 +69,12 @@ defmodule Sqlite.Ecto.DDL do
   # etc. because columns do not have types, and SQLite will not coerce any
   # stored value.  Thus, "strings" are all text and "numerics" have arbitrary
   # precision regardless of the declared column type.
-  # FIXME A bug in Sqlitex prevents captitalized "DATETIME" from being parsed
-  # correctly.  When that bug is fixed, remove this line.
-  defp column_type(:datetime), do: "datetime"
   defp column_type(:serial), do: "INTEGER"
   defp column_type(:string), do: "TEXT"
   defp column_type({:array, _}), do: raise(ArgumentError, "Array type is not supported by SQLite")
   defp column_type(type), do: type |> Atom.to_string |> String.upcase
 
   # NOTE SQLite requires autoincrement integers to be primary keys
-  # XXX Are there no other constraints we need to handle for serial cols?
   defp column_constraints(:serial, _), do: "PRIMARY KEY AUTOINCREMENT"
 
   # Return a string of constraints for the column.
@@ -90,6 +87,8 @@ defmodule Sqlite.Ecto.DDL do
   end
   defp column_constraints(opts=%{default: default}) do
     val = case default do
+      true -> 1
+      false -> 0
       {:fragment, expr} -> "(#{expr})"
       string when is_binary(string) -> "'#{string}'"
       other -> other

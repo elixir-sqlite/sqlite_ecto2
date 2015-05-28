@@ -2,7 +2,7 @@ defmodule Sqlite.Ecto.Query do
   @moduledoc false
 
   import Sqlite.Ecto.Transaction, only: [with_savepoint: 2]
-  import Sqlite.Ecto.Util, only: [assemble: 1, exec: 2, random_id: 0, quote_id: 1]
+  import Sqlite.Ecto.Util
 
   # ALTER TABLE queries:
   def query(pid, <<"ALTER TABLE ", _ :: binary>>=sql, params, opts) do
@@ -76,17 +76,17 @@ defmodule Sqlite.Ecto.Query do
     assemble ["INSERT INTO", quote_id(table), "DEFAULT VALUES", return]
   end
   def insert(table, fields, returning) do
-    cols = "(" <> Enum.map_join(fields, ",", &quote_id/1) <> ")"
-    vals = "(" <> Enum.map_join(1..length(fields), ",", &"?#{&1}") <> ")"
+    cols = map_intersperse(fields, ",", &quote_id/1)
+    vals = map_intersperse(1..length(fields), ",", &"?#{&1}")
     return = returning_clause(table, returning, "INSERT")
-    assemble ["INSERT INTO", quote_id(table), cols, "VALUES", vals, return]
+    assemble ["INSERT INTO", quote_id(table), "(", cols, ")", "VALUES (", vals, ")", return]
   end
 
   def update(table, fields, filters, returning) do
     {vals, count} = Enum.map_reduce(fields, 1, fn (i, acc) ->
       {"#{quote_id(i)} = ?#{acc}", acc + 1}
     end)
-    vals = Enum.join(vals, ", ")
+    vals = Enum.intersperse(vals, ",")
     where = where_filter(filters, count)
     return = returning_clause(table, returning, "UPDATE")
     assemble ["UPDATE", quote_id(table), "SET", vals, where, return]
@@ -105,7 +105,7 @@ defmodule Sqlite.Ecto.Query do
   # SQLite does not have any sort of "RETURNING" clause upon which Ecto
   # relies.  Therefore, we have made up our own with its own syntax:
   #
-  #    ;-- RETURNING ON [INSERT | UPDATE | DELETE] <table>,<col>,<col>,...
+  #    ;--RETURNING ON [INSERT | UPDATE | DELETE] <table>,<col>,<col>,...
   #
   # When the query/4 function is given a query with the above returning
   # clause, (1) it strips it from the end of the query, (2) parses it, and
@@ -156,15 +156,17 @@ defmodule Sqlite.Ecto.Query do
     {sql, table, cols, query, ref}
   end
 
-  defp parse_return_contents(<<"INSERT", " ", values::binary>>) do
+  # From our returning clause, return the table, columns, command, and whether
+  # we are interested in the "NEW" or "OLD" values of the modified rows.
+  defp parse_return_contents(<<"INSERT ", values::binary>>) do
     [table | cols] = String.split(values, ",")
     {table, cols, "INSERT", "NEW"}
   end
-  defp parse_return_contents(<<"UPDATE", " ", values::binary>>) do
+  defp parse_return_contents(<<"UPDATE ", values::binary>>) do
     [table | cols] = String.split(values, ",")
     {table, cols, "UPDATE", "NEW"}
   end
-  defp parse_return_contents(<<"DELETE", " ", values::binary>>) do
+  defp parse_return_contents(<<"DELETE ", values::binary>>) do
     [table | cols] = String.split(values, ",")
     {table, cols, "DELETE", "OLD"}
   end
@@ -201,6 +203,8 @@ defmodule Sqlite.Ecto.Query do
     results
   end
 
+  # Execute a query with (possibly) binded parameters and handle busy signals
+  # from the database.
   defp do_query(pid, sql, params, opts) do
     opts = Keyword.put(opts, :bind, params)
     case Sqlitex.Server.query(pid, sql, opts) do
@@ -211,6 +215,8 @@ defmodule Sqlite.Ecto.Query do
     end
   end
 
+  # If this is an INSERT, UPDATE, or DELETE, then return the number of changed
+  # rows.  Otherwise (e.g. for SELECT) return the queried column values.
   defp query_result(pid, <<"INSERT ", _::binary>>, []), do: changes_result(pid)
   defp query_result(pid, <<"UPDATE ", _::binary>>, []), do: changes_result(pid)
   defp query_result(pid, <<"DELETE ", _::binary>>, []), do: changes_result(pid)
@@ -230,8 +236,8 @@ defmodule Sqlite.Ecto.Query do
   # a DATETIME type.  Sqlitex cannot determine that the type of the cast is a
   # datetime value because datetime defaults to an integer type in SQLite.
   # Thus, we cast the value to a TEXT_DATETIME pseudo-type to preserve the
-  # datetime string.  Then when we get here, we convert the string to an
-  # Erlang datetime tuple if it looks like a cast was attempted.
+  # datetime string.  Then when we get here, we convert the string to an Ecto
+  # datetime tuple if it looks like a cast was attempted.
   defp cast_any_datetimes(row) do
     Enum.map row, fn {key, value} ->
       str = Atom.to_string(key)
@@ -276,6 +282,10 @@ defmodule Sqlite.Ecto.Query do
 
   ## Generic Query Helpers
 
+  alias Ecto.Query.JoinExpr
+  alias Ecto.Query.QueryExpr
+  alias Ecto.Query.SelectExpr
+
   defp create_names(%{sources: sources}, stmt \\ :select) do
     create_names(sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
   end
@@ -290,7 +300,7 @@ defmodule Sqlite.Ecto.Query do
   end
   defp create_names(_, pos, pos, _stmt), do: []
 
-  defp select(%Ecto.Query.SelectExpr{fields: fields}, distinct, sources) do
+  defp select(%SelectExpr{fields: fields}, distinct, sources) do
     fields = Enum.map_join(fields, ", ", fn (f) ->
       assemble(expr(f, sources))
     end)
@@ -298,9 +308,9 @@ defmodule Sqlite.Ecto.Query do
   end
 
   defp distinct(nil), do: []
-  defp distinct(%Ecto.Query.QueryExpr{expr: true}), do: "DISTINCT"
-  defp distinct(%Ecto.Query.QueryExpr{expr: false}), do: []
-  defp distinct(%Ecto.Query.QueryExpr{expr: exprs}) when is_list(exprs) do
+  defp distinct(%QueryExpr{expr: true}), do: "DISTINCT"
+  defp distinct(%QueryExpr{expr: false}), do: []
+  defp distinct(%QueryExpr{expr: exprs}) when is_list(exprs) do
     raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite"
   end
 
@@ -320,8 +330,7 @@ defmodule Sqlite.Ecto.Query do
 
   defp expr({:&, _, [idx]}, sources) do
     {_table, name, model} = elem(sources, idx)
-    fields = model.__schema__(:fields)
-    Enum.map_join(fields, ", ", &"#{name}.#{quote_id(&1)}")
+    map_intersperse(model.__schema__(:fields), ",", &"#{name}.#{quote_id(&1)}")
   end
 
   defp expr({:in, _, [left, right]}, sources) when is_list(right) do
@@ -344,6 +353,7 @@ defmodule Sqlite.Ecto.Query do
     ["NOT (", expr(expr, sources), ")"]
   end
 
+  # TODO Issue #28 -- Update this code for Ecto 0.12:
   defp expr({:fragment, _, parts}, sources) do
     Enum.map_join(parts, "", fn
       part when is_binary(part) -> part
@@ -358,7 +368,7 @@ defmodule Sqlite.Ecto.Query do
         [op_to_binary(left, sources), op, op_to_binary(right, sources)]
 
       {:fun, fun} ->
-        [fun, "(", Enum.map_join(args, ", ", &expr(&1, sources)), ")"]
+        [fun, "(", map_intersperse(args, ",", &expr(&1, sources)), ")"]
     end
   end
 
@@ -404,29 +414,26 @@ defmodule Sqlite.Ecto.Query do
 
   defp where([], _), do: []
   defp where(query_exprs, sources) do
-    exprs = query_exprs
-    |> Enum.map(fn %Ecto.Query.QueryExpr{expr: expr} ->
+    exprs = map_intersperse query_exprs, "AND", fn %QueryExpr{expr: expr} ->
       ["(", expr(expr, sources), ")"]
-    end)
-    |> Enum.intersperse("AND")
-    ["WHERE", exprs]
+    end
+    ["WHERE" | exprs]
   end
 
   # Generate a where clause from the given filters.
   defp where_filter(filters), do: where_filter(filters, 1)
   defp where_filter([], _start), do: ""
   defp where_filter(filters, start) do
-    filters
+    filters = filters
     |> Enum.map(&quote_id/1)
     |> Enum.map_reduce(start, fn (i, acc) -> {"#{i} = ?#{acc}", acc + 1} end)
     |> (fn ({filters, _acc}) -> filters end).()
-    |> Enum.join(" AND ")
-    |> (fn (clause) -> "WHERE " <> clause end).()
+    |> Enum.intersperse("AND")
+    ["WHERE" | filters]
   end
 
   defp order_by(order_bys, sources) do
-    exprs = order_bys
-    |> Enum.map_join(", ", fn %Ecto.Query.QueryExpr{expr: expr} ->
+    exprs = Enum.map_join(order_bys, ", ", fn %QueryExpr{expr: expr} ->
       Enum.map_join(expr, ", ", &ordering_term(&1, sources))
     end)
 
@@ -443,18 +450,17 @@ defmodule Sqlite.Ecto.Query do
   end
 
   defp limit(nil, _offset, _sources), do: []
-  defp limit(%Ecto.Query.QueryExpr{expr: expr}, offset, sources) do
+  defp limit(%QueryExpr{expr: expr}, offset, sources) do
     ["LIMIT", expr(expr, sources), offset(offset, sources)]
   end
 
   defp offset(nil, _sources), do: []
-  defp offset(%Ecto.Query.QueryExpr{expr: expr}, sources) do
+  defp offset(%QueryExpr{expr: expr}, sources) do
     ["OFFSET", expr(expr, sources)]
   end
 
   defp group_by(group_bys, havings, sources) do
-    exprs = group_bys
-    |> Enum.map_join(", ", fn %Ecto.Query.QueryExpr{expr: expr} ->
+    exprs = Enum.map_join(group_bys, ", ", fn %QueryExpr{expr: expr} ->
       Enum.map_join(expr, ", ", &assemble(expr(&1, sources)))
     end)
 
@@ -467,23 +473,19 @@ defmodule Sqlite.Ecto.Query do
 
   defp having([], _sources), do: []
   defp having(havings, sources) do
-    exprs = havings
-    |> Enum.map(fn %Ecto.Query.QueryExpr{expr: expr} ->
+    exprs = map_intersperse havings, "AND", fn %QueryExpr{expr: expr} ->
       ["(", expr(expr, sources), ")"]
-    end)
-    |> Enum.intersperse("AND")
-    ["HAVING", exprs]
+    end
+    ["HAVING" | exprs]
   end
 
   defp join([], _sources), do: []
   defp join(joins, sources) do
     Enum.map(joins, fn
-      %Ecto.Query.JoinExpr{on: %Ecto.Query.QueryExpr{expr: expr}, qual: qual, ix: ix} ->
-        {table, name, _model} = elem(sources, ix)
-
-        on   = expr(expr, sources)
+      %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix} ->
         qual = join_qual(qual)
-
+        {table, name, _model} = elem(sources, ix)
+        on   = expr(expr, sources)
         [qual, "JOIN", quote_id(table), "AS", name, "ON", on]
     end)
   end

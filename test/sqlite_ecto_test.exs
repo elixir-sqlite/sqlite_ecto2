@@ -36,7 +36,7 @@ defmodule Sqlite.Ecto.Test do
 
   test "insert" do
     query = SQL.insert("model", [:x, :y], [:id])
-    assert query == ~s{INSERT INTO "model" ("x","y") VALUES (?1,?2) ;--RETURNING ON INSERT "model","id"}
+    assert query == ~s{INSERT INTO "model" ("x", "y") VALUES (?1, ?2) ;--RETURNING ON INSERT "model","id"}
 
     query = SQL.insert("model", [], [:id])
     assert query == ~s{INSERT INTO "model" DEFAULT VALUES ;--RETURNING ON INSERT "model","id"}
@@ -99,7 +99,7 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :title, :string, []},
                 {:add, :created_at, :datetime, []}]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "created_at" datetime)}
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "created_at" DATETIME)}
   end
 
   test "create table with reference" do
@@ -117,7 +117,7 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :on_hand, :integer, [default: 0, null: true]},
                 {:add, :is_active, :boolean, [default: true]}]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL, "price" NUMERIC DEFAULT (expr), "on_hand" INTEGER DEFAULT 0, "is_active" BOOLEAN DEFAULT true)}
+    assert query == ~s{CREATE TABLE "posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL, "price" NUMERIC DEFAULT (expr), "on_hand" INTEGER DEFAULT 0, "is_active" BOOLEAN DEFAULT 1)}
   end
 
   test "drop table" do
@@ -279,7 +279,7 @@ defmodule Sqlite.Ecto.Test do
 
   test "where" do
     query = Model |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 WHERE ( m0."x" = 42 ) AND ( m0."y" != 43 )}
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 WHERE (m0."x" = 42) AND (m0."y" != 43)}
   end
 
   test "order by" do
@@ -344,7 +344,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT m0."x" IS NULL FROM "model" AS m0}
 
     query = Model |> select([r], not is_nil(r.x)) |> normalize
-    assert SQL.all(query) == ~s{SELECT NOT ( m0."x" IS NULL ) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT NOT (m0."x" IS NULL) FROM "model" AS m0}
   end
 
   test "fragments" do
@@ -378,7 +378,7 @@ defmodule Sqlite.Ecto.Test do
 
   test "tagged type" do
     query = Model |> select([], type(^1, :float)) |> normalize
-    assert SQL.all(query) == ~s{SELECT CAST ( ? AS NUMERIC ) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT CAST (? AS NUMERIC) FROM "model" AS m0}
 
     assert_raise ArgumentError, "Array type is not supported by SQLite", fn ->
       query = Model |> select([], type(^[1,2,3], {:array, :integer})) |> normalize
@@ -389,24 +389,24 @@ defmodule Sqlite.Ecto.Test do
   test "nested expressions" do
     z = 123
     query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
-    assert SQL.all(query) == ~s{SELECT ( ( m0."x" > 0 ) AND ( m0."y" > ? ) ) OR 1 FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT ((m0."x" > 0) AND (m0."y" > ?)) OR 1 FROM "model" AS m0}
   end
 
   test "in expression" do
     query = Model |> select([e], 1 in []) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN ( ) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN () FROM "model" AS m0}
 
     query = Model |> select([e], 1 in [1,e.x,3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN ( 1, m0."x", 3 ) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN (1, m0."x", 3) FROM "model" AS m0}
 
     query = Model |> select([e], 1 in ^[]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN ( ) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN () FROM "model" AS m0}
 
     query = Model |> select([e], 1 in ^[1, 2, 3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN ( ?, ?, ? ) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN (?, ?, ?) FROM "model" AS m0}
 
     query = Model |> select([e], 1 in [1, ^2, 3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN ( 1, ?, 3 ) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN (1, ?, 3) FROM "model" AS m0}
   end
 
   test "group by" do
@@ -414,7 +414,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x"}
 
     query = Model |> group_by([r], r.x) |> having([r], r.x == r.x) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x" HAVING ( m0."x" = m0."x" )}
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x" HAVING (m0."x" = m0."x")}
 
     query = Model |> group_by([r], 2) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY 2}
@@ -423,7 +423,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y"}
 
     query = Model |> group_by([r], [r.x, r.y]) |> having([r], r.x == r.x) |> having([r], r.y == r.y) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y" HAVING ( m0."x" = m0."x" ) AND ( m0."y" = m0."y" )}
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y" HAVING (m0."x" = m0."x") AND (m0."y" = m0."y")}
 
     query = Model |> group_by([r], []) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
@@ -448,8 +448,8 @@ defmodule Sqlite.Ecto.Test do
 
     result =
       "SELECT ? FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON ? " <>
-      "INNER JOIN \"model2\" AS m2 ON ? WHERE ( ? ) AND ( ? ) " <>
-      "GROUP BY ?, ? HAVING ( ? ) AND ( ? ) " <>
+      "INNER JOIN \"model2\" AS m2 ON ? WHERE (?) AND (?) " <>
+      "GROUP BY ?, ? HAVING (?) AND (?) " <>
       "ORDER BY ?, m0.\"x\" LIMIT ? OFFSET ?"
 
     assert SQL.all(query) == String.rstrip(result)
@@ -514,7 +514,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.update_all(query, [x: 0]) == ~s{UPDATE "model" SET "x" = 0}
 
     query = from(e in Model, where: e.x == 123) |> normalize
-    assert SQL.update_all(query, [x: 0]) == ~s{UPDATE "model" SET "x" = 0 WHERE ( "model"."x" = 123 )}
+    assert SQL.update_all(query, [x: 0]) == ~s{UPDATE "model" SET "x" = 0 WHERE ("model"."x" = 123)}
 
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, [x: 0, y: "123"]) == ~s{UPDATE "model" SET "x" = 0, "y" = '123'}
@@ -533,7 +533,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.delete_all(query) == ~s{DELETE FROM "model"}
 
     query = from(e in Model, where: e.x == 123) |> normalize
-    assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE ( "model"."x" = 123 )}
+    assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE ("model"."x" = 123)}
 
     assert_raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite", fn ->
       query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize

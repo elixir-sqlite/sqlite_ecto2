@@ -12,7 +12,7 @@ defmodule Sqlite.Ecto.Integration.TypeTest do
     float    = 0.1
     text     = <<0,1>>
     uuid     = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
-    # FIXME  How to handle these Decimal modules in SQLite?
+    # TODO Issue #26 -- How to handle these Decimal modules in SQLite?
     #decimal  = Decimal.new("1.0")
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26,
       sec: 51, usec: 0}
