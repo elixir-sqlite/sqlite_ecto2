@@ -5,6 +5,9 @@ ExUnit.start exclude: [:array_type,
                        :delete_with_join,
                        :right_outer_join]
 
+# Load support files
+Code.require_file "support/repo.exs", __DIR__
+
 # Basic test repo
 alias Sqlite.Ecto.Integration.TestRepo
 
@@ -14,7 +17,7 @@ Application.put_env(:sqlite_ecto, TestRepo,
   size: 1, max_overflow: 0)
 
 defmodule Sqlite.Ecto.Integration.TestRepo do
-  use Ecto.Repo, otp_app: :sqlite_ecto
+  use Ecto.Integration.Repo, otp_app: :sqlite_ecto
 end
 
 # Pool repo for transaction and lock tests
@@ -26,7 +29,7 @@ Application.put_env(:sqlite_ecto, PoolRepo,
   size: 10)
 
 defmodule Sqlite.Ecto.Integration.PoolRepo do
-  use Ecto.Repo, otp_app: :sqlite_ecto
+  use Ecto.Integration.Repo, otp_app: :sqlite_ecto
 
   def lock_for_update, do: "FOR UPDATE"
 end

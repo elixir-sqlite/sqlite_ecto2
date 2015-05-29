@@ -210,17 +210,14 @@ defmodule Sqlite.Ecto.Integration.RepoTest do
     assert nil = TestRepo.get(Custom, "03abcdef03abcdef")
   end
 
-# TODO Add this test back in once we move to Ecto 0.12.  The test relies on
-# Ecto.model.put_source/2.
-#
-#  test "get(!) with custom source" do
-#    custom = %Custom{uuid: "01abcdef01abcdef"}
-#    custom = Ecto.Model.put_source(custom, "posts")
-#    TestRepo.insert(custom)
-#
-#    assert %Custom{uuid: "01abcdef01abcdef", __meta__: %{source: "posts"}} =
-#           TestRepo.get(from(c in {"posts", Custom}), "01abcdef01abcdef")
-#  end
+  test "get(!) with custom source" do
+    custom = %Custom{uuid: "01abcdef01abcdef"}
+    custom = Ecto.Model.put_source(custom, "posts")
+    TestRepo.insert(custom)
+
+    assert %Custom{uuid: "01abcdef01abcdef", __meta__: %{source: "posts"}} =
+           TestRepo.get(from(c in {"posts", Custom}), "01abcdef01abcdef")
+  end
 
   test "get_by(!)" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})

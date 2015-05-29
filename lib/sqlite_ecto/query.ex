@@ -353,11 +353,10 @@ defmodule Sqlite.Ecto.Query do
     ["NOT (", expr(expr, sources), ")"]
   end
 
-  # TODO Issue #28 -- Update this code for Ecto 0.12:
   defp expr({:fragment, _, parts}, sources) do
     Enum.map_join(parts, "", fn
-      part when is_binary(part) -> part
-      expr -> expr(expr, sources)
+      {:raw, part}  -> part
+      {:expr, expr} -> expr(expr, sources)
     end)
   end
 
