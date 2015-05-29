@@ -422,14 +422,12 @@ defmodule Sqlite.Ecto.Query do
 
   # Generate a where clause from the given filters.
   defp where_filter(filters), do: where_filter(filters, 1)
-  defp where_filter([], _start), do: ""
+  defp where_filter([], _start), do: []
   defp where_filter(filters, start) do
-    filters = filters
-    |> Enum.map(&quote_id/1)
-    |> Enum.map_reduce(start, fn (i, acc) -> {"#{i} = ?#{acc}", acc + 1} end)
-    |> (fn ({filters, _acc}) -> filters end).()
-    |> Enum.intersperse("AND")
-    ["WHERE" | filters]
+    {filters, _} = Enum.map_reduce filters, start, fn (filter, count) ->
+      {"#{quote_id(filter)} = ?#{count}", count + 1}
+    end
+    ["WHERE" | Enum.intersperse(filters, "AND")]
   end
 
   defp order_by(order_bys, sources) do
