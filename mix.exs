@@ -42,8 +42,7 @@ defmodule Sqlite.Ecto.Mixfile do
   defp deps do
     [{:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.7", only: :dev},
-     #{:ecto, "~> 0.11"},
-     {:ecto, path: "/home/jazzyb/share/ecto"},
+     {:ecto, "0.12.0-rc"},
      {:sqlitex, "~> 0.4"}]
   end
 
