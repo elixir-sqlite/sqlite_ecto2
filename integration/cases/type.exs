@@ -1,3 +1,5 @@
+Code.require_file "../support/types.exs", __DIR__
+
 defmodule Sqlite.Ecto.Integration.TypeTest do
   use Sqlite.Ecto.Integration.Case
 
@@ -6,23 +8,27 @@ defmodule Sqlite.Ecto.Integration.TypeTest do
 
   alias Sqlite.Ecto.Integration.Post
   alias Sqlite.Ecto.Integration.Tag
+  alias Sqlite.Ecto.Integration.Custom
 
   test "primitive types" do
     integer  = 1
     float    = 0.1
     text     = <<0,1>>
-    uuid     = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
     # TODO Issue #26 -- How to handle these Decimal modules in SQLite?
     #decimal  = Decimal.new("1.0")
-    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26,
-      sec: 51, usec: 0}
+    uuid     = "00010203-0405-0607-0809-0a0b0c0d0e0f"
+    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
+                              hour: 20, min: 26, sec: 51, usec: 0}
 
-    TestRepo.insert(%Post{text: text, uuid: uuid, public: true, visits: integer,
+    TestRepo.insert(%Post{text: text, public: true, visits: integer, uuid: uuid, counter: integer,
                           #inserted_at: datetime, cost: decimal, intensity: float})
                           inserted_at: datetime, intensity: float})
 
     # nil
     assert [nil] = TestRepo.all(from Post, select: nil)
+
+    # ID
+    assert [1] = TestRepo.all(from p in Post, where: p.counter == ^integer, select: p.counter)
 
     # Integers
     assert [1] = TestRepo.all(from p in Post, where: p.visits == ^integer, select: p.visits)
@@ -44,6 +50,7 @@ defmodule Sqlite.Ecto.Integration.TypeTest do
     assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: p.public)
 
     # Binaries
+    assert [^text] = TestRepo.all(from p in Post, where: p.text == <<0, 1>>, select: p.text)
     assert [^text] = TestRepo.all(from p in Post, where: p.text == ^text, select: p.text)
 
     # UUID
@@ -60,10 +67,6 @@ defmodule Sqlite.Ecto.Integration.TypeTest do
     assert [1]   = TestRepo.all(from Post, select: type(^"1", :integer))
     assert [1.0] = TestRepo.all(from Post, select: type(^1.0, :float))
 
-    # UUID
-    uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
-    assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, :uuid))
-
     # Datetime
     datetime = {{2014, 04, 17}, {14, 00, 00, 00}}
     assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, :datetime))
@@ -74,6 +77,13 @@ defmodule Sqlite.Ecto.Integration.TypeTest do
     # Custom types
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51, usec: 0}
     assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, Ecto.DateTime))
+  end
+
+  test "binary id type" do
+    assert %Custom{} = custom = TestRepo.insert(%Custom{})
+    bid = custom.bid
+    assert [^bid] = TestRepo.all(from c in Custom, select: c.bid)
+    assert [^bid] = TestRepo.all(from c in Custom, select: type(^bid, :binary_id))
   end
 
   test "composite types in select" do

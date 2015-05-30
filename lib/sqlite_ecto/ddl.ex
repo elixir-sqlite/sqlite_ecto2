@@ -106,12 +106,27 @@ defmodule Sqlite.Ecto.DDL do
   defp create_unique_index(true), do: "CREATE UNIQUE INDEX"
   defp create_unique_index(false), do: "CREATE INDEX"
 
+  # If we are adding a DATETIME column with the NOT NULL constraint, SQLite
+  # will force us to give it a DEFAULT value.  The only default value
+  # that makes sense is CURRENT_TIMESTAMP, but when adding a column to a
+  # table, defaults must be constant values.
+  #
+  # Therefore the best option is just to remove the NOT NULL constraint when
+  # we add new datetime columns.
+  defp alter_table_suffix({:add, column, :datetime, opts}) do
+    opts = opts |> Enum.into(%{}) |> Dict.delete(:null)
+    change = {:add, column, :datetime, opts}
+    ["ADD COLUMN", column_definition(change)]
+  end
+
   defp alter_table_suffix(change={:add, _column, _type, _opts}) do
     ["ADD COLUMN", column_definition(change)]
   end
+
   defp alter_table_suffix({:modify, _column, _type, _opts}) do
     raise ArgumentError, "ALTER COLUMN not supported by SQLite"
   end
+
   defp alter_table_suffix({:remove, _column}) do
     raise ArgumentError, "DROP COLUMN not supported by SQLite"
   end

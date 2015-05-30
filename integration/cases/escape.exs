@@ -1,4 +1,4 @@
-defmodule Sqlite.Ecto.Integration.SQLEscapeTest do
+defmodule Sqlite.Ecto.Integration.EscapeTest do
   use Sqlite.Ecto.Integration.Case
 
   require Sqlite.Ecto.Integration.TestRepo, as: TestRepo

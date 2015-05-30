@@ -2,7 +2,11 @@ Logger.configure(level: :info)
 ExUnit.start exclude: [:array_type,
                        :update_with_join,
                        :delete_with_join,
-                       :right_outer_join]
+                       :right_outer_join,
+                       :timeouts]
+
+# Configure Ecto for support and tests
+Application.put_env(:ecto, :primary_key_type, :id)
 
 # Load support files
 Code.require_file "support/repo.exs", __DIR__
@@ -29,8 +33,6 @@ Application.put_env(:sqlite_ecto, PoolRepo,
 
 defmodule Sqlite.Ecto.Integration.PoolRepo do
   use Ecto.Integration.Repo, otp_app: :sqlite_ecto
-
-  def lock_for_update, do: "FOR UPDATE"
 end
 
 defmodule Sqlite.Ecto.Integration.Case do

@@ -377,8 +377,8 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "tagged type" do
-    query = Model |> select([], type(^1, :float)) |> normalize
-    assert SQL.all(query) == ~s{SELECT CAST (? AS NUMERIC) FROM "model" AS m0}
+    query = Model |> select([], type(^"601d74e4-a8d3-4b6e-8365-eddb4c893327", Ecto.UUID)) |> normalize
+    assert SQL.all(query) == ~s{SELECT CAST (? AS TEXT) FROM "model" AS m0}
 
     assert_raise ArgumentError, "Array type is not supported by SQLite", fn ->
       query = Model |> select([], type(^[1,2,3], {:array, :integer})) |> normalize
