@@ -15,7 +15,6 @@ defmodule Sqlite.Ecto.Query do
   end
   # all other queries:
   def query(pid, sql, params, opts) do
-    #{sql, params} |> inspect |> IO.puts
     params = Enum.map(params, fn
       %Ecto.Query.Tagged{type: :binary, value: value} when is_binary(value)-> {:blob, value}
       %Ecto.Query.Tagged{value: value} -> value
@@ -208,7 +207,6 @@ defmodule Sqlite.Ecto.Query do
   # Execute a query with (possibly) binded parameters and handle busy signals
   # from the database.
   defp do_query(pid, sql, params, opts) do
-    #{sql, params} |> inspect |> IO.puts
     opts = Keyword.put(opts, :bind, params)
     case Sqlitex.Server.query(pid, sql, opts) do
       # busy error means another process is writing to the database; try again

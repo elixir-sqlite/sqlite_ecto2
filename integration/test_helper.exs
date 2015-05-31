@@ -2,8 +2,7 @@ Logger.configure(level: :info)
 ExUnit.start exclude: [:array_type,
                        :update_with_join,
                        :delete_with_join,
-                       :right_outer_join,
-                       :timeouts]
+                       :right_outer_join]
 
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :primary_key_type, :id)

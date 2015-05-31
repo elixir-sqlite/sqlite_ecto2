@@ -182,7 +182,6 @@ defmodule Sqlite.Ecto.Integration.TransactionTest do
 
   ## Timeouts
 
-  @tag :timeouts
   test "transaction exit includes :timeout on begin timeout" do
     assert match?({:timeout, _},
       catch_exit(PoolRepo.transaction(fn ->
@@ -190,7 +189,6 @@ defmodule Sqlite.Ecto.Integration.TransactionTest do
       end)))
   end
 
-  @tag :timeouts
   test "transaction exit includes :timeout on query timeout" do
     assert match?({:timeout, _},
       catch_exit(PoolRepo.transaction(fn ->
@@ -200,7 +198,6 @@ defmodule Sqlite.Ecto.Integration.TransactionTest do
     assert [] = PoolRepo.all(Trans)
   end
 
-  @tag :timeouts
   test "transaction exit includes :timeout on nested query timeout" do
     assert match?({:timeout, _},
       catch_exit(PoolRepo.transaction(fn ->
