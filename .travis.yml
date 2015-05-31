@@ -5,3 +5,5 @@ otp_release:
         - 17.3
         - 17.4
 sudo: false
+script:
+        - mix test.all
