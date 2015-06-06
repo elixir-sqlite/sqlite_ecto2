@@ -42,7 +42,8 @@ defmodule Sqlite.Ecto.Mixfile do
   defp deps do
     [{:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.7", only: :dev},
-     {:ecto, "0.12.0-rc"},
+     #{:ecto, "0.12.0-rc"},
+     {:ecto, git: "https://github.com/elixir-lang/ecto"},
      {:sqlitex, "~> 0.5"}]
   end
 
@@ -54,7 +55,7 @@ defmodule Sqlite.Ecto.Mixfile do
       links: %{"Github" => "https://github.com/jazzyb/sqlite_ecto"}]
   end
 
-  defp test_paths(:integration), do: ["integration"]
+  defp test_paths(:integration), do: ["integration/sqlite"]
   defp test_paths(_), do: ["test"]
 
   defp test_integration(args) do
