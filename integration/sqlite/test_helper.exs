@@ -1,6 +1,5 @@
 Logger.configure(level: :info)
 ExUnit.start exclude: [:array_type,
-                       :decimal_type,
                        :update_with_join,
                        :delete_with_join,
                        :right_join]

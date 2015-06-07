@@ -44,7 +44,8 @@ defmodule Sqlite.Ecto.Mixfile do
      {:ex_doc, "~> 0.7", only: :dev},
      #{:ecto, "0.12.0-rc"},
      {:ecto, git: "https://github.com/elixir-lang/ecto"},
-     {:sqlitex, "~> 0.5"}]
+     #{:sqlitex, "~> 0.5"}]
+     {:sqlitex, path: "/vagrant/sqlitex"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto"

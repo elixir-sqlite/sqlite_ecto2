@@ -4,5 +4,4 @@
   "esqlite": {:hex, :esqlite, "0.1.0"},
   "ex_doc": {:hex, :ex_doc, "0.7.3"},
   "pipe": {:hex, :pipe, "0.0.2"},
-  "poolboy": {:hex, :poolboy, "1.5.1"},
-  "sqlitex": {:hex, :sqlitex, "0.5.0"}}
+  "poolboy": {:hex, :poolboy, "1.5.1"}}
