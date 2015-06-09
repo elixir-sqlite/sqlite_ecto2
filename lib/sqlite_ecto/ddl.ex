@@ -58,21 +58,27 @@ defmodule Sqlite.Ecto.DDL do
 
   defp column_definition({_action, name, type, opts}) do
     opts = Enum.into(opts, %{})
-    [quote_id(name), column_type(type), column_constraints(type, opts)]
+    [quote_id(name), column_type(type, opts), column_constraints(type, opts)]
   end
 
   # Foreign keys:
-  defp column_type(%Reference{table: table, column: col}) do
+  defp column_type(%Reference{table: table, column: col}, _opts) do
     "REFERENCES #{quote_id(table)}(#{quote_id(col)})"
+  end
+  # Decimals are the only type for which we care about the options:
+  defp column_type(:decimal, opts=%{precision: precision}) do
+    scale = Dict.get(opts, :scale, 0)
+    "DECIMAL(#{precision},#{scale})"
   end
   # Simple column types.  Note that we ignore options like :size, :precision,
   # etc. because columns do not have types, and SQLite will not coerce any
   # stored value.  Thus, "strings" are all text and "numerics" have arbitrary
-  # precision regardless of the declared column type.
-  defp column_type(:serial), do: "INTEGER"
-  defp column_type(:string), do: "TEXT"
-  defp column_type({:array, _}), do: raise(ArgumentError, "Array type is not supported by SQLite")
-  defp column_type(type), do: type |> Atom.to_string |> String.upcase
+  # precision regardless of the declared column type.  Decimals above are the
+  # only exception.
+  defp column_type(:serial, _opts), do: "INTEGER"
+  defp column_type(:string, _opts), do: "TEXT"
+  defp column_type({:array, _}, _opts), do: raise(ArgumentError, "Array type is not supported by SQLite")
+  defp column_type(type, _opts), do: type |> Atom.to_string |> String.upcase
 
   # NOTE SQLite requires autoincrement integers to be primary keys
   defp column_constraints(:serial, _), do: "PRIMARY KEY AUTOINCREMENT"

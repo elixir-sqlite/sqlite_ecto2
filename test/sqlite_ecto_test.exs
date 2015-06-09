@@ -101,9 +101,10 @@ defmodule Sqlite.Ecto.Test do
     create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :title, :string, []},
+                {:add, :price, :decimal, [precision: 10, scale: 2]},
                 {:add, :created_at, :datetime, []}]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "created_at" DATETIME)}
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "price" DECIMAL(10,2), "created_at" DATETIME)}
   end
 
   test "create table with reference" do
