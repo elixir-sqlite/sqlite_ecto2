@@ -43,7 +43,7 @@ defmodule Sqlite.Ecto.Mixfile do
     [{:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.7", only: :dev},
      #{:ecto, "0.12.0-rc"},
-     {:ecto, git: "https://github.com/elixir-lang/ecto"},
+     {:ecto, git: "https://github.com/jazzyb/ecto"},
      {:sqlitex, "~> 0.5"}]
   end
 

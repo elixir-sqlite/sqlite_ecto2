@@ -3,7 +3,9 @@ ExUnit.start exclude: [:array_type,
                        :decimal_type,
                        :update_with_join,
                        :delete_with_join,
-                       :right_join]
+                       :right_join,
+                       :modify_column,
+                       :remove_column]
 
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :primary_key_type, :id)
