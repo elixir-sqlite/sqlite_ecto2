@@ -93,6 +93,10 @@ defmodule Sqlite.Ecto.Test do
 
   import Ecto.Migration, only: [table: 1, index: 2, index: 3, references: 1]
 
+  test "executing a string during migration" do
+    assert SQL.execute_ddl("example") == "example"
+  end
+
   test "create table" do
     create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
