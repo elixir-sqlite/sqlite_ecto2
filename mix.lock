@@ -5,4 +5,4 @@
   "ex_doc": {:hex, :ex_doc, "0.7.3"},
   "pipe": {:hex, :pipe, "0.0.2"},
   "poolboy": {:hex, :poolboy, "1.5.1"},
-  "sqlitex": {:git, "https://github.com/jazzyb/sqlitex", "ba9513f294956d3f994eab24fecfa22c496114da", []}}
+  "sqlitex": {:hex, :sqlitex, "0.6.0"}}
