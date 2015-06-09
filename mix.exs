@@ -54,6 +54,7 @@ defmodule Sqlite.Ecto.Mixfile do
 
   defp test_all(args) do
     Mix.Task.run "test", args
-    test_integration(args)
+    {_, res} = test_integration(args)
+    if res != 0, do: exit {:shutdown, 1}
   end
 end
