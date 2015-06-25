@@ -16,8 +16,10 @@ defmodule Sqlite.Ecto.Query do
   # all other queries:
   def query(pid, sql, params, opts) do
     params = Enum.map(params, fn
-      %Ecto.Query.Tagged{type: :binary, value: value} when is_binary(value)-> {:blob, value}
+      %Ecto.Query.Tagged{type: :binary, value: value} when is_binary(value) -> {:blob, value}
       %Ecto.Query.Tagged{value: value} -> value
+      %{__struct__: _} = value -> value
+      %{} = value -> json_library.encode! value
       value -> value
     end)
 
@@ -294,6 +296,8 @@ defmodule Sqlite.Ecto.Query do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.SelectExpr
 
+  defp json_library, do: Application.get_env(:ecto, :json_library)
+
   defp create_names(%{sources: sources}, stmt \\ :select) do
     create_names(sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
   end
@@ -438,6 +442,7 @@ defmodule Sqlite.Ecto.Query do
       :float -> "NUMERIC"
       :string -> "TEXT"
       :datetime -> "TEXT_DATETIME"  # HACK see: cast_any_datetimes/1
+      :map -> "TEXT"
       other -> other |> Atom.to_string |> String.upcase
     end
   end
