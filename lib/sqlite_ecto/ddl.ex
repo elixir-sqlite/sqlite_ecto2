@@ -58,21 +58,27 @@ defmodule Sqlite.Ecto.DDL do
 
   defp column_definition({_action, name, type, opts}) do
     opts = Enum.into(opts, %{})
-    [quote_id(name), column_type(type), column_constraints(type, opts)]
+    [quote_id(name), column_type(type, opts), column_constraints(type, opts)]
   end
 
   # Foreign keys:
-  defp column_type(%Reference{table: table, column: col}) do
+  defp column_type(%Reference{table: table, column: col}, _opts) do
     "REFERENCES #{quote_id(table)}(#{quote_id(col)})"
+  end
+  # Decimals are the only type for which we care about the options:
+  defp column_type(:decimal, opts=%{precision: precision}) do
+    scale = Dict.get(opts, :scale, 0)
+    "DECIMAL(#{precision},#{scale})"
   end
   # Simple column types.  Note that we ignore options like :size, :precision,
   # etc. because columns do not have types, and SQLite will not coerce any
   # stored value.  Thus, "strings" are all text and "numerics" have arbitrary
-  # precision regardless of the declared column type.
-  defp column_type(:serial), do: "INTEGER"
-  defp column_type(:string), do: "TEXT"
-  defp column_type({:array, _}), do: raise(ArgumentError, "Array type is not supported by SQLite")
-  defp column_type(type), do: type |> Atom.to_string |> String.upcase
+  # precision regardless of the declared column type.  Decimals above are the
+  # only exception.
+  defp column_type(:serial, _opts), do: "INTEGER"
+  defp column_type(:string, _opts), do: "TEXT"
+  defp column_type({:array, _}, _opts), do: raise(ArgumentError, "Array type is not supported by SQLite")
+  defp column_type(type, _opts), do: type |> Atom.to_string |> String.upcase
 
   # NOTE SQLite requires autoincrement integers to be primary keys
   defp column_constraints(:serial, _), do: "PRIMARY KEY AUTOINCREMENT"
@@ -106,12 +112,27 @@ defmodule Sqlite.Ecto.DDL do
   defp create_unique_index(true), do: "CREATE UNIQUE INDEX"
   defp create_unique_index(false), do: "CREATE INDEX"
 
+  # If we are adding a DATETIME column with the NOT NULL constraint, SQLite
+  # will force us to give it a DEFAULT value.  The only default value
+  # that makes sense is CURRENT_TIMESTAMP, but when adding a column to a
+  # table, defaults must be constant values.
+  #
+  # Therefore the best option is just to remove the NOT NULL constraint when
+  # we add new datetime columns.
+  defp alter_table_suffix({:add, column, :datetime, opts}) do
+    opts = opts |> Enum.into(%{}) |> Dict.delete(:null)
+    change = {:add, column, :datetime, opts}
+    ["ADD COLUMN", column_definition(change)]
+  end
+
   defp alter_table_suffix(change={:add, _column, _type, _opts}) do
     ["ADD COLUMN", column_definition(change)]
   end
+
   defp alter_table_suffix({:modify, _column, _type, _opts}) do
     raise ArgumentError, "ALTER COLUMN not supported by SQLite"
   end
+
   defp alter_table_suffix({:remove, _column}) do
     raise ArgumentError, "DROP COLUMN not supported by SQLite"
   end

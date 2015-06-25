@@ -16,6 +16,7 @@ defmodule Sqlite.Ecto.Query do
   # all other queries:
   def query(pid, sql, params, opts) do
     params = Enum.map(params, fn
+      %Ecto.Query.Tagged{type: :binary, value: value} when is_binary(value)-> {:blob, value}
       %Ecto.Query.Tagged{value: value} -> value
       value -> value
     end)
@@ -222,7 +223,14 @@ defmodule Sqlite.Ecto.Query do
   defp query_result(pid, <<"DELETE ", _::binary>>, []), do: changes_result(pid)
   defp query_result(_pid, _sql, rows) do
     rows = Enum.map(rows, fn row ->
-      row |> cast_any_datetimes |> Keyword.values |> List.to_tuple
+      row
+      |> cast_any_datetimes
+      |> Keyword.values
+      |> Enum.map(fn
+        {:blob, binary} -> binary
+        other -> other
+      end)
+      |> List.to_tuple
     end)
     {:ok, %{rows: rows, num_rows: length(rows)}}
   end
@@ -353,11 +361,10 @@ defmodule Sqlite.Ecto.Query do
     ["NOT (", expr(expr, sources), ")"]
   end
 
-  # TODO Issue #28 -- Update this code for Ecto 0.12:
   defp expr({:fragment, _, parts}, sources) do
     Enum.map_join(parts, "", fn
-      part when is_binary(part) -> part
-      expr -> expr(expr, sources)
+      {:raw, part}  -> part
+      {:expr, expr} -> expr(expr, sources)
     end)
   end
 
@@ -370,6 +377,14 @@ defmodule Sqlite.Ecto.Query do
       {:fun, fun} ->
         [fun, "(", map_intersperse(args, ",", &expr(&1, sources)), ")"]
     end
+  end
+
+  defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
+    "X'#{Base.encode16(binary, case: :upper)}'"
+  end
+
+  defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) when type in [:id, :integer, :float] do
+    expr(other, sources)
   end
 
   defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
@@ -403,6 +418,8 @@ defmodule Sqlite.Ecto.Query do
   defp ecto_to_sqlite_type(type) do
     case type do
       {:array, _} -> raise ArgumentError, "Array type is not supported by SQLite"
+      :id -> "INTEGER"
+      :binary_id -> "TEXT"
       :uuid -> "TEXT" # SQLite does not support UUID
       :binary -> "BLOB"
       :float -> "NUMERIC"

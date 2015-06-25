@@ -2,7 +2,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
   defmodule Sqlite.Ecto.Connection do
     @moduledoc false
 
-    @behaviour Ecto.Adapters.SQL.Connection
+    @behaviour Ecto.Adapters.SQL.Query
 
     # Connect to a new Sqlite.Server.  Enable and verify the foreign key
     # constraints for the connection.

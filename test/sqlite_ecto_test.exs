@@ -93,13 +93,18 @@ defmodule Sqlite.Ecto.Test do
 
   import Ecto.Migration, only: [table: 1, index: 2, index: 3, references: 1]
 
+  test "executing a string during migration" do
+    assert SQL.execute_ddl("example") == "example"
+  end
+
   test "create table" do
     create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :title, :string, []},
+                {:add, :price, :decimal, [precision: 10, scale: 2]},
                 {:add, :created_at, :datetime, []}]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "created_at" DATETIME)}
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "price" DECIMAL(10,2), "created_at" DATETIME)}
   end
 
   test "create table with reference" do
@@ -231,7 +236,7 @@ defmodule Sqlite.Ecto.Test do
   end
 
   defp normalize(query) do
-    {query, _params} = Ecto.Query.Planner.prepare(query, [])
+    {query, _params} = Ecto.Query.Planner.prepare(query, [], %{})
     Ecto.Query.Planner.normalize(query, [], [])
   end
 
@@ -377,8 +382,8 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "tagged type" do
-    query = Model |> select([], type(^1, :float)) |> normalize
-    assert SQL.all(query) == ~s{SELECT CAST (? AS NUMERIC) FROM "model" AS m0}
+    query = Model |> select([], type(^"601d74e4-a8d3-4b6e-8365-eddb4c893327", Ecto.UUID)) |> normalize
+    assert SQL.all(query) == ~s{SELECT CAST (? AS TEXT) FROM "model" AS m0}
 
     assert_raise ArgumentError, "Array type is not supported by SQLite", fn ->
       query = Model |> select([], type(^[1,2,3], {:array, :integer})) |> normalize
