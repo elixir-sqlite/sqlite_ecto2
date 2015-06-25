@@ -337,7 +337,12 @@ defmodule Sqlite.Ecto.Query do
   end
 
   defp expr({:&, _, [idx]}, sources) do
-    {_table, name, model} = elem(sources, idx)
+    {table, name, model} = elem(sources, idx)
+    unless model do
+      raise ArgumentError, "SQLite requires a model when using selector #{inspect name} but " <>
+                           "only the table #{inspect table} was given. Please specify a model " <>
+                           "or specify exactly which fields from #{inspect name} you desire"
+    end
     map_intersperse(model.__schema__(:fields), ",", &"#{name}.#{quote_id(&1)}")
   end
 

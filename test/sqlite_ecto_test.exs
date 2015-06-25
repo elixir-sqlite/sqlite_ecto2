@@ -248,6 +248,10 @@ defmodule Sqlite.Ecto.Test do
   test "from without model" do
     query = "posts" |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
+
+    assert_raise ArgumentError, ~r"SQLite requires a model", fn ->
+      SQL.all from(p in "posts", select: p) |> normalize()
+    end
   end
 
 #  test "from with schema source" do
