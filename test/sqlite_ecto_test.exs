@@ -359,6 +359,11 @@ defmodule Sqlite.Ecto.Test do
     value = 13
     query = Model |> select([r], fragment("ltrim(?, ?)", r.x, ^value)) |> normalize
     assert SQL.all(query) == ~s{SELECT ltrim(m0."x", ?) FROM "model" AS m0}
+
+    query = Model |> select([], fragment(title: 2)) |> normalize
+    assert_raise ArgumentError, "SQLite adapter does not support keyword or interpolated fragments", fn ->
+      SQL.all(query)
+    end
   end
 
   test "literals" do
