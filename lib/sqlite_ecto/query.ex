@@ -353,6 +353,10 @@ defmodule Sqlite.Ecto.Query do
     [expr(left, sources), "IN (", args, ")"]
   end
 
+  defp expr({:in, _, [left, right]}, sources) do
+    [expr(left, sources), "IN (", expr(right, sources), ")"]
+  end
+
   defp expr({:is_nil, _, [arg]}, sources) do
     [expr(arg, sources), "IS", "NULL"]
   end
