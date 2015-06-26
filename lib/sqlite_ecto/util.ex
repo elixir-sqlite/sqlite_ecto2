@@ -33,6 +33,7 @@ defmodule Sqlite.Ecto.Util do
           Enum.join([result, word], " ")
         end
     end)
+    |> String.strip
   end
   def assemble(literal), do: literal
 

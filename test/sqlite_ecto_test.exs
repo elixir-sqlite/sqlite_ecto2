@@ -91,7 +91,7 @@ defmodule Sqlite.Ecto.Test do
     assert row == {0}
   end
 
-  import Ecto.Migration, only: [table: 1, index: 2, index: 3, references: 1]
+  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -123,6 +123,13 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :is_active, :boolean, [default: true]}]}
     query = SQL.execute_ddl(create)
     assert query == ~s{CREATE TABLE "posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL, "price" NUMERIC DEFAULT (expr), "on_hand" INTEGER DEFAULT 0, "is_active" BOOLEAN DEFAULT 1)}
+  end
+
+  test "create table with table options" do
+    create = {:create, table(:posts, options: "WITHOUT ROWID"),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :created_at, :datetime, []}]}
+    assert SQL.execute_ddl(create) == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "created_at" DATETIME) WITHOUT ROWID}
   end
 
   test "drop table" do
