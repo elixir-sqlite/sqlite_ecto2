@@ -3,7 +3,7 @@ defmodule Sqlite.Ecto.Mixfile do
 
   def project do
     [app: :sqlite_ecto,
-     version: "0.0.2",
+     version: "0.2.0",
      name: "Sqlite.Ecto",
      elixir: "~> 1.0",
      deps: deps,
@@ -12,8 +12,7 @@ defmodule Sqlite.Ecto.Mixfile do
      test_paths: test_paths(Mix.env),
      aliases: ["test.all": &test_all/1,
                "test.integration": &test_integration/1],
-     preferred_cli_env: ["test.integration": :test,
-                         "test.all": :test],
+     preferred_cli_env: ["test.all": :test],
 
      # hex
      description: description,
@@ -24,25 +23,15 @@ defmodule Sqlite.Ecto.Mixfile do
   end
 
   # Configuration for the OTP application
-  #
-  # Type `mix help compile.app` for more information
   def application do
     [applications: [:logger, :ecto]]
   end
 
-  # Dependencies can be Hex packages:
-  #
-  #   {:mydep, "~> 0.3.0"}
-  #
-  # Or git/path repositories:
-  #
-  #   {:mydep, git: "https://github.com/elixir-lang/mydep.git", tag: "0.1.0"}
-  #
-  # Type `mix help deps` for more examples and options
+  # Dependencies
   defp deps do
     [{:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.7", only: :dev},
-     #{:ecto, "0.12.0-rc"},
+     #{:ecto, "0.12.1"},
      {:ecto, git: "https://github.com/elixir-lang/ecto"},
      {:poison, "~> 1.0"},
      {:sqlitex, "~> 0.6"}]
@@ -67,6 +56,7 @@ defmodule Sqlite.Ecto.Mixfile do
 
   defp test_all(args) do
     Mix.Task.run "test", args
-    test_integration(args)
+    {_, res} = test_integration(args)
+    if res != 0, do: exit {:shutdown, 1}
   end
 end
