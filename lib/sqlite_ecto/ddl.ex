@@ -12,9 +12,8 @@ defmodule Sqlite.Ecto.DDL do
   def ddl_exists(%Index{name: name}), do: sqlite_master_query(name, "index")
 
   # Create a table.
-  def execute_ddl({:create, table = %Table{name: name}, columns}) do
-    opts = Map.get(table, :options)
-    assemble ["CREATE TABLE", quote_id(name), column_definitions(columns), opts]
+  def execute_ddl({:create, %Table{name: name, options: options}, columns}) do
+    assemble ["CREATE TABLE", quote_id(name), column_definitions(columns), options]
   end
 
   # Drop a table.

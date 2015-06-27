@@ -26,6 +26,10 @@ defmodule Sqlite.Ecto.Util do
   def assemble(list) when is_list(list) do
     list
     |> List.flatten
+    |> Enum.filter(fn
+      nil -> false
+      _ -> true
+    end)
     |> Enum.reduce(fn word, result ->
         if word == "," || word == ")" || String.ends_with?(result, "(") do
           Enum.join([result, word])
@@ -33,7 +37,6 @@ defmodule Sqlite.Ecto.Util do
           Enum.join([result, word], " ")
         end
     end)
-    |> String.strip
   end
   def assemble(literal), do: literal
 
