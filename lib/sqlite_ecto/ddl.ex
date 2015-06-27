@@ -62,8 +62,8 @@ defmodule Sqlite.Ecto.DDL do
   end
 
   # Foreign keys:
-  defp column_type(%Reference{table: table, column: col}, _opts) do
-    "REFERENCES #{quote_id(table)}(#{quote_id(col)})"
+  defp column_type(%Reference{table: table, column: col, on_delete: delete}, _opts) do
+    ["REFERENCES #{quote_id(table)}(#{quote_id(col)})", reference_on_delete(delete)]
   end
   # Decimals are the only type for which we care about the options:
   defp column_type(:decimal, opts=%{precision: precision}) do
@@ -83,7 +83,6 @@ defmodule Sqlite.Ecto.DDL do
 
   # NOTE SQLite requires autoincrement integers to be primary keys
   defp column_constraints(:serial, _), do: "PRIMARY KEY AUTOINCREMENT"
-
   # Return a string of constraints for the column.
   # NOTE The order of these constraints does not matter to SQLite, but
   # rearranging them may cause tests that rely on their order to fail.
@@ -108,6 +107,12 @@ defmodule Sqlite.Ecto.DDL do
     ["NOT NULL", other_constraints]
   end
   defp column_constraints(_), do: []
+
+  # Define how to handle deletion of foreign keys on parent table.
+  # See: https://www.sqlite.org/foreignkeys.html#fk_actions
+  defp reference_on_delete(:nillify_all), do: "ON DELETE SET NULL"
+  defp reference_on_delete(:delete_all), do: "ON DELETE CASCADE"
+  defp reference_on_delete(_), do: []
 
   # Returns a create index prefix.
   defp create_unique_index(true), do: "CREATE UNIQUE INDEX"

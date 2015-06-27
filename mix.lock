@@ -1,6 +1,6 @@
 %{"decimal": {:hex, :decimal, "1.1.0"},
   "earmark": {:hex, :earmark, "0.1.17"},
-  "ecto": {:git, "https://github.com/elixir-lang/ecto", "e34fc49e8621c89cf4996693665fe095942acc01", []},
+  "ecto": {:git, "https://github.com/elixir-lang/ecto", "e537150e3e2c44fc8af645fb48a7a27d647ddcd0", []},
   "esqlite": {:hex, :esqlite, "0.2.0"},
   "ex_doc": {:hex, :ex_doc, "0.7.3"},
   "pipe": {:hex, :pipe, "0.0.2"},

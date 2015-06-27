@@ -91,7 +91,7 @@ defmodule Sqlite.Ecto.Test do
     assert row == {0}
   end
 
-  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1]
+  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1, references: 2]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -113,6 +113,30 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :category_id, references(:categories), []} ]}
     query = SQL.execute_ddl(create)
     assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id"))}
+  end
+
+  test "create table reference on delete nothing" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_id, references(:categories, on_delete: :nothing), []} ]}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id"))}
+  end
+
+  test "create table reference on delete nillify_all" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_id, references(:categories, on_delete: :nillify_all), []} ]}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id") ON DELETE SET NULL)}
+  end
+
+  test "create table reference on delete delete_all" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_id, references(:categories, on_delete: :delete_all), []} ]}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id") ON DELETE CASCADE)}
   end
 
   test "create table with column options" do
