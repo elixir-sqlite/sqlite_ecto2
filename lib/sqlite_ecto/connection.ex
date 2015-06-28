@@ -44,7 +44,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defdelegate all(query), to: Query
 
-    defdelegate update_all(query, values), to: Query
+    defdelegate update_all(query), to: Query
 
     defdelegate delete_all(query), to: Query
 

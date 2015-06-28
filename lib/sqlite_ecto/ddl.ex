@@ -110,7 +110,7 @@ defmodule Sqlite.Ecto.DDL do
 
   # Define how to handle deletion of foreign keys on parent table.
   # See: https://www.sqlite.org/foreignkeys.html#fk_actions
-  defp reference_on_delete(:nillify_all), do: "ON DELETE SET NULL"
+  defp reference_on_delete(:nilify_all), do: "ON DELETE SET NULL"
   defp reference_on_delete(:delete_all), do: "ON DELETE CASCADE"
   defp reference_on_delete(_), do: []
 

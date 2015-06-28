@@ -48,17 +48,14 @@ defmodule Sqlite.Ecto.Query do
     assemble [select, from, join, where, group_by, order_by, limit]
   end
 
-  def update_all(query, values) do
+  def update_all(query) do
     if query.joins != [] do
       raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite"
     end
 
     sources = create_names(query, :update)
     {table, _name, _model} = elem(sources, 0)
-
-    fields = Enum.map_join(values, ", ", fn {field, expr} ->
-      "#{quote_id(field)} = #{expr(expr, sources)}"
-    end)
+    fields = update_fields(query.updates, sources)
     where = where(query.wheres, sources)
     assemble ["UPDATE", quote_id(table), "SET", fields, where]
   end
@@ -510,6 +507,24 @@ defmodule Sqlite.Ecto.Query do
       ["(", expr(expr, sources), ")"]
     end
     ["HAVING" | exprs]
+  end
+
+  defp update_fields(updates, sources) do
+    for(%{expr: expr} <- updates,
+        {op, kw} <- expr,
+        {key, value} <- kw,
+        do: update_op(op, key, value, sources)) |> Enum.intersperse(",")
+  end
+
+  defp update_op(:set, key, value, sources) do
+    [quote_id(key), "=", expr(value, sources)]
+  end
+  defp update_op(:inc, key, value, sources) do
+    quoted = quote_id(key)
+    [quoted, "=", quoted, "+", expr(value, sources)]
+  end
+  defp update_op(op, _key, _value, _sources) do
+    raise ArgumentError, "Unknown update operation #{inspect op} for SQLite"
   end
 
   defp join([], _sources), do: []

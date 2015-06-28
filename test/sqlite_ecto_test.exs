@@ -123,10 +123,10 @@ defmodule Sqlite.Ecto.Test do
     assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id"))}
   end
 
-  test "create table reference on delete nillify_all" do
+  test "create table reference on delete nilify_all" do
     create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, on_delete: :nillify_all), []} ]}
+                {:add, :category_id, references(:categories, on_delete: :nilify_all), []} ]}
     query = SQL.execute_ddl(create)
     assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id") ON DELETE SET NULL)}
   end
@@ -266,9 +266,9 @@ defmodule Sqlite.Ecto.Test do
     end
   end
 
-  defp normalize(query) do
-    {query, _params} = Ecto.Query.Planner.prepare(query, [], %{})
-    Ecto.Query.Planner.normalize(query, [], [])
+  defp normalize(query, operation \\ :all) do
+    {query, _params} = Ecto.Query.Planner.prepare(query, operation, [], %{})
+    Ecto.Query.Planner.normalize(query, operation, [])
   end
 
   test "from" do
@@ -319,7 +319,7 @@ defmodule Sqlite.Ecto.Test do
 
   test "where" do
     query = Model |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 WHERE (m0."x" = 42) AND (m0."y" != 43)}
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 WHERE (m0."y" != 43) AND (m0."x" = 42)}
   end
 
   test "order by" do
@@ -471,7 +471,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y"}
 
     query = Model |> group_by([r], [r.x, r.y]) |> having([r], r.x == r.x) |> having([r], r.y == r.y) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y" HAVING (m0."x" = m0."x") AND (m0."y" = m0."y")}
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y" HAVING (m0."y" = m0."y") AND (m0."x" = m0."x")}
 
     query = Model |> group_by([r], []) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
@@ -558,21 +558,22 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "update all" do
-    query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: 0]) == ~s{UPDATE "model" SET "x" = 0}
+    query = from(m in Model, update: [set: [x: 0]]) |> normalize(:update_all)
+    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0}
 
-    query = from(e in Model, where: e.x == 123) |> normalize
-    assert SQL.update_all(query, [x: 0]) == ~s{UPDATE "model" SET "x" = 0 WHERE ("model"."x" = 123)}
+    query = from(m in Model, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
+    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
 
-    query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: 0, y: "123"]) == ~s{UPDATE "model" SET "x" = 0, "y" = '123'}
+    query = from(e in Model, update: [set: [x: 0, y: "123"]]) |> normalize(:update_all)
+    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = '123'}
 
-    query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: quote(do: ^0)]) == ~s{UPDATE "model" SET "x" = ?}
+    query = from(m in Model, update: [set: [x: ^0]]) |> normalize(:update_all)
+    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = ?}
 
     assert_raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite", fn ->
-      query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
-      SQL.update_all(query, [x: 0])
+      query = Model |> join(:inner, [p], q in Model2, p.x == q.z)
+                    |> update([_], set: [x: 0]) |> normalize(:update_all)
+      SQL.update_all(query)
     end
   end
 
