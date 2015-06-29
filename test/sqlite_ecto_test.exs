@@ -27,7 +27,6 @@ defmodule Sqlite.Ecto.Test do
 
   # return a unique temporary filename
   defp tempfilename do
-    :erlang.now |> :random.seed
     1..10
     |> Enum.map(fn(_) -> :random.uniform(10) - 1 end)
     |> Enum.join
