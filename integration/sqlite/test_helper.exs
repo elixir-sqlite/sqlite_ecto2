@@ -19,7 +19,7 @@ alias Ecto.Integration.TestRepo
 Application.put_env(:sqlite_ecto, TestRepo,
   adapter: Sqlite.Ecto,
   database: "/tmp/test_repo.db",
-  size: 1, max_overflow: 0)
+  pool: Ecto.Adapters.SQL.Sandbox)
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :sqlite_ecto
@@ -64,3 +64,4 @@ _   = Ecto.Storage.down(TestRepo)
 {:ok, _pid} = PoolRepo.start_link
 
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
+Process.flag(:trap_exit, true)

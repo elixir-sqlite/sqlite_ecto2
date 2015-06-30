@@ -9,6 +9,7 @@ defmodule Sqlite.Ecto.Mixfile do
      deps: deps,
 
      # testing
+     build_per_environment: false,
      test_paths: test_paths(Mix.env),
      aliases: ["test.all": &test_all/1,
                "test.integration": &test_integration/1],
