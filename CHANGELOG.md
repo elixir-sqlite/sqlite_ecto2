@@ -1,3 +1,6 @@
+# v0.3.0 (2015-06-30)
+* Release for Ecto 0.13.1+
+
 # v0.2.0 (2015-06-25)
 * Release for Ecto 0.12.1+
   * Adds support for Decimals

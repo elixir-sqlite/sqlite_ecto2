@@ -60,7 +60,7 @@ Add `Sqlite.Ecto` as a dependency in your `mix.exs` file.
 
 ```elixir
 def deps do
-  [{:sqlite_ecto, "~> 0.2.0"}]
+  [{:sqlite_ecto, "~> 0.3.0"}]
 end
 ```
 
