@@ -32,7 +32,8 @@ defmodule Sqlite.Ecto.Mixfile do
   defp deps do
     [{:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.7", only: :dev},
-     {:ecto, "~> 0.13.1"},
+     #{:ecto, "~> 0.13.1"},
+     {:ecto, github: "elixir-lang/ecto"},
      {:poison, "~> 1.0"},
      {:sqlitex, "~> 0.6"}]
   end
