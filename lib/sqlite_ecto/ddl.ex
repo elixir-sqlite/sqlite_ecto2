@@ -11,6 +11,11 @@ defmodule Sqlite.Ecto.DDL do
   def ddl_exists(%Table{name: name}), do: sqlite_master_query(name, "table")
   def ddl_exists(%Index{name: name}), do: sqlite_master_query(name, "index")
 
+  # Raise error on NoSQL arguments.
+  def execute_ddl({:create, %Table{options: keyword}, _}) when is_list(keyword) do
+    raise ArgumentError, "SQLite adapter does not support keyword lists in :options"
+  end
+
   # Create a table.
   def execute_ddl({:create, %Table{name: name, options: options}, columns}) do
     assemble ["CREATE TABLE", quote_id(name), column_definitions(columns), options]
@@ -40,6 +45,11 @@ defmodule Sqlite.Ecto.DDL do
   # Drop an index.
   def execute_ddl({:drop, %Index{name: name}}) do
     assemble ["DROP INDEX", quote_id(name)]
+  end
+
+  # Raise error on NoSQL arguments.
+  def execute_ddl(keyword) when is_list(keyword) do
+    raise ArgumentError, "SQLite adapter does not support keyword lists in execute"
   end
 
   # Default:
