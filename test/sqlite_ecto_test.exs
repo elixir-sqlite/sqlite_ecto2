@@ -235,6 +235,7 @@ defmodule Sqlite.Ecto.Test do
     schema "model" do
       field :x, :integer
       field :y, :integer
+      field :z, :integer
 
       has_many :comments, Sqlite.Ecto.Test.Model2,
         references: :x,
@@ -266,8 +267,8 @@ defmodule Sqlite.Ecto.Test do
   end
 
   defp normalize(query, operation \\ :all) do
-    {query, _params} = Ecto.Query.Planner.prepare(query, operation, [], %{})
-    Ecto.Query.Planner.normalize(query, operation, [])
+    {query, _params} = Ecto.Query.Planner.prepare(query, operation, %{})
+    Ecto.Query.Planner.normalize(query, operation, %{})
   end
 
   test "from" do
@@ -564,7 +565,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
 
     query = from(e in Model, update: [set: [x: 0, y: "123"]]) |> normalize(:update_all)
-    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = '123'}
+    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = 123}
 
     query = from(m in Model, update: [set: [x: ^0]]) |> normalize(:update_all)
     assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = ?}

@@ -13,28 +13,35 @@ Application.put_env(:ecto, :primary_key_type, :id)
 # Load support files
 Code.require_file "../../deps/ecto/integration_test/support/repo.exs", __DIR__
 
+pool =
+  case System.get_env("ECTO_POOL") || "poolboy" do
+    "poolboy"        -> Ecto.Pools.Poolboy
+    "sojourn_broker" -> Ecto.Pools.SojournBroker
+  end
+
 # Basic test repo
 alias Ecto.Integration.TestRepo
 
-Application.put_env(:sqlite_ecto, TestRepo,
+Application.put_env(:ecto, TestRepo,
   adapter: Sqlite.Ecto,
   database: "/tmp/test_repo.db",
   pool: Ecto.Adapters.SQL.Sandbox)
 
 defmodule Ecto.Integration.TestRepo do
-  use Ecto.Integration.Repo, otp_app: :sqlite_ecto
+  use Ecto.Integration.Repo, otp_app: :ecto
 end
 
 # Pool repo for transaction and lock tests
 alias Ecto.Integration.PoolRepo
 
-Application.put_env(:sqlite_ecto, PoolRepo,
+Application.put_env(:ecto, PoolRepo,
   adapter: Sqlite.Ecto,
+  pool: pool,
   database: "/tmp/test_repo.db",
   size: 10)
 
 defmodule Ecto.Integration.PoolRepo do
-  use Ecto.Integration.Repo, otp_app: :sqlite_ecto
+  use Ecto.Integration.Repo, otp_app: :ecto
 end
 
 defmodule Ecto.Integration.Case do

@@ -393,6 +393,10 @@ defmodule Sqlite.Ecto.Query do
     end
   end
 
+  defp expr(%Decimal{} = decimal, _sources) do
+    Decimal.to_string(decimal, :normal)
+  end
+
   defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
     "X'#{Base.encode16(binary, case: :upper)}'"
   end
