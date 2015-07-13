@@ -33,6 +33,11 @@ defmodule Sqlite.Ecto.DDL do
     end)
   end
 
+  # Rename a table.
+  def execute_ddl({:rename, %Table{name: old}, %Table{name: new}}) do
+    "ALTER TABLE #{quote_id(old)} RENAME TO #{quote_id(new)}"
+  end
+
   # Create an index.
   # NOTE Ignores concurrently and using values.
   def execute_ddl({:create, %Index{}=index}) do

@@ -176,6 +176,11 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(drop) == ~s{DROP INDEX "posts$main"}
   end
 
+  test "rename table" do
+    rename = {:rename, table(:posts), table(:new_posts)}
+    assert SQL.execute_ddl(rename) == ~s{ALTER TABLE "posts" RENAME TO "new_posts"}
+  end
+
   test "alter table" do
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
@@ -319,7 +324,7 @@ defmodule Sqlite.Ecto.Test do
 
   test "where" do
     query = Model |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 WHERE (m0."y" != 43) AND (m0."x" = 42)}
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 WHERE (m0."x" = 42) AND (m0."y" != 43)}
   end
 
   test "order by" do
@@ -471,7 +476,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y"}
 
     query = Model |> group_by([r], [r.x, r.y]) |> having([r], r.x == r.x) |> having([r], r.y == r.y) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y" HAVING (m0."y" = m0."y") AND (m0."x" = m0."x")}
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y" HAVING (m0."x" = m0."x") AND (m0."y" = m0."y")}
 
     query = Model |> group_by([r], []) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
