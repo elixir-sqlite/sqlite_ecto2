@@ -229,7 +229,6 @@ defmodule Sqlite.Ecto.Query do
         {:blob, binary} -> binary
         other -> other
       end)
-      |> List.to_tuple
     end)
     {:ok, %{rows: rows, num_rows: length(rows)}}
   end
