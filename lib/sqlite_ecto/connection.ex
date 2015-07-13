@@ -22,17 +22,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       :ok
     end
 
-    # Run the mapper/1 function over the rows.
-    #
-    # NOTE: decode/2 is used by, e.g., Postgres and MySQL to decode the binary
-    # data returned from a query into Elixir types.  All of SQLite's
-    # "decoding" happens at the level of the C library, so there is no need
-    # for us to decode the data.
-    def decode({:ok, %{rows: rows} = res}, mapper) when is_list(rows) do
-      {:ok, %{res | rows: Enum.map(rows, mapper)}}
-    end
-    def decode(results, _mapper), do: results
-
     ## Transaction
 
     alias Sqlite.Ecto.Transaction
