@@ -5,6 +5,7 @@ ExUnit.start exclude: [:array_type,
                        :delete_with_join,
                        :right_join,
                        :modify_column,
+                       :modify_foreign_key,
                        :remove_column]
 
 # Configure Ecto for support and tests
