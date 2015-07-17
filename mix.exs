@@ -35,7 +35,8 @@ defmodule Sqlite.Ecto.Mixfile do
      #{:ecto, "~> 0.13.1"},
      {:ecto, github: "elixir-lang/ecto"},
      {:poison, "~> 1.0"},
-     {:sqlitex, "~> 0.6"}]
+     #{:sqlitex, "~> 0.6"}]
+     {:sqlitex, github: "jazzyb/sqlitex"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto"

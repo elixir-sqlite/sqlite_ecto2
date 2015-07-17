@@ -247,7 +247,7 @@ defmodule Sqlite.Ecto.Query do
   defp cast_any_datetimes(row) do
     Enum.map row, fn {key, value} ->
       str = Atom.to_string(key)
-      if String.contains?(str, "CAST (") && String.contains?(str, "TEXT_DATETIME") do
+      if String.contains?(str, "CAST (") && String.contains?(str, "TEXT_DATE") do
         {key, string_to_datetime(value)}
       else
         {key, value}
@@ -255,6 +255,9 @@ defmodule Sqlite.Ecto.Query do
     end
   end
 
+  defp string_to_datetime(<<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2)>>) do
+    {String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}
+  end
   defp string_to_datetime(str) do
     <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2), " ", hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary-size(6)>> = str
     {{String.to_integer(yr), String.to_integer(mo), String.to_integer(da)},{String.to_integer(hr), String.to_integer(mi), String.to_integer(se), String.to_integer(fr)}}
@@ -381,6 +384,22 @@ defmodule Sqlite.Ecto.Query do
     end)
   end
 
+  # start of SQLite function to display date
+  # NOTE the open parenthesis must be closed
+  @date_format "strftime('%Y-%m-%d'"
+
+  defp expr({:date_add, _, [date, count, interval]}, sources) do
+    ["CAST (", @date_format, ",", expr(date, sources), ",", interval(count, interval, sources), ") AS TEXT_DATE)"]
+  end
+
+  # start of SQLite function to display datetime
+  # NOTE the open parenthesis must be closed
+  @datetime_format "strftime('%Y-%m-%d %H:%M:%f000'"
+
+  defp expr({:datetime_add, _, [datetime, count, interval]}, sources) do
+    ["CAST (", @datetime_format, ",", expr(datetime, sources), ",", interval(count, interval, sources), ") AS TEXT_DATETIME)"]
+  end
+
   defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do
     case handle_call(fun, length(args)) do
       {:binary_op, op} ->
@@ -424,6 +443,22 @@ defmodule Sqlite.Ecto.Query do
     "'#{:binary.replace(literal, "'", "''", [:global])}'"
   end
 
+  defp interval(_, "microsecond", sources) do
+    raise ArgumentError, "SQLite does not support microsecond precision in datetime intervals"
+  end
+
+  defp interval(count, "millisecond", sources) do
+    "(#{expr(count, sources)} / 1000.0) || ' seconds'"
+  end
+
+  defp interval(count, "week", sources) do
+    "(#{expr(count, sources)} * 7) || ' days'"
+  end
+
+  defp interval(count, interval, sources) do
+    "#{expr(count, sources)} || ' #{interval}'"
+  end
+
   defp op_to_binary({op, _, [_, _]} = expr, sources) when op in @binary_ops do
     ["(", expr(expr, sources), ")"]
   end
@@ -441,6 +476,7 @@ defmodule Sqlite.Ecto.Query do
       :binary -> "BLOB"
       :float -> "NUMERIC"
       :string -> "TEXT"
+      :date -> "TEXT_DATE"          # HACK see: cast_any_datetimes/1
       :datetime -> "TEXT_DATETIME"  # HACK see: cast_any_datetimes/1
       :map -> "TEXT"
       other -> other |> Atom.to_string |> String.upcase
