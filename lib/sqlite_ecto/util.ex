@@ -14,6 +14,8 @@ defmodule Sqlite.Ecto.Util do
   def random_id, do: :random.uniform |> Float.to_string |> String.slice(2..10)
 
   # Quote the given identifier.
+  def quote_id({nil, id}), do: quote_id(id)
+  def quote_id({prefix, table}), do: quote_id(prefix) <> "." <> quote_id(table)
   def quote_id(id) when is_atom(id), do: id |> Atom.to_string |> quote_id
   def quote_id(id) do
     if String.contains?(id, "\"") || String.contains?(id, ",") do

@@ -71,31 +71,31 @@ defmodule Sqlite.Ecto.Query do
     assemble ["DELETE FROM", quote_id(table), where]
   end
 
-  def insert(table, [], returning) do
-    return = returning_clause(table, returning, "INSERT")
-    assemble ["INSERT INTO", quote_id(table), "DEFAULT VALUES", return]
+  def insert(prefix, table, [], returning) do
+    return = returning_clause(prefix, table, returning, "INSERT")
+    assemble ["INSERT INTO", quote_id({prefix, table}), "DEFAULT VALUES", return]
   end
-  def insert(table, fields, returning) do
+  def insert(prefix, table, fields, returning) do
     cols = map_intersperse(fields, ",", &quote_id/1)
     vals = map_intersperse(1..length(fields), ",", &"?#{&1}")
-    return = returning_clause(table, returning, "INSERT")
-    assemble ["INSERT INTO", quote_id(table), "(", cols, ")", "VALUES (", vals, ")", return]
+    return = returning_clause(prefix, table, returning, "INSERT")
+    assemble ["INSERT INTO", quote_id({prefix, table}), "(", cols, ")", "VALUES (", vals, ")", return]
   end
 
-  def update(table, fields, filters, returning) do
+  def update(prefix, table, fields, filters, returning) do
     {vals, count} = Enum.map_reduce(fields, 1, fn (i, acc) ->
       {"#{quote_id(i)} = ?#{acc}", acc + 1}
     end)
     vals = Enum.intersperse(vals, ",")
     where = where_filter(filters, count)
-    return = returning_clause(table, returning, "UPDATE")
-    assemble ["UPDATE", quote_id(table), "SET", vals, where, return]
+    return = returning_clause(prefix, table, returning, "UPDATE")
+    assemble ["UPDATE", quote_id({prefix, table}), "SET", vals, where, return]
   end
 
-  def delete(table, filters, returning) do
+  def delete(prefix, table, filters, returning) do
     where = where_filter(filters)
-    return = returning_clause(table, returning, "DELETE")
-    assemble ["DELETE FROM", quote_id(table), where, return]
+    return = returning_clause(prefix, table, returning, "DELETE")
+    assemble ["DELETE FROM", quote_id({prefix, table}), where, return]
   end
 
   ## Returning Clause Helpers
@@ -264,10 +264,10 @@ defmodule Sqlite.Ecto.Query do
   # that query() can parse the string later and emulate it with a
   # transaction and trigger.
   # See: returning_query()
-  defp returning_clause(_table, [], _cmd), do: []
-  defp returning_clause(table, returning, cmd) do
+  defp returning_clause(_prefix, _table, [], _cmd), do: []
+  defp returning_clause(prefix, table, returning, cmd) do
     return = String.strip(@pseudo_returning_statement)
-    fields = Enum.map_join([table | returning], ",", &quote_id/1)
+    fields = Enum.map_join([{prefix, table} | returning], ",", &quote_id/1)
     [return, cmd, fields]
   end
 
@@ -294,19 +294,19 @@ defmodule Sqlite.Ecto.Query do
 
   defp json_library, do: Application.get_env(:ecto, :json_library)
 
-  defp create_names(%{sources: sources}, stmt \\ :select) do
-    create_names(sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
+  defp create_names(%{prefix: prefix, sources: sources}, stmt \\ :select) do
+    create_names(prefix, sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
   end
-  defp create_names(sources, pos, limit, stmt) when pos < limit do
+  defp create_names(prefix, sources, pos, limit, stmt) when pos < limit do
     {table, model} = elem(sources, pos)
     if stmt == :select do
       id = String.first(table) <> Integer.to_string(pos)
     else
       id = quote_id(table)
     end
-    [{table, id, model} | create_names(sources, pos + 1, limit, stmt)]
+    [{{prefix, table}, id, model} | create_names(prefix, sources, pos + 1, limit, stmt)]
   end
-  defp create_names(_, pos, pos, _stmt), do: []
+  defp create_names(_, _, pos, pos, _), do: []
 
   defp select(%SelectExpr{fields: fields}, distinct, sources) do
     fields = Enum.map_join(fields, ", ", fn (f) ->
@@ -322,7 +322,7 @@ defmodule Sqlite.Ecto.Query do
     raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite"
   end
 
-  def from(sources) do
+  defp from(sources) do
     {table, id, _model} = elem(sources, 0)
     ["FROM", quote_id(table), "AS", id]
   end

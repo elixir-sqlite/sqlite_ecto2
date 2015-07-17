@@ -48,11 +48,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defdelegate delete_all(query), to: Query
 
-    defdelegate insert(table, fields, returning), to: Query
+    defdelegate insert(prefix, table, fields, returning), to: Query
 
-    defdelegate update(table, fields, filters, returning), to: Query
+    defdelegate update(prefix, table, fields, filters, returning), to: Query
 
-    defdelegate delete(table, filters, returning), to: Query
+    defdelegate delete(prefix, table, filters, returning), to: Query
 
     ## DDL
 
