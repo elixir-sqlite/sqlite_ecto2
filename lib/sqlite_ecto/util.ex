@@ -26,19 +26,14 @@ defmodule Sqlite.Ecto.Util do
 
   # Assemble a list of items into a single string.
   def assemble(list) when is_list(list) do
-    list
-    |> List.flatten
-    |> Enum.filter(fn
-      nil -> false
-      _ -> true
-    end)
-    |> Enum.reduce(fn word, result ->
+    list = for x <- List.flatten(list), x != nil, do: x
+    Enum.reduce list, fn word, result ->
         if word == "," || word == ")" || String.ends_with?(result, "(") do
           Enum.join([result, word])
         else
           Enum.join([result, word], " ")
         end
-    end)
+    end
   end
   def assemble(literal), do: literal
 
