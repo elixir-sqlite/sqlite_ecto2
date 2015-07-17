@@ -30,12 +30,11 @@ defmodule Sqlite.Ecto.Query do
     end
   end
 
+  def all(%Ecto.Query{lock: lock}) when lock != nil do
+    raise ArgumentError, "locks are not supported by SQLite"
+  end
   def all(query) do
-    if query.lock do
-      raise ArgumentError, "locks are not supported by SQLite"
-    end
-
-    sources = create_names(query)
+    sources = create_names(query, :select)
 
     select = select(query.select, query.distinct, sources)
     from = from(sources)
@@ -48,11 +47,10 @@ defmodule Sqlite.Ecto.Query do
     assemble [select, from, join, where, group_by, order_by, limit]
   end
 
+  def update_all(%Ecto.Query{joins: [_ | _]}) do
+    raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite"
+  end
   def update_all(query) do
-    if query.joins != [] do
-      raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite"
-    end
-
     sources = create_names(query, :update)
     {table, _name, _model} = elem(sources, 0)
     fields = update_fields(query.updates, sources)
@@ -60,11 +58,10 @@ defmodule Sqlite.Ecto.Query do
     assemble ["UPDATE", quote_id(table), "SET", fields, where]
   end
 
+  def delete_all(%Ecto.Query{joins: [_ | _]}) do
+    raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite"
+  end
   def delete_all(query) do
-    if query.joins != [] do
-      raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite"
-    end
-
     sources = create_names(query, :delete)
     {table, _name, _model} = elem(sources, 0)
     where = where(query.wheres, sources)
@@ -294,19 +291,20 @@ defmodule Sqlite.Ecto.Query do
 
   defp json_library, do: Application.get_env(:ecto, :json_library)
 
-  defp create_names(%{prefix: prefix, sources: sources}, stmt \\ :select) do
+  defp create_names(%{prefix: prefix, sources: sources}, stmt) do
     create_names(prefix, sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
   end
   defp create_names(prefix, sources, pos, limit, stmt) when pos < limit do
     {table, model} = elem(sources, pos)
-    if stmt == :select do
-      id = String.first(table) <> Integer.to_string(pos)
-    else
-      id = quote_id(table)
-    end
+    id = table_identifier(stmt, table, pos)
     [{{prefix, table}, id, model} | create_names(prefix, sources, pos + 1, limit, stmt)]
   end
   defp create_names(_, _, pos, pos, _), do: []
+
+  defp table_identifier(:select, table, pos) do
+    String.first(table) <> Integer.to_string(pos)
+  end
+  defp table_identifier(_stmt, table, _pos), do: quote_id(table)
 
   defp select(%SelectExpr{fields: fields}, distinct, sources) do
     fields = Enum.map_join(fields, ", ", fn (f) ->
@@ -466,16 +464,14 @@ defmodule Sqlite.Ecto.Query do
   end
 
   defp order_by(order_bys, sources) do
-    exprs = Enum.map_join(order_bys, ", ", fn %QueryExpr{expr: expr} ->
+    Enum.map_join(order_bys, ", ", fn %QueryExpr{expr: expr} ->
       Enum.map_join(expr, ", ", &ordering_term(&1, sources))
     end)
-
-    if exprs == "" do
-      []
-    else
-      ["ORDER BY", exprs]
-    end
+    |> order_by_clause
   end
+
+  defp order_by_clause(""), do: []
+  defp order_by_clause(exprs), do: ["ORDER BY", exprs]
 
   defp ordering_term({:asc, expr}, sources), do: assemble(expr(expr, sources))
   defp ordering_term({:desc, expr}, sources) do
@@ -493,15 +489,15 @@ defmodule Sqlite.Ecto.Query do
   end
 
   defp group_by(group_bys, havings, sources) do
-    exprs = Enum.map_join(group_bys, ", ", fn %QueryExpr{expr: expr} ->
+    Enum.map_join(group_bys, ", ", fn %QueryExpr{expr: expr} ->
       Enum.map_join(expr, ", ", &assemble(expr(&1, sources)))
     end)
+    |> group_by_clause(havings, sources)
+  end
 
-    if exprs == "" do
-      []
-    else
-      ["GROUP BY", exprs, having(havings, sources)]
-    end
+  defp group_by_clause("", _, _), do: []
+  defp group_by_clause(exprs, havings, sources) do
+    ["GROUP BY", exprs, having(havings, sources)]
   end
 
   defp having([], _sources), do: []
