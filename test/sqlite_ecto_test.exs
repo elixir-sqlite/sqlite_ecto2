@@ -290,8 +290,8 @@ defmodule Sqlite.Ecto.Test do
   end
 
   defp normalize(query, operation \\ :all) do
-    {query, _params} = Ecto.Query.Planner.prepare(query, operation, %{})
-    Ecto.Query.Planner.normalize(query, operation, %{})
+    {query, _params} = Ecto.Query.Planner.prepare(query, operation, Sqlite.Ecto)
+    Ecto.Query.Planner.normalize(query, operation, Sqlite.Ecto)
   end
 
   test "from" do

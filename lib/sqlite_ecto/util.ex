@@ -1,6 +1,9 @@
 defmodule Sqlite.Ecto.Util do
   @moduledoc "Common utilties used by multiple Sqlite.Ecto modules."
 
+  # Use Ecto's JSON library (currently Poison) for embedded JSON datatypes.
+  def json_library, do: Application.get_env(:ecto, :json_library)
+
   # Execute a SQL query.
   def exec(pid, sql) do
     case Sqlitex.Server.exec(pid, sql) do

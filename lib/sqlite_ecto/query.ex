@@ -289,8 +289,6 @@ defmodule Sqlite.Ecto.Query do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.SelectExpr
 
-  defp json_library, do: Application.get_env(:ecto, :json_library)
-
   defp create_names(%{prefix: prefix, sources: sources}, stmt) do
     create_names(prefix, sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
   end

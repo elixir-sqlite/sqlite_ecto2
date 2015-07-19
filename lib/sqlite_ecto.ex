@@ -27,11 +27,23 @@ defmodule Sqlite.Ecto do
 
   """
 
+  import Sqlite.Ecto.Util, only: [json_library: 0]
+
   # Inherit all behaviour from Ecto.Adapters.SQL
   use Ecto.Adapters.SQL, :sqlitex
 
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
+
+  ## Custom SQLite Types
+
+  def load({:embed, _} = type, binary) when is_binary(binary) do
+    super(type, json_library.decode!(binary))
+  end
+  def load(:map, binary) when is_binary(binary) do
+    super(:map, json_library.decode!(binary))
+  end
+  def load(type, value), do: super(type, value)
 
   ## Storage API
 
