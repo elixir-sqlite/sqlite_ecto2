@@ -1,3 +1,6 @@
+# v0.4.0 (2015-07-19)
+* Release for Ecto 0.14.0+
+
 # v0.3.0 (2015-06-30)
 * Release for Ecto 0.13.1+
 
