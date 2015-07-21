@@ -1,3 +1,4 @@
+Code.require_file "../../deps/ecto/integration_test/cases/interval.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/cases/joins.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/cases/migrator.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/cases/pool.exs", __DIR__

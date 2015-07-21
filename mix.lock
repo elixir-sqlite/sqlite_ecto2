@@ -6,4 +6,4 @@
   "pipe": {:hex, :pipe, "0.0.2"},
   "poison": {:hex, :poison, "1.4.0"},
   "poolboy": {:hex, :poolboy, "1.5.1"},
-  "sqlitex": {:hex, :sqlitex, "0.6.1"}}
+  "sqlitex": {:hex, :sqlitex, "0.7.0"}}

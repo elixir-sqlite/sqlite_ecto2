@@ -6,7 +6,8 @@ ExUnit.start exclude: [:array_type,
                        :right_join,
                        :modify_column,
                        :modify_foreign_key,
-                       :remove_column]
+                       :remove_column,
+                       :uses_usec]
 
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :primary_key_type, :id)
