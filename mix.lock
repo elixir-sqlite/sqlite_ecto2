@@ -6,4 +6,4 @@
   "pipe": {:hex, :pipe, "0.0.2"},
   "poison": {:hex, :poison, "1.4.0"},
   "poolboy": {:hex, :poolboy, "1.5.1"},
-  "sqlitex": {:git, "git://github.com/jazzyb/sqlitex.git", "650f9b7d1eccd5b1a80409a75f18c387ebb456aa", []}}
+  "sqlitex": {:hex, :sqlitex, "0.7.0"}}
