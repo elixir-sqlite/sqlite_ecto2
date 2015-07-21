@@ -1,3 +1,6 @@
+# v0.4.1 (2015-07-21)
+* Adds support for interval based operations with date_add and datetime_add
+
 # v0.4.0 (2015-07-19)
 * Release for Ecto 0.14.0+
 
