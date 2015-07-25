@@ -40,7 +40,7 @@ Application.put_env(:ecto, PoolRepo,
   adapter: Sqlite.Ecto,
   pool: pool,
   database: "/tmp/test_repo.db",
-  size: 10)
+  pool_size: 10)
 
 defmodule Ecto.Integration.PoolRepo do
   use Ecto.Integration.Repo, otp_app: :ecto

@@ -96,18 +96,6 @@ defmodule Sqlite.Ecto.Test do
     assert row == [1, "foo", "bar", 4]
   end
 
-  test "table exists", context do
-    sql = context[:sql]
-    {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE model (id, x, y, z)", [], [])
-    query = SQL.ddl_exists(%Table{name: "model"})
-    assert query == "SELECT count(1) FROM sqlite_master WHERE name = 'model' AND type = 'table'"
-    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [], [])
-    assert row == [1]
-    query = SQL.ddl_exists(%Table{name: "not_model"})
-    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [], [])
-    assert row == [0]
-  end
-
   import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1, references: 2]
 
   test "executing a string during migration" do
@@ -122,6 +110,16 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :created_at, :datetime, []}]}
     query = SQL.execute_ddl(create)
     assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "price" DECIMAL(10,2), "created_at" DATETIME)}
+  end
+
+  test "create table if not exists" do
+    create = {:create_if_not_exists, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :title, :string, []},
+                {:add, :price, :decimal, [precision: 10, scale: 2]},
+                {:add, :created_at, :datetime, []}]}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE TABLE IF NOT EXISTS "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "price" DECIMAL(10,2), "created_at" DATETIME)}
   end
 
   test "create table with reference" do
@@ -177,10 +175,20 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl({:drop, %Table{name: "posts"}}) == ~s{DROP TABLE "posts"}
   end
 
+  test "drop table if exists" do
+    assert SQL.execute_ddl({:drop_if_exists, %Table{name: "posts"}}) == ~s{DROP TABLE IF EXISTS "posts"}
+  end
+
   test "create index" do
     create = {:create, index(:posts, [:category_id, :permalink])}
     query = SQL.execute_ddl(create)
     assert query == ~s{CREATE INDEX "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")}
+  end
+
+  test "create index if not exists" do
+    create = {:create_if_not_exists, index(:posts, [:category_id, :permalink])}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE INDEX IF NOT EXISTS "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")}
   end
 
   test "create unique index" do
@@ -189,9 +197,20 @@ defmodule Sqlite.Ecto.Test do
     assert query == ~s{CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")}
   end
 
+  test "create unique index if not exists" do
+    create = {:create_if_not_exists, index(:posts, [:permalink], unique: true)}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE UNIQUE INDEX IF NOT EXISTS "posts_permalink_index" ON "posts" ("permalink")}
+  end
+
   test "drop index" do
     drop = {:drop, index(:posts, [:id], name: "posts$main")}
     assert SQL.execute_ddl(drop) == ~s{DROP INDEX "posts$main"}
+  end
+
+  test "drop index if exists" do
+    drop = {:drop_if_exists, index(:posts, [:id], name: "posts$main")}
+    assert SQL.execute_ddl(drop) == ~s{DROP INDEX IF EXISTS "posts$main"}
   end
 
   test "rename table" do

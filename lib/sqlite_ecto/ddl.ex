@@ -6,24 +6,21 @@ defmodule Sqlite.Ecto.DDL do
   alias Ecto.Migration.Reference
   import Sqlite.Ecto.Util, only: [assemble: 1, map_intersperse: 3, quote_id: 1]
 
-  # Return a SQLite query to determine if the given table or index exists in
-  # the database.
-  def ddl_exists(%Table{name: name}), do: sqlite_master_query(name, "table")
-  def ddl_exists(%Index{name: name}), do: sqlite_master_query(name, "index")
-
   # Raise error on NoSQL arguments.
-  def execute_ddl({:create, %Table{options: keyword}, _}) when is_list(keyword) do
+  def execute_ddl({_command, %Table{options: keyword}, _}) when is_list(keyword) do
     raise ArgumentError, "SQLite adapter does not support keyword lists in :options"
   end
 
   # Create a table.
-  def execute_ddl({:create, %Table{name: name, options: options}, columns}) do
-    assemble ["CREATE TABLE", quote_id(name), column_definitions(columns), options]
+  def execute_ddl({command, %Table{name: name, options: options}, columns})
+  when command in [:create, :create_if_not_exists] do
+    assemble [create_table(command), quote_id(name), column_definitions(columns), options]
   end
 
   # Drop a table.
-  def execute_ddl({:drop, %Table{name: name}}) do
-    assemble ["DROP TABLE", quote_id(name)]
+  def execute_ddl({command, %Table{name: name}})
+  when command in [:drop, :drop_if_exists] do
+    assemble [drop_table(command), quote_id(name)]
   end
 
   # Alter a table.
@@ -40,16 +37,18 @@ defmodule Sqlite.Ecto.DDL do
 
   # Create an index.
   # NOTE Ignores concurrently and using values.
-  def execute_ddl({:create, %Index{}=index}) do
-    create_index = create_unique_index(index.unique)
+  def execute_ddl({command, %Index{}=index})
+  when command in [:create, :create_if_not_exists] do
+    create_index = create_index(command, index.unique)
     [name, table] = Enum.map([index.name, index.table], &quote_id/1)
     fields = map_intersperse(index.columns, ",", &quote_id/1)
     assemble [create_index, name, "ON", table, "(", fields, ")"]
   end
 
   # Drop an index.
-  def execute_ddl({:drop, %Index{name: name}}) do
-    assemble ["DROP INDEX", quote_id(name)]
+  def execute_ddl({command, %Index{name: name}})
+  when command in [:drop, :drop_if_exists] do
+    assemble [drop_index(command), quote_id(name)]
   end
 
   # Raise error on NoSQL arguments.
@@ -62,10 +61,13 @@ defmodule Sqlite.Ecto.DDL do
 
   ## Helpers
 
-  # called by ddl_exists/1 above
-  defp sqlite_master_query(name, type) do
-    "SELECT count(1) FROM sqlite_master WHERE name = '#{name}' AND type = '#{type}'"
-  end
+  # Returns a create table prefix.
+  defp create_table(:create), do: "CREATE TABLE"
+  defp create_table(:create_if_not_exists), do: "CREATE TABLE IF NOT EXISTS"
+
+  # Returns a drop table prefix.
+  defp drop_table(:drop), do: "DROP TABLE"
+  defp drop_table(:drop_if_exists), do: "DROP TABLE IF EXISTS"
 
   defp column_definitions(cols) do
     ["(", map_intersperse(cols, ",", &column_definition/1), ")"]
@@ -130,8 +132,17 @@ defmodule Sqlite.Ecto.DDL do
   defp reference_on_delete(_), do: []
 
   # Returns a create index prefix.
+  defp create_index(:create, unique?), do: create_unique_index(unique?)
+  defp create_index(:create_if_not_exists, unique?) do
+    [create_unique_index(unique?), "IF NOT EXISTS"]
+  end
+
   defp create_unique_index(true), do: "CREATE UNIQUE INDEX"
   defp create_unique_index(false), do: "CREATE INDEX"
+
+  # Returns a drop index prefix.
+  defp drop_index(:drop), do: "DROP INDEX"
+  defp drop_index(:drop_if_exists), do: "DROP INDEX IF EXISTS"
 
   # If we are adding a DATETIME column with the NOT NULL constraint, SQLite
   # will force us to give it a DEFAULT value.  The only default value

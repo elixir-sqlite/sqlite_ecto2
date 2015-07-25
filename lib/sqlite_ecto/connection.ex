@@ -58,8 +58,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     alias Sqlite.Ecto.DDL
 
-    defdelegate ddl_exists(ddl), to: DDL
-
     defdelegate execute_ddl(ddl), to: DDL
   end
 end
