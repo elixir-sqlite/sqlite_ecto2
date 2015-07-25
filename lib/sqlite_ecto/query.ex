@@ -439,7 +439,7 @@ defmodule Sqlite.Ecto.Query do
     "'#{:binary.replace(literal, "'", "''", [:global])}'"
   end
 
-  defp interval(_, "microsecond", sources) do
+  defp interval(_, "microsecond", _sources) do
     raise ArgumentError, "SQLite does not support microsecond precision in datetime intervals"
   end
 

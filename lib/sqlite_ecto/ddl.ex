@@ -35,6 +35,11 @@ defmodule Sqlite.Ecto.DDL do
     "ALTER TABLE #{quote_id(old)} RENAME TO #{quote_id(new)}"
   end
 
+  # Rename a table column.
+  def execute_ddl({:rename, %Table{}, _old_col, _new_col}) do
+    raise ArgumentError, "RENAME COLUMN not supported by SQLite"
+  end
+
   # Create an index.
   # NOTE Ignores concurrently and using values.
   def execute_ddl({command, %Index{}=index})

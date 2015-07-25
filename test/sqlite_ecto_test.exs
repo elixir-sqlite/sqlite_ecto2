@@ -258,6 +258,13 @@ defmodule Sqlite.Ecto.Test do
     end
   end
 
+  test "rename column errors" do
+    rename = {:rename, table(:posts), :given_name, :first_name}
+    assert_raise ArgumentError, "RENAME COLUMN not supported by SQLite", fn ->
+      SQL.execute_ddl(rename)
+    end
+  end
+
   test "drop column errors" do
     alter = {:alter, table(:posts), [{:remove, :summary}]}
     assert_raise ArgumentError, "DROP COLUMN not supported by SQLite", fn ->
