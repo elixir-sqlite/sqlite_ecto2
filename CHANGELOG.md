@@ -1,3 +1,7 @@
+# v0.5.0 (2015-08-06)
+* Release for Ecto 0.15.0+
+  * Supports create_if_not_exists and drop_if_exists
+
 # v0.4.1 (2015-07-21)
 * Adds support for interval based operations with date_add and datetime_add
 
