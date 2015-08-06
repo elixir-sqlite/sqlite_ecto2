@@ -316,7 +316,7 @@ defmodule Sqlite.Ecto.Test do
   end
 
   defp normalize(query, operation \\ :all) do
-    {query, _params} = Ecto.Query.Planner.prepare(query, operation, Sqlite.Ecto)
+    {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Sqlite.Ecto)
     Ecto.Query.Planner.normalize(query, operation, Sqlite.Ecto)
   end
 
