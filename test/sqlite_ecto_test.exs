@@ -127,7 +127,15 @@ defmodule Sqlite.Ecto.Test do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories), []} ]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id"))}
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id"))}
+  end
+
+  test "create table with named reference" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_id, references(:categories, name: :foo_bar), []} ]}
+    query = SQL.execute_ddl(create)
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" CONSTRAINT "foo_bar" REFERENCES "categories"("id"))}
   end
 
   test "create table reference on delete nothing" do
@@ -135,7 +143,7 @@ defmodule Sqlite.Ecto.Test do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :nothing), []} ]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id"))}
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id"))}
   end
 
   test "create table reference on delete nilify_all" do
@@ -143,7 +151,7 @@ defmodule Sqlite.Ecto.Test do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :nilify_all), []} ]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id") ON DELETE SET NULL)}
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id") ON DELETE SET NULL)}
   end
 
   test "create table reference on delete delete_all" do
@@ -151,7 +159,7 @@ defmodule Sqlite.Ecto.Test do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :delete_all), []} ]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" REFERENCES "categories"("id") ON DELETE CASCADE)}
+    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id") ON DELETE CASCADE)}
   end
 
   test "create table with column options" do

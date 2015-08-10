@@ -12,9 +12,9 @@ defmodule Sqlite.Ecto.DDL do
   end
 
   # Create a table.
-  def execute_ddl({command, %Table{name: name, options: options}, columns})
+  def execute_ddl({command, table = %Table{name: name, options: options}, columns})
   when command in [:create, :create_if_not_exists] do
-    assemble [create_table(command), quote_id(name), column_definitions(columns), options]
+    assemble [create_table(command), quote_id(name), column_definitions(table, columns), options]
   end
 
   # Drop a table.
@@ -24,9 +24,9 @@ defmodule Sqlite.Ecto.DDL do
   end
 
   # Alter a table.
-  def execute_ddl({:alter, %Table{name: name}, changes}) do
+  def execute_ddl({:alter, %Table{} = table, changes}) do
     Enum.map_join(changes, "; ", fn (change) ->
-      assemble ["ALTER TABLE", quote_id(name), alter_table_suffix(change)]
+      assemble ["ALTER TABLE", quote_id(table.name), alter_table_suffix(table, change)]
     end)
   end
 
@@ -74,19 +74,32 @@ defmodule Sqlite.Ecto.DDL do
   defp drop_table(:drop), do: "DROP TABLE"
   defp drop_table(:drop_if_exists), do: "DROP TABLE IF EXISTS"
 
-  defp column_definitions(cols) do
-    ["(", map_intersperse(cols, ",", &column_definition/1), ")"]
+  defp column_definitions(table, cols) do
+    ["(", map_intersperse(cols, ",", &column_definition(table, &1)), ")"]
   end
 
+  defp column_definition(table, {_action, name, ref = %Reference{}, opts}) do
+    opts = Enum.into(opts, %{})
+    [quote_id(name), reference_expr(ref, table, name), column_constraints(opts)]
+  end
+  defp column_definition(_table, action), do: column_definition(action)
   defp column_definition({_action, name, type, opts}) do
     opts = Enum.into(opts, %{})
     [quote_id(name), column_type(type, opts), column_constraints(type, opts)]
   end
 
   # Foreign keys:
-  defp column_type(%Reference{table: table, column: col, on_delete: delete}, _opts) do
-    ["REFERENCES #{quote_id(table)}(#{quote_id(col)})", reference_on_delete(delete)]
+  defp reference_expr(%Reference{} = ref, table, col) do
+    ["CONSTRAINT", reference_name(ref, table, col),
+     "REFERENCES #{quote_id(ref.table)}(#{quote_id(ref.column)})",
+     reference_on_delete(ref.on_delete)]
   end
+
+  defp reference_name(%Reference{name: nil}, %Table{name: table}, col) do
+    [table, col, "fkey"] |> Enum.join("_") |> quote_id
+  end
+  defp reference_name(%Reference{name: name}, _table, _col), do: quote_id(name)
+
   # Decimals are the only type for which we care about the options:
   defp column_type(:decimal, opts=%{precision: precision}) do
     scale = Dict.get(opts, :scale, 0)
@@ -156,21 +169,21 @@ defmodule Sqlite.Ecto.DDL do
   #
   # Therefore the best option is just to remove the NOT NULL constraint when
   # we add new datetime columns.
-  defp alter_table_suffix({:add, column, :datetime, opts}) do
+  defp alter_table_suffix(_table, {:add, column, :datetime, opts}) do
     opts = opts |> Enum.into(%{}) |> Dict.delete(:null)
     change = {:add, column, :datetime, opts}
     ["ADD COLUMN", column_definition(change)]
   end
 
-  defp alter_table_suffix(change={:add, _column, _type, _opts}) do
-    ["ADD COLUMN", column_definition(change)]
+  defp alter_table_suffix(table, change={:add, _column, _type, _opts}) do
+    ["ADD COLUMN", column_definition(table, change)]
   end
 
-  defp alter_table_suffix({:modify, _column, _type, _opts}) do
+  defp alter_table_suffix(_table, {:modify, _column, _type, _opts}) do
     raise ArgumentError, "ALTER COLUMN not supported by SQLite"
   end
 
-  defp alter_table_suffix({:remove, _column}) do
+  defp alter_table_suffix(_table, {:remove, _column}) do
     raise ArgumentError, "DROP COLUMN not supported by SQLite"
   end
 end
