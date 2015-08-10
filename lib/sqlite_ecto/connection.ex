@@ -22,6 +22,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       :ok
     end
 
+    defdelegate to_constraints(error), to: Sqlite.Ecto.Error
+
     ## Transaction
 
     alias Sqlite.Ecto.Transaction
