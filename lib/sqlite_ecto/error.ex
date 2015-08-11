@@ -8,8 +8,5 @@ defmodule Sqlite.Ecto.Error do
   def exception({type, msg}), do: %__MODULE__{sqlite: {type, to_string(msg)}}
   def exception(msg), do: %__MODULE__{sqlite: msg}
 
-  def to_constraints(%__MODULE__{sqlite: {:constraint, "UNIQUE constraint failed: " <> id}}) do
-    [unique: id]
-  end
-  def to_constraints(%__MODULE__{} = error), do: (error |> inspect |> IO.puts; [])
+  def to_constraints(_), do: []
 end

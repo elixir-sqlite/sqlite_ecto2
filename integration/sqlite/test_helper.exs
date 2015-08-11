@@ -9,6 +9,7 @@ ExUnit.start exclude: [:array_type,
                        :remove_column,
                        :rename_column,
                        :right_join,
+                       :unique_constraint,
                        :uses_usec]
 
 # Configure Ecto for support and tests
