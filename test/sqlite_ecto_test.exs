@@ -104,12 +104,12 @@ defmodule Sqlite.Ecto.Test do
 
   test "create table" do
     create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :title, :string, []},
-                {:add, :price, :decimal, [precision: 10, scale: 2]},
-                {:add, :created_at, :datetime, []}]}
+               [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
+                {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
+                {:add, :on_hand, :integer, [default: 0, null: true]},
+                {:add, :is_active, :boolean, [default: true]}]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "price" DECIMAL(10,2), "created_at" DATETIME)}
+    assert query == ~s{CREATE TABLE "posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL, "price" NUMERIC DEFAULT (expr), "on_hand" INTEGER DEFAULT 0, "is_active" BOOLEAN DEFAULT 1)}
   end
 
   test "create table if not exists" do
@@ -122,61 +122,23 @@ defmodule Sqlite.Ecto.Test do
     assert query == ~s{CREATE TABLE IF NOT EXISTS "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "price" DECIMAL(10,2), "created_at" DATETIME)}
   end
 
-  test "create table with reference" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories), []} ]}
-    query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id"))}
-  end
-
-  test "create table with named reference" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, name: :foo_bar), []} ]}
-    query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" CONSTRAINT "foo_bar" REFERENCES "categories"("id"))}
-  end
-
-  test "create table reference on delete nothing" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, on_delete: :nothing), []} ]}
-    query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id"))}
-  end
-
-  test "create table reference on delete nilify_all" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, on_delete: :nilify_all), []} ]}
-    query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id") ON DELETE SET NULL)}
-  end
-
-  test "create table reference on delete delete_all" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, on_delete: :delete_all), []} ]}
-    query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_id" CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id") ON DELETE CASCADE)}
-  end
-
-  test "create table with column options" do
-    create = {:create, table(:posts),
-               [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
-                {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
-                {:add, :on_hand, :integer, [default: 0, null: true]},
-                {:add, :is_active, :boolean, [default: true]}]}
-    query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE "posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL, "price" NUMERIC DEFAULT (expr), "on_hand" INTEGER DEFAULT 0, "is_active" BOOLEAN DEFAULT 1)}
-  end
-
   test "create table with table options" do
     create = {:create, table(:posts, options: "WITHOUT ROWID"),
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :created_at, :datetime, []}]}
     assert SQL.execute_ddl(create) == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "created_at" DATETIME) WITHOUT ROWID}
+  end
+
+  test "create table with references" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_0, references(:categories), []},
+                {:add, :category_1, references(:categories, name: :foo_bar), []},
+                {:add, :category_2, references(:categories, on_delete: :nothing), []},
+                {:add, :category_3, references(:categories, on_delete: :delete_all), [null: false]},
+                {:add, :category_4, references(:categories, on_delete: :nilify_all), []}]}
+
+    assert SQL.execute_ddl(create) == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_0" CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"), "category_1" CONSTRAINT "foo_bar" REFERENCES "categories"("id"), "category_2" CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"), "category_3" NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "categories"("id") ON DELETE CASCADE, "category_4" CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL)}
   end
 
   test "drop table" do
@@ -229,9 +191,9 @@ defmodule Sqlite.Ecto.Test do
   test "alter table" do
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:add, :email, :string, []}]}
+                {:add, :author_id, references(:author), []}]}
     query = SQL.execute_ddl(alter)
-    assert query == ~s{ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL; ALTER TABLE "posts" ADD COLUMN "email" TEXT}
+    assert query == ~s{ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL; ALTER TABLE "posts" ADD COLUMN "author_id" CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")}
   end
 
   test "alter table query", context do

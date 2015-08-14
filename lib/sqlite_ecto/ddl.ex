@@ -80,7 +80,7 @@ defmodule Sqlite.Ecto.DDL do
 
   defp column_definition(table, {_action, name, ref = %Reference{}, opts}) do
     opts = Enum.into(opts, %{})
-    [quote_id(name), reference_expr(ref, table, name), column_constraints(opts)]
+    [quote_id(name), column_constraints(opts), reference_expr(ref, table, name)]
   end
   defp column_definition(_table, action), do: column_definition(action)
   defp column_definition({_action, name, type, opts}) do
