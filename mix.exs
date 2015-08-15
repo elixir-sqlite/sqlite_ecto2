@@ -3,7 +3,7 @@ defmodule Sqlite.Ecto.Mixfile do
 
   def project do
     [app: :sqlite_ecto,
-     version: "0.5.0",
+     version: "0.6.0",
      name: "Sqlite.Ecto",
      elixir: "~> 1.0",
      deps: deps,
@@ -32,8 +32,7 @@ defmodule Sqlite.Ecto.Mixfile do
   defp deps do
     [{:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.7", only: :dev},
-     #{:ecto, "~> 0.15.0"},
-     {:ecto, github: "elixir-lang/ecto"},
+     {:ecto, "~> 0.16.0"},
      {:poison, "~> 1.0"},
      {:sqlitex, "~> 0.8"}]
   end

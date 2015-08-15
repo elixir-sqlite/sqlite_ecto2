@@ -1,3 +1,6 @@
+# v0.6.0 (2015-08-15)
+* Release for Ecto 0.16.0+
+
 # v0.5.0 (2015-08-06)
 * Release for Ecto 0.15.0+
   * Supports create_if_not_exists and drop_if_exists
