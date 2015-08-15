@@ -79,3 +79,23 @@ defmodule MyApp.Repo do
     adapter: Sqlite.Ecto
 end
 ```
+
+## Ignored Ecto Constraints
+
+There are a few Ecto options which `Sqlite.Ecto` silently ignores because
+SQLite does not support them and raising an error on them does not make sense:
+* Most column options will ignore `size`, `precision`, and `scale` constraints
+  on types because columns in SQLite have no types, and SQLite will not coerce
+  any stored value.  Thus, all "strings" are `TEXT` and "numerics" will have
+  arbitrary precision regardless of the declared column constraints.  The lone
+  exception to this rule are Decimal types which accept `precision` and
+  `scale` options because these constraints are handled in the driver
+  software, not the SQLite database.
+* If we are altering a table to add a `DATETIME` column with a `NOT NULL`
+  constraint, SQLite will require a default value to be provided.  The only
+  default value which would make sense in this situation is
+  `CURRENT_TIMESTAMP`; however, when adding a column to a table, defaults must
+  be constant values.  Therefore, in this situation the `NOT NULL` constraint
+  will be ignored so that a default value does not need to be provided.
+* When creating an index, `concurrently` and `using` values are silently
+  ignored since they do not apply to SQLite.
