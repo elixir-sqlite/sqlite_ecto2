@@ -3,11 +3,13 @@ ExUnit.start exclude: [:array_type,
                        :strict_savepoint,
                        :update_with_join,
                        :delete_with_join,
-                       :right_join,
+                       :foreign_key_constraint,
                        :modify_column,
                        :modify_foreign_key,
                        :remove_column,
                        :rename_column,
+                       :right_join,
+                       :unique_constraint,
                        :uses_usec]
 
 # Configure Ecto for support and tests
