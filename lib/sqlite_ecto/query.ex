@@ -296,9 +296,13 @@ defmodule Sqlite.Ecto.Query do
     create_names(prefix, sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
   end
   defp create_names(prefix, sources, pos, limit, stmt) when pos < limit do
-    {table, model} = elem(sources, pos)
-    id = table_identifier(stmt, table, pos)
-    [{{prefix, table}, id, model} | create_names(prefix, sources, pos + 1, limit, stmt)]
+    current = case elem(sources, pos) do
+      {table, model} ->
+        {{prefix, table}, table_identifier(stmt, table, pos), model}
+      {:fragment, _, _} = fragment ->
+        {fragment, fragment_identifier(pos), nil}
+    end
+    [current | create_names(prefix, sources, pos + 1, limit, stmt)]
   end
   defp create_names(_, _, pos, pos, _), do: []
 
@@ -306,6 +310,8 @@ defmodule Sqlite.Ecto.Query do
     String.first(table) <> Integer.to_string(pos)
   end
   defp table_identifier(_stmt, table, _pos), do: quote_id(table)
+
+  defp fragment_identifier(pos), do: "f" <> Integer.to_string(pos)
 
   defp select(%SelectExpr{fields: fields}, distinct, sources) do
     fields = Enum.map_join(fields, ", ", fn (f) ->
@@ -565,9 +571,14 @@ defmodule Sqlite.Ecto.Query do
     Enum.map(joins, fn
       %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix} ->
         qual = join_qual(qual)
-        {table, name, _model} = elem(sources, ix)
-        on   = expr(expr, sources)
-        [qual, "JOIN", quote_id(table), "AS", name, "ON", on]
+        {join, name, _model} = elem(sources, ix)
+        join = case join do
+          {_, _} = table ->
+            quote_id(table)
+          {:fragment, _, _} ->
+            ["(", expr(join, sources), ")"]
+        end
+        [qual, "JOIN", join, "AS", name, "ON", expr(expr, sources)]
     end)
   end
 

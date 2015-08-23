@@ -1,9 +1,9 @@
 %{"decimal": {:hex, :decimal, "1.1.0"},
   "earmark": {:hex, :earmark, "0.1.17"},
-  "ecto": {:hex, :ecto, "0.16.0"},
+  "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "55788cc181924a1944e0cd9fa7e31613621afd16", []},
   "esqlite": {:hex, :esqlite, "0.2.1"},
   "ex_doc": {:hex, :ex_doc, "0.7.3"},
   "pipe": {:hex, :pipe, "0.0.2"},
-  "poison": {:hex, :poison, "1.4.0"},
+  "poison": {:hex, :poison, "1.5.0"},
   "poolboy": {:hex, :poolboy, "1.5.1"},
   "sqlitex": {:hex, :sqlitex, "0.8.0"}}
