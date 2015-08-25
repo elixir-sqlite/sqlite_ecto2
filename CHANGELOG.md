@@ -1,3 +1,7 @@
+# v1.0.0 (2015-08-25)
+* Release for Ecto 1.0+
+  * Supports fragment sources in join statements
+
 # v0.6.0 (2015-08-15)
 * Release for Ecto 0.16.0+
 
