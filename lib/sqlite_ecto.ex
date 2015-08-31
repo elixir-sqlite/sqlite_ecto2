@@ -53,6 +53,7 @@ defmodule Sqlite.Ecto do
     if File.exists?(database) do
       {:error, :already_up}
     else
+      database |> Path.dirname |> File.mkdir_p!
       case Sqlitex.open(database) do
         {:error, _msg} = err -> err
         {:ok, db} ->

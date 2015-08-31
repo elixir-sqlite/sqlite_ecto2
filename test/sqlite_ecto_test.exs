@@ -25,6 +25,14 @@ defmodule Sqlite.Ecto.Test do
     assert Sqlite.Ecto.storage_down(tmp) == {:error, :already_down}
   end
 
+  test "storage up creates directory" do
+    dir = "/tmp/my_sqlite_ecto_directory/"
+    File.rm_rf! dir
+    tmp = [database: dir <> tempfilename]
+    :ok = Sqlite.Ecto.storage_up(tmp)
+    assert File.exists?(dir <> "tmp/") && File.dir?(dir <> "tmp/")
+  end
+
   # return a unique temporary filename
   defp tempfilename do
     1..10
