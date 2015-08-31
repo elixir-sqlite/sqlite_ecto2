@@ -1,3 +1,6 @@
+# v1.0.1 (2015-08-30)
+* Sqlite.Ecto.storage_up/1 creates directory if not exists
+
 # v1.0.0 (2015-08-25)
 * Release for Ecto 1.0+
   * Supports fragment sources in join statements
