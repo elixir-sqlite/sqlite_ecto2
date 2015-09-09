@@ -80,7 +80,23 @@ defmodule MyApp.Repo do
 end
 ```
 
-## Ignored Ecto Constraints
+## Unsupported Ecto Constraints
+
+The changeset functions
+[`foreign_key_constraint/3`](http://hexdocs.pm/ecto/Ecto.Changeset.html#foreign_key_constraint/3)
+and
+[`unique_constraint/3`](http://hexdocs.pm/ecto/Ecto.Changeset.html#unique_constraint/3)
+are not supported by `Sqlite.Ecto` because the underlying SQLite database does
+not provide enough information when such constraints are violated to support
+the features.
+
+Note that SQLite **does** support both unique and foreign key constraints via
+[`unique_index/3`](http://hexdocs.pm/ecto/Ecto.Migration.html#unique_index/3)
+and [`references/2`](http://hexdocs.pm/ecto/Ecto.Migration.html#references/2),
+respectively.  When such constraints are violated, they will raise
+`Sqlite.Ecto.Error` exceptions.
+
+## Silently Ignored Options
 
 There are a few Ecto options which `Sqlite.Ecto` silently ignores because
 SQLite does not support them and raising an error on them does not make sense:
