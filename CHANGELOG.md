@@ -1,5 +1,8 @@
+# v1.0.2 (2015-09-19)
+* Documents why `unique_constraint/3` and `foreign_key_constraint/3` cannot be supported by SQLite
+
 # v1.0.1 (2015-08-30)
-* Sqlite.Ecto.storage_up/1 creates directory if not exists
+* `Sqlite.Ecto.storage_up/1` creates directory if not exists
 
 # v1.0.0 (2015-08-25)
 * Release for Ecto 1.0+
@@ -10,10 +13,10 @@
 
 # v0.5.0 (2015-08-06)
 * Release for Ecto 0.15.0+
-  * Supports create_if_not_exists and drop_if_exists
+  * Supports `create_if_not_exists` and `drop_if_exists`
 
 # v0.4.1 (2015-07-21)
-* Adds support for interval based operations with date_add and datetime_add
+* Adds support for interval based operations with `date_add` and `datetime_add`
 
 # v0.4.0 (2015-07-19)
 * Release for Ecto 0.14.0+
