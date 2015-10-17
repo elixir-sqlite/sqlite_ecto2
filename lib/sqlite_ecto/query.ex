@@ -403,13 +403,19 @@ defmodule Sqlite.Ecto.Query do
   end
 
   defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do
+    {modifier, args} =
+      case args do
+        [rest, :distinct] -> {"DISTINCT ", [rest]}
+        _ -> {"", args}
+      end
+
     case handle_call(fun, length(args)) do
       {:binary_op, op} ->
         [left, right] = args
         [op_to_binary(left, sources), op, op_to_binary(right, sources)]
 
       {:fun, fun} ->
-        [fun, "(", map_intersperse(args, ",", &expr(&1, sources)), ")"]
+        [fun, "(" <> modifier, map_intersperse(args, ",", &expr(&1, sources)), ")"]
     end
   end
 
