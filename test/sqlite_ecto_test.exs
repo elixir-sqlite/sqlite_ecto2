@@ -137,6 +137,28 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(create) == ~s{CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "created_at" DATETIME) WITHOUT ROWID}
   end
 
+  test "create table with prefix" do
+    create = {:create, table(:posts, prefix: :foo),
+               [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
+                {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
+                {:add, :on_hand, :integer, [default: 0, null: true]},
+                {:add, :is_active, :boolean, [default: true]}]}
+
+    assert SQL.execute_ddl(create) == ~s{CREATE TABLE "foo"."posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL, "price" NUMERIC DEFAULT (expr), "on_hand" INTEGER DEFAULT 0, "is_active" BOOLEAN DEFAULT 1)}
+  end
+
+  test "create table with references including prefixes" do
+    create = {:create, table(:posts, prefix: :foo),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_0, references(:categories, prefix: :foo), []},
+                {:add, :category_1, references(:categories, name: :foo_bar, prefix: :foo), []},
+                {:add, :category_2, references(:categories, on_delete: :nothing, prefix: :foo), []},
+                {:add, :category_3, references(:categories, on_delete: :delete_all, prefix: :foo), [null: false]},
+                {:add, :category_4, references(:categories, on_delete: :nilify_all, prefix: :foo), []}]}
+
+    assert SQL.execute_ddl(create) == ~s{CREATE TABLE "foo"."posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_0" CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"), "category_1" CONSTRAINT "foo_bar" REFERENCES "foo"."categories"("id"), "category_2" CONSTRAINT "posts_category_2_fkey" REFERENCES "foo"."categories"("id"), "category_3" NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "foo"."categories"("id") ON DELETE CASCADE, "category_4" CONSTRAINT "posts_category_4_fkey" REFERENCES "foo"."categories"("id") ON DELETE SET NULL)}
+  end
+
   test "create table with references" do
     create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
@@ -157,6 +179,11 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl({:drop_if_exists, %Table{name: "posts"}}) == ~s{DROP TABLE IF EXISTS "posts"}
   end
 
+  test "drop table with prefixes" do
+    drop = {:drop, table(:posts, prefix: :foo)}
+    assert SQL.execute_ddl(drop) == ~s{DROP TABLE "foo"."posts"}
+  end
+
   test "create index" do
     create = {:create, index(:posts, [:category_id, :permalink])}
     query = SQL.execute_ddl(create)
@@ -167,6 +194,11 @@ defmodule Sqlite.Ecto.Test do
     create = {:create_if_not_exists, index(:posts, [:category_id, :permalink])}
     query = SQL.execute_ddl(create)
     assert query == ~s{CREATE INDEX IF NOT EXISTS "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")}
+  end
+
+  test "create index with prefix" do
+    create = {:create, index(:posts, [:category_id, :permalink], prefix: :foo)}
+    assert SQL.execute_ddl(create) == ~s{CREATE INDEX "posts_category_id_permalink_index" ON "foo"."posts" ("category_id", "permalink")}
   end
 
   test "create unique index" do
@@ -186,6 +218,11 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(drop) == ~s{DROP INDEX "posts$main"}
   end
 
+  test "drop index with prefix" do
+    drop = {:drop, index(:posts, [:id], name: "posts$main", prefix: :foo)}
+    assert SQL.execute_ddl(drop) == ~s{DROP INDEX "posts$main"}
+  end
+
   test "drop index if exists" do
     drop = {:drop_if_exists, index(:posts, [:id], name: "posts$main")}
     assert SQL.execute_ddl(drop) == ~s{DROP INDEX IF EXISTS "posts$main"}
@@ -196,12 +233,25 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(rename) == ~s{ALTER TABLE "posts" RENAME TO "new_posts"}
   end
 
+  test "rename table with prefix" do
+    rename = {:rename, table(:posts, prefix: :foo), table(:new_posts, prefix: :foo)}
+    assert SQL.execute_ddl(rename) == ~s{ALTER TABLE "foo"."posts" RENAME TO "foo"."new_posts"}
+  end
+
   test "alter table" do
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
                 {:add, :author_id, references(:author), []}]}
     query = SQL.execute_ddl(alter)
     assert query == ~s{ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL; ALTER TABLE "posts" ADD COLUMN "author_id" CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")}
+  end
+
+  test "alter table with prefix" do
+    alter = {:alter, table(:posts, prefix: :foo),
+               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
+                {:add, :author_id, references(:author, prefix: :foo), []}]}
+
+    assert SQL.execute_ddl(alter) == ~s{ALTER TABLE "foo"."posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL; ALTER TABLE "foo"."posts" ADD COLUMN "author_id" CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id")}
   end
 
   test "alter table query", context do

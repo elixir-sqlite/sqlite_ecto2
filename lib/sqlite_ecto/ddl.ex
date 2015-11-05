@@ -12,27 +12,27 @@ defmodule Sqlite.Ecto.DDL do
   end
 
   # Create a table.
-  def execute_ddl({command, table = %Table{name: name, options: options}, columns})
+  def execute_ddl({command, %Table{} = table, columns})
   when command in [:create, :create_if_not_exists] do
-    assemble [create_table(command), quote_id(name), column_definitions(table, columns), options]
+    assemble [create_table(command), quote_table(table), column_definitions(table, columns), table.options]
   end
 
   # Drop a table.
-  def execute_ddl({command, %Table{name: name}})
+  def execute_ddl({command, %Table{} = table})
   when command in [:drop, :drop_if_exists] do
-    assemble [drop_table(command), quote_id(name)]
+    assemble [drop_table(command), quote_table(table)]
   end
 
   # Alter a table.
   def execute_ddl({:alter, %Table{} = table, changes}) do
     Enum.map_join(changes, "; ", fn (change) ->
-      assemble ["ALTER TABLE", quote_id(table.name), alter_table_suffix(table, change)]
+      assemble ["ALTER TABLE", quote_table(table), alter_table_suffix(table, change)]
     end)
   end
 
   # Rename a table.
-  def execute_ddl({:rename, %Table{name: old}, %Table{name: new}}) do
-    "ALTER TABLE #{quote_id(old)} RENAME TO #{quote_id(new)}"
+  def execute_ddl({:rename, %Table{} = old, %Table{} = new}) do
+    "ALTER TABLE #{quote_table(old)} RENAME TO #{quote_table(new)}"
   end
 
   # Rename a table column.
@@ -45,9 +45,9 @@ defmodule Sqlite.Ecto.DDL do
   def execute_ddl({command, %Index{}=index})
   when command in [:create, :create_if_not_exists] do
     create_index = create_index(command, index.unique)
-    [name, table] = Enum.map([index.name, index.table], &quote_id/1)
+    table = quote_table(index.prefix, index.table)
     fields = map_intersperse(index.columns, ",", &quote_id/1)
-    assemble [create_index, name, "ON", table, "(", fields, ")"]
+    assemble [create_index, quote_id(index.name), "ON", table, "(", fields, ")"]
   end
 
   # Drop an index.
@@ -70,6 +70,15 @@ defmodule Sqlite.Ecto.DDL do
   defp create_table(:create), do: "CREATE TABLE"
   defp create_table(:create_if_not_exists), do: "CREATE TABLE IF NOT EXISTS"
 
+  # Quotes a table name.
+  defp quote_table(%Table{prefix: prefix, name: name}) do
+    quote_table(prefix, name)
+  end
+  defp quote_table(nil, name), do: quote_id(name)
+  defp quote_table(prefix, name) do
+    [prefix, name] |> Enum.map(&quote_id/1) |> Enum.join(".")
+  end
+
   # Returns a drop table prefix.
   defp drop_table(:drop), do: "DROP TABLE"
   defp drop_table(:drop_if_exists), do: "DROP TABLE IF EXISTS"
@@ -89,9 +98,9 @@ defmodule Sqlite.Ecto.DDL do
   end
 
   # Foreign keys:
-  defp reference_expr(%Reference{} = ref, table, col) do
+  defp reference_expr(%Reference{} = ref, %Table{} = table, col) do
     ["CONSTRAINT", reference_name(ref, table, col),
-     "REFERENCES #{quote_id(ref.table)}(#{quote_id(ref.column)})",
+     "REFERENCES #{quote_table(table.prefix, ref.table)}(#{quote_id(ref.column)})",
      reference_on_delete(ref.on_delete)]
   end
 
