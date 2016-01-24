@@ -40,7 +40,7 @@ defmodule Sqlite.Ecto.Mixfile do
   defp description, do: "SQLite3 adapter for Ecto"
 
   defp package do
-    [contributors: ["Jason M Barnes"],
+    [maintainers: ["Jason M Barnes"],
       licenses: ["MIT"],
       links: %{"Github" => "https://github.com/jazzyb/sqlite_ecto"}]
   end
