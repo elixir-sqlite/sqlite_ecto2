@@ -1,3 +1,6 @@
+# v1.1.0 (2016-01-24)
+* Release for Ecto 1.1+
+
 # v1.0.2 (2015-09-19)
 * Documents why `unique_constraint/3` and `foreign_key_constraint/3` cannot be supported by SQLite
 
