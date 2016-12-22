@@ -5,7 +5,7 @@ defmodule Sqlite.Ecto.Mixfile do
     [app: :sqlite_ecto,
      version: "1.1.0",
      name: "Sqlite.Ecto",
-     elixir: "~> 1.0",
+     elixir: "~> 1.2",
      deps: deps,
 
      # testing
