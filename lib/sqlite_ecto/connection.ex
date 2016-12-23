@@ -11,7 +11,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       case Sqlitex.Server.start_link(database, opts) do
         {:ok, pid} ->
           :ok = Sqlitex.Server.exec(pid, "PRAGMA foreign_keys = ON")
-          [[foreign_keys: 1]] = Sqlitex.Server.query(pid, "PRAGMA foreign_keys")
+          {:ok, [[foreign_keys: 1]]} = Sqlitex.Server.query(pid, "PRAGMA foreign_keys")
           {:ok, pid}
         error -> error
       end

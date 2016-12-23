@@ -208,7 +208,7 @@ defmodule Sqlite.Ecto.Query do
       # busy error means another process is writing to the database; try again
       {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
       {:error, msg} -> {:error, Sqlite.Ecto.Error.exception(msg)}
-      rows when is_list(rows) -> query_result(pid, sql, rows)
+      {:ok, rows} when is_list(rows) -> query_result(pid, sql, rows)
     end
   end
 
@@ -231,7 +231,7 @@ defmodule Sqlite.Ecto.Query do
   end
 
   defp changes_result(pid) do
-    [["changes()": count]] = Sqlitex.Server.query(pid, "SELECT changes()")
+    {:ok, [["changes()": count]]} = Sqlitex.Server.query(pid, "SELECT changes()")
     {:ok, %{rows: nil, num_rows: count}}
   end
 

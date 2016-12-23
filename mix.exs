@@ -34,7 +34,7 @@ defmodule Sqlite.Ecto.Mixfile do
      {:ex_doc, "~> 0.7", only: :dev},
      {:ecto, "~> 1.1"},
      {:poison, "~> 1.0"},
-     {:sqlitex, "~> 0.8"}]
+     {:sqlitex, "~> 1.0.1"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto"
