@@ -30,7 +30,7 @@ defmodule Sqlite.Ecto.Mixfile do
 
   # Dependencies
   defp deps do
-    [{:ex_doc, "~> 0.7", only: :dev},
+    [{:ex_doc, "~> 0.14.5", only: :dev},
      {:ecto, "~> 1.1"},
      {:poison, "~> 1.0"},
      {:sqlitex, "~> 1.0.1"}]
