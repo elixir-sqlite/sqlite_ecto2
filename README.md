@@ -8,6 +8,18 @@ for a detailed example of how to setup and use a SQLite repo with Ecto, or
 just check-out the CliffsNotes in the sections below if you want to get
 started quickly.
 
+## A WARNING About OTP 19.0.x
+
+OTP 19.0.x appears to have a bug that causes it to
+[misinterpret certain pattern matches](https://github.com/elixir-lang/elixir/issues/5586).
+This causes the unit tests for sqlite_ecto to fail on some platforms when hosted
+on OTP 19.0.x. This bug did not appear in OTP 18.0 and appears to have been fixed
+for OTP 19.1. Consequently, we strongly advise you to avoid using OTP 19.0.x when
+running sqlite_ecto, especially if using `decimal` value types.
+
+Note that the Travis configuration for this repo specifically excludes OTP 19.0
+for this reason.
+
 ## Dependencies
 
 `Sqlite.Ecto` relies on [Sqlitex](https://github.com/mmmries/sqlitex) and
