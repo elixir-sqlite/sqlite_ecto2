@@ -1,5 +1,5 @@
 %{"certifi": {:hex, :certifi, "0.7.0", "861a57f3808f7eb0c2d1802afeaae0fa5de813b0df0979153cbafcd853ababaf", [:rebar3], []},
-  "coverex": {:git, "https://github.com/scouten/coverex.git", "e845717f71b0c1e665c15c3781812c5da63aca9c", [branch: "fix-coveralls-output"]},
+  "coverex": {:git, "https://github.com/scouten/coverex.git", "31cf48fa61dc646c1cac24066e12a04c0e6c4e89", [branch: "fix-coveralls-output"]},
   "decimal": {:hex, :decimal, "1.1.1", "a8ff5b673105e6cdaca96f799aeefc6f07142881b616c65db16e14e556b16e76", [:mix], []},
   "earmark": {:hex, :earmark, "1.0.3", "89bdbaf2aca8bbb5c97d8b3b55c5dd0cff517ecc78d417e87f1d0982e514557b", [:mix], []},
   "ecto": {:hex, :ecto, "1.1.3", "859244ba9b7e10ba18889e48172d6455b552df3f9029bf312bcc7e360e3224de", [:mix], [{:decimal, "~> 1.0", [hex: :decimal, optional: false]}, {:mariaex, "~> 0.5.0", [hex: :mariaex, optional: true]}, {:poison, "~> 1.0", [hex: :poison, optional: true]}, {:poolboy, "~> 1.4", [hex: :poolboy, optional: false]}, {:postgrex, "~> 0.11.0", [hex: :postgrex, optional: true]}, {:sbroker, "~> 0.7", [hex: :sbroker, optional: true]}]},
