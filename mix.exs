@@ -31,7 +31,7 @@ defmodule Sqlite.Ecto.Mixfile do
 
   # Dependencies
   defp deps do
-    [{:coverex, "~> 1.4.10", only: :coverage},
+    [{:coverex, git: "https://github.com/scouten/coverex.git", branch: "fix-coveralls-output", only: :coverage},
      {:ex_doc, "~> 0.14.5", only: :dev},
      {:ecto, "~> 1.1"},
      {:poison, "~> 1.0"},
