@@ -2,9 +2,9 @@ defmodule Sqlite.Ecto.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :sqlite_ecto,
-     version: "1.1.0",
-     name: "Sqlite.Ecto",
+    [app: :sqlite_ecto2,
+     version: "2.0-alpha",
+     name: "Sqlite.Ecto2",
      elixir: "~> 1.2",
      deps: deps,
 
@@ -38,12 +38,12 @@ defmodule Sqlite.Ecto.Mixfile do
      {:sqlitex, "~> 1.0.1"}]
   end
 
-  defp description, do: "SQLite3 adapter for Ecto"
+  defp description, do: "SQLite3 adapter for Ecto2 (not yet working)"
 
   defp package do
-    [maintainers: ["Jason M Barnes"],
+    [maintainers: ["Jason M Barnes", "Eric Scouten"],
       licenses: ["MIT"],
-      links: %{"Github" => "https://github.com/jazzyb/sqlite_ecto"}]
+      links: %{"Github" => "https://github.com/scouten/sqlite_ecto2"}]
   end
 
   defp test_paths(:coverage), do: ["integration/sqlite", "test"]

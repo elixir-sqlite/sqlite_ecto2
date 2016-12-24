@@ -1,7 +1,20 @@
-Sqlite.Ecto [![Build Status](https://travis-ci.org/jazzyb/sqlite_ecto.svg?branch=master "Build Status")](https://travis-ci.org/jazzyb/sqlite_ecto) [![Coverage Status](https://coveralls.io/repos/github/scouten/sqlite_ecto/badge.svg?branch=master)](https://coveralls.io/github/scouten/sqlite_ecto?branch=master)
+Sqlite.Ecto2 [![Build Status](https://travis-ci.org/scouten/sqlite_ecto2.svg?branch=master "Build Status")](https://travis-ci.org/scouten/sqlite_ecto2) [![Coverage Status](https://coveralls.io/repos/github/scouten/sqlite_ecto2/badge.svg?branch=master)](https://coveralls.io/github/scouten/sqlite_ecto2?branch=master)
 ==========
 
-`Sqlite.Ecto` is a SQLite3 Adapter for Ecto.
+`Sqlite.Ecto2` is a SQLite3 Adapter for Ecto 2.x.
+
+**IMPORTANT!!!!** This is an experimental port and does not work yet. It's entirely
+possible that I'll play with this for a while and abandon it; it's also entirely
+possible that it will lead to a viable adapter for Ecto 2.x.
+
+If you're able to use Ecto 1.x, please look at [sqlite_ecto](https://github.com/jazzyb/sqlite_ecto),
+on which this project is based.
+
+The remainder of this README is held over from the 1.x version of this project.
+If this project is ultimately successful, we'll revise the documentation accordingly.
+For now, consider it inaccurate. Such is life on the bleeding edge.
+
+---
 
 Read [the tutorial](https://github.com/jazzyb/sqlite_ecto/wiki/Basic-Sqlite.Ecto-Tutorial)
 for a detailed example of how to setup and use a SQLite repo with Ecto, or
@@ -72,14 +85,14 @@ Add `Sqlite.Ecto` as a dependency in your `mix.exs` file.
 
 ```elixir
 def deps do
-  [{:sqlite_ecto, "~> 1.0.0"}]
+  [{:sqlite_ecto2, "~> 2.0.0"}]
 end
 ```
 
 You should also update your applications list to include both projects:
 ```elixir
 def application do
-  [applications: [:logger, :sqlite_ecto, :ecto]]
+  [applications: [:logger, :sqlite_ecto2, :ecto]]
 end
 ```
 
