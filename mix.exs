@@ -14,6 +14,7 @@ defmodule Sqlite.Ecto.Mixfile do
      aliases: ["test.all": &test_all/1,
                "test.integration": &test_integration/1],
      preferred_cli_env: ["test.all": :test],
+     test_coverage: [tool: Coverex.Task, coveralls: true],
 
      # hex
      description: description,
@@ -30,7 +31,8 @@ defmodule Sqlite.Ecto.Mixfile do
 
   # Dependencies
   defp deps do
-    [{:ex_doc, "~> 0.14.5", only: :dev},
+    [{:coverex, "~> 1.4.10", only: :coverage},
+     {:ex_doc, "~> 0.14.5", only: :dev},
      {:ecto, "~> 1.1"},
      {:poison, "~> 1.0"},
      {:sqlitex, "~> 1.0.1"}]
@@ -44,6 +46,7 @@ defmodule Sqlite.Ecto.Mixfile do
       links: %{"Github" => "https://github.com/jazzyb/sqlite_ecto"}]
   end
 
+  defp test_paths(:coverage), do: ["integration/sqlite", "test"]
   defp test_paths(:integration), do: ["integration/sqlite"]
   defp test_paths(_), do: ["test"]
 

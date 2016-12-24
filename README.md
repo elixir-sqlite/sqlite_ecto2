@@ -1,4 +1,4 @@
-Sqlite.Ecto [![Build Status](https://travis-ci.org/jazzyb/sqlite_ecto.svg?branch=master "Build Status")](https://travis-ci.org/jazzyb/sqlite_ecto)
+Sqlite.Ecto [![Build Status](https://travis-ci.org/jazzyb/sqlite_ecto.svg?branch=master "Build Status")](https://travis-ci.org/jazzyb/sqlite_ecto) [![Coverage Status](https://coveralls.io/repos/github/scouten/sqlite_ecto/badge.svg?branch=master)](https://coveralls.io/github/scouten/sqlite_ecto?branch=master)
 ==========
 
 `Sqlite.Ecto` is a SQLite3 Adapter for Ecto.

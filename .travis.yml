@@ -10,8 +10,15 @@ otp_release:
   - 19.1
   - 19.2
 
+matrix:
+  exclude:
+  - elixir: 1.2
+    otp_release: 19.1
+  - elixir: 1.2
+    otp_release: 19.2
+
 script:
-  - mix test.all
+  - MIX_ENV=coverage mix test --cover
 
 branches:
   only:
