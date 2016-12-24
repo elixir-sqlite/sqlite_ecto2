@@ -23,6 +23,7 @@ matrix:
 
 script:
   - MIX_ENV=coverage mix test --cover
+  - cat cover/coveralls.json
 
 branches:
   only:
