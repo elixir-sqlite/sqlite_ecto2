@@ -31,27 +31,32 @@ defmodule Sqlite.Ecto.Result do
   @spec decode(t, ([term] -> term)) :: t
   def decode(result_set, mapper \\ fn x -> x end)
 
+  def decode({:ok, %__MODULE__{} = res}, mapper), do: {:ok, decode(res, mapper)}
+
   def decode(%__MODULE__{decoder: :done} = res, _mapper), do: res
 
-  def decode(res, mapper) do
-    %__MODULE__{rows: rows} = res
+  def decode(%__MODULE__{rows: rows} = res, mapper) do
     rows = do_decode(rows, mapper)
     %__MODULE__{res | rows: rows, decoder: :done}
   end
 
-  defp do_decode(nil, mapper), do: nil
+  defp do_decode(nil, _mapper), do: nil
+
+  defp do_decode(rows, nil), do: rows
 
   defp do_decode(rows, mapper) do
-    rows = Enum.map(rows, fn row ->
-      row
-      |> cast_any_datetimes
-      |> Keyword.values
-      |> Enum.map(fn
-        {:blob, binary} -> binary
-        other -> other
-      end)
-      |> Enum.map(mapper)
-    end)
+    Enum.map(rows, mapper)
+
+    # |> Enum.map(rows, fn row ->
+    #   IO.puts "do_decode:57 (inner) row = #{inspect row} mapper = #{inspect mapper}"
+    #   row
+    #   |> cast_any_datetimes
+    #   |> Keyword.values
+    #   |> Enum.map(fn
+    #     {:blob, binary} -> binary
+    #     other -> other
+    #   end)
+    # end)
   end
 
   # HACK: We have to do a special conversion if the user is trying to cast to

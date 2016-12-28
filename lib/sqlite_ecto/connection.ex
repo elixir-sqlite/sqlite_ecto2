@@ -56,6 +56,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defdelegate delete(prefix, table, filters, returning), to: Query
 
+    ## Result
+
+    alias Sqlite.Ecto.Result
+
+    defdelegate decode(result_set, mapper), to: Result
+
     ## DDL
 
     alias Sqlite.Ecto.DDL

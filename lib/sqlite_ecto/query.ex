@@ -205,7 +205,9 @@ defmodule Sqlite.Ecto.Query do
   # Execute a query with (possibly) binded parameters and handle busy signals
   # from the database.
   defp do_query(pid, sql, params, opts) do
-    opts = Keyword.put(opts, :bind, params)
+    opts = opts
+           |> Keyword.put(:decode, :manual)
+           |> Keyword.put(:bind, params)
     case Sqlitex.Server.query(pid, sql, opts) do
       # busy error means another process is writing to the database; try again
       {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
@@ -224,11 +226,16 @@ defmodule Sqlite.Ecto.Query do
   end
 
   defp decode(rows, {:ok, :manual}) do
+    rows = rows |> Enum.map(&strip_column_names/1)
     %Result{rows: rows, num_rows: length(rows), decoder: :deferred}
   end
   defp decode(rows, _) do # not specified or :auto
     %Result{rows: rows, num_rows: length(rows), decoder: :deferred}
     |> Result.decode
+  end
+
+  defp strip_column_names(row) do
+    Enum.map(row, &(elem(&1, 1)))
   end
 
   defp changes_result(pid) do
