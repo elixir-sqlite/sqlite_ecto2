@@ -4,6 +4,8 @@ defmodule Sqlite.Ecto.Query do
   import Sqlite.Ecto.Transaction, only: [with_savepoint: 2]
   import Sqlite.Ecto.Util
 
+  alias Sqlite.Ecto.Result
+
   # ALTER TABLE queries:
   def query(pid, <<"ALTER TABLE ", _ :: binary>>=sql, params, opts) do
     sql
@@ -227,12 +229,12 @@ defmodule Sqlite.Ecto.Query do
         other -> other
       end)
     end)
-    {:ok, %{rows: rows, num_rows: length(rows)}}
+    {:ok, %Result{rows: rows, num_rows: length(rows)}}
   end
 
   defp changes_result(pid) do
     {:ok, [["changes()": count]]} = Sqlitex.Server.query(pid, "SELECT changes()")
-    {:ok, %{rows: nil, num_rows: count}}
+    {:ok, %Result{rows: nil, num_rows: count}}
   end
 
   # HACK: We have to do a special conversion if the user is trying to cast to
