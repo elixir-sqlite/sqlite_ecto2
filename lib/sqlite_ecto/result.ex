@@ -31,18 +31,21 @@ defmodule Sqlite.Ecto.Result do
   @spec decode(t, ([term] -> term)) :: t
   def decode(result_set, mapper \\ fn x -> x end)
 
-  def decode(%__MODULE__{decoder: :done} = res, _mapper), do: res
+  def decode({:ok, %__MODULE__{decoder: :done}} = res, _mapper), do: res
 
   def decode(res, mapper) do
+    # IO.inspect("decode:37 res = #{inspect res}")
     %__MODULE__{rows: rows} = res
     rows = do_decode(rows, mapper)
-    %__MODULE__{res | rows: rows, decoder: :done}
+    x = %__MODULE__{res | rows: rows, decoder: :done}
+    IO.puts("decode:41 = #{inspect x}")
+    x
   end
 
-  defp do_decode(nil, mapper), do: nil
+  defp do_decode(nil, _mapper), do: nil
 
   defp do_decode(rows, mapper) do
-    rows = Enum.map(rows, fn row ->
+    Enum.map(rows, fn row ->
       row
       |> cast_any_datetimes
       |> Keyword.values
