@@ -210,56 +210,30 @@ defmodule Sqlite.Ecto.Query do
       # busy error means another process is writing to the database; try again
       {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
       {:error, msg} -> {:error, Sqlite.Ecto.Error.exception(msg)}
-      {:ok, rows} when is_list(rows) -> query_result(pid, sql, rows)
+      {:ok, rows} when is_list(rows) -> query_result(pid, sql, rows, opts)
     end
   end
 
   # If this is an INSERT, UPDATE, or DELETE, then return the number of changed
   # rows.  Otherwise (e.g. for SELECT) return the queried column values.
-  defp query_result(pid, <<"INSERT ", _::binary>>, []), do: changes_result(pid)
-  defp query_result(pid, <<"UPDATE ", _::binary>>, []), do: changes_result(pid)
-  defp query_result(pid, <<"DELETE ", _::binary>>, []), do: changes_result(pid)
-  defp query_result(_pid, _sql, rows) do
-    rows = Enum.map(rows, fn row ->
-      row
-      |> cast_any_datetimes
-      |> Keyword.values
-      |> Enum.map(fn
-        {:blob, binary} -> binary
-        other -> other
-      end)
-    end)
-    {:ok, %Result{rows: rows, num_rows: length(rows)}}
+  defp query_result(pid, <<"INSERT ", _::binary>>, [], _opts), do: changes_result(pid)
+  defp query_result(pid, <<"UPDATE ", _::binary>>, [], _opts), do: changes_result(pid)
+  defp query_result(pid, <<"DELETE ", _::binary>>, [], _opts), do: changes_result(pid)
+  defp query_result(_pid, _sql, rows, opts) do
+    {:ok, decode(rows, Keyword.fetch(opts, :decode))}
+  end
+
+  defp decode(rows, {:ok, :manual}) do
+    %Result{rows: rows, num_rows: length(rows), decoder: :deferred}
+  end
+  defp decode(rows, _) do # not specified or :auto
+    %Result{rows: rows, num_rows: length(rows), decoder: :deferred}
+    |> Result.decode
   end
 
   defp changes_result(pid) do
     {:ok, [["changes()": count]]} = Sqlitex.Server.query(pid, "SELECT changes()")
     {:ok, %Result{rows: nil, num_rows: count}}
-  end
-
-  # HACK: We have to do a special conversion if the user is trying to cast to
-  # a DATETIME type.  Sqlitex cannot determine that the type of the cast is a
-  # datetime value because datetime defaults to an integer type in SQLite.
-  # Thus, we cast the value to a TEXT_DATETIME pseudo-type to preserve the
-  # datetime string.  Then when we get here, we convert the string to an Ecto
-  # datetime tuple if it looks like a cast was attempted.
-  defp cast_any_datetimes(row) do
-    Enum.map row, fn {key, value} ->
-      str = Atom.to_string(key)
-      if String.contains?(str, "CAST (") && String.contains?(str, "TEXT_DATE") do
-        {key, string_to_datetime(value)}
-      else
-        {key, value}
-      end
-    end
-  end
-
-  defp string_to_datetime(<<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2)>>) do
-    {String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}
-  end
-  defp string_to_datetime(str) do
-    <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2), " ", hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary-size(6)>> = str
-    {{String.to_integer(yr), String.to_integer(mo), String.to_integer(da)},{String.to_integer(hr), String.to_integer(mi), String.to_integer(se), String.to_integer(fr)}}
   end
 
   # SQLite does not have a returning clause, but we append a pseudo one so
