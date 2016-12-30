@@ -205,7 +205,9 @@ defmodule Sqlite.Ecto.Query do
   # Execute a query with (possibly) binded parameters and handle busy signals
   # from the database.
   defp do_query(pid, sql, params, opts) do
-    opts = Keyword.put(opts, :bind, params)
+    opts = opts
+           |> Keyword.put(:decode, :manual)
+           |> Keyword.put(:bind, params)
     case Sqlitex.Server.query(pid, sql, opts) do
       # busy error means another process is writing to the database; try again
       {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
