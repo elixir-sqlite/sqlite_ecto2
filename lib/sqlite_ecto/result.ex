@@ -31,9 +31,16 @@ defmodule Sqlite.Ecto.Result do
   @spec decode(t, ([term] -> term)) :: t
   def decode(result_set, mapper \\ fn x -> x end)
 
-  def decode({:ok, %__MODULE__{decoder: :done}} = res, _mapper), do: res
+  def decode({:ok, %__MODULE__{} = res}, mapper), do: {:ok, decode(res, mapper)}
 
-  def decode(res, mapper) do
+  def decode(%__MODULE__{decoder: :done} = res, _mapper), do: res
+
+  def decode(%__MODULE__{} = res, mapper) do
+    try do
+      raise "x"
+    rescue
+      _ -> IO.puts "decode res = #{inspect res}\n\nvia #{inspect System.stacktrace}\n\n"
+    end
     # IO.inspect("decode:37 res = #{inspect res}")
     %__MODULE__{rows: rows} = res
     rows = do_decode(rows, mapper)

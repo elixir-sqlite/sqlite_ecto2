@@ -205,6 +205,12 @@ defmodule Sqlite.Ecto.Query do
   # Execute a query with (possibly) binded parameters and handle busy signals
   # from the database.
   defp do_query(pid, sql, params, opts) do
+    IO.puts "query:208 opts = #{inspect opts}"
+    try do
+      raise "blah"
+    rescue
+      _ -> IO.puts "via #{inspect System.stacktrace}"
+    end
     opts = opts
            |> Keyword.put(:decode, :manual)
            |> Keyword.put(:bind, params)
@@ -222,13 +228,15 @@ defmodule Sqlite.Ecto.Query do
   defp query_result(pid, <<"UPDATE ", _::binary>>, [], _opts), do: changes_result(pid)
   defp query_result(pid, <<"DELETE ", _::binary>>, [], _opts), do: changes_result(pid)
   defp query_result(_pid, _sql, rows, opts) do
+    IO.puts "decode:322 opts = #{inspect opts}"
     {:ok, decode(rows, Keyword.fetch(opts, :decode))}
   end
 
   defp decode(rows, {:ok, :manual}) do
+    IO.puts "decode:236 rows = #{inspect rows}"
     %Result{rows: rows, num_rows: length(rows), decoder: :deferred}
   end
-  defp decode(rows, _) do # not specified or :auto
+  defp decode(rows, what) do # not specified or :auto
     %Result{rows: rows, num_rows: length(rows), decoder: :deferred}
     |> Result.decode
   end
