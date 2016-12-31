@@ -45,18 +45,17 @@ defmodule Sqlite.Ecto.Result do
   defp do_decode(rows, nil), do: rows
 
   defp do_decode(rows, mapper) do
-    Enum.map(rows, mapper)
-
-    # |> Enum.map(rows, fn row ->
-    #   IO.puts "do_decode:57 (inner) row = #{inspect row} mapper = #{inspect mapper}"
-    #   row
-    #   |> cast_any_datetimes
-    #   |> Keyword.values
-    #   |> Enum.map(fn
-    #     {:blob, binary} -> binary
-    #     other -> other
-    #   end)
-    # end)
+    rows
+    |> Enum.map(fn row ->
+      row
+      # |> cast_any_datetimes
+      # |> Keyword.values
+      |> Enum.map(fn
+        {:blob, binary} -> binary
+        other -> other
+      end)
+    end)
+    |> Enum.map(mapper)
   end
 
   # HACK: We have to do a special conversion if the user is trying to cast to
