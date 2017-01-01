@@ -12,13 +12,13 @@ defmodule Sqlite.Ecto.Result do
 
   @type t :: %__MODULE__{
     # command: atom,
-    # columns: [String.t] | nil,
+    columns: [String.t] | nil,
     rows: [[term]] | nil,
     num_rows: integer,
     decoder: :deferred | :done
   }
 
-  defstruct [rows: nil, num_rows: nil, decoder: :done]
+  defstruct [rows: nil, columns: nil, num_rows: nil, decoder: :done]
 
   @doc """
   Decodes a result set.
@@ -48,6 +48,7 @@ defmodule Sqlite.Ecto.Result do
     rows
     |> Enum.map(fn row ->
       row
+      |> cast_undefined
       # |> cast_any_datetimes
       # |> Keyword.values
       |> Enum.map(fn
@@ -57,6 +58,13 @@ defmodule Sqlite.Ecto.Result do
     end)
     |> Enum.map(mapper)
   end
+
+  defp cast_undefined(row) do
+    row |> Enum.map(&undefined_to_nil/1)
+  end
+
+  defp undefined_to_nil(:undefined), do: nil
+  defp undefined_to_nil(other), do: other
 
   # HACK: We have to do a special conversion if the user is trying to cast to
   # a DATETIME type.  Sqlitex cannot determine that the type of the cast is a

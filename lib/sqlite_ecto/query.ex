@@ -207,35 +207,31 @@ defmodule Sqlite.Ecto.Query do
   defp do_query(pid, sql, params, opts) do
     opts = opts
            |> Keyword.put(:decode, :manual)
+           |> Keyword.put(:into, :raw_list)
            |> Keyword.put(:bind, params)
     case Sqlitex.Server.query(pid, sql, opts) do
       # busy error means another process is writing to the database; try again
       {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
       {:error, msg} -> {:error, Sqlite.Ecto.Error.exception(msg)}
-      {:ok, rows} when is_list(rows) -> query_result(pid, sql, rows, opts)
+      {:ok, rows, columns} when is_list(rows) -> query_result(pid, sql, rows, columns, opts)
     end
   end
 
   # If this is an INSERT, UPDATE, or DELETE, then return the number of changed
   # rows.  Otherwise (e.g. for SELECT) return the queried column values.
-  defp query_result(pid, <<"INSERT ", _::binary>>, [], _opts), do: changes_result(pid)
-  defp query_result(pid, <<"UPDATE ", _::binary>>, [], _opts), do: changes_result(pid)
-  defp query_result(pid, <<"DELETE ", _::binary>>, [], _opts), do: changes_result(pid)
-  defp query_result(_pid, _sql, rows, opts) do
-    {:ok, decode(rows, Keyword.fetch(opts, :decode))}
+  defp query_result(pid, <<"INSERT ", _::binary>>, [], _columns, _opts), do: changes_result(pid)
+  defp query_result(pid, <<"UPDATE ", _::binary>>, [], _columns, _opts), do: changes_result(pid)
+  defp query_result(pid, <<"DELETE ", _::binary>>, [], _columns, _opts), do: changes_result(pid)
+  defp query_result(_pid, _sql, rows, columns, opts) do
+    {:ok, decode(rows, columns, Keyword.fetch(opts, :decode))}
   end
 
-  defp decode(rows, {:ok, :manual}) do
-    rows = rows |> Enum.map(&strip_column_names/1)
+  defp decode(rows, columns, {:ok, :manual}) do
     %Result{rows: rows, num_rows: length(rows), decoder: :deferred}
   end
-  defp decode(rows, _) do # not specified or :auto
+  defp decode(rows, columns,  _) do # not specified or :auto
     %Result{rows: rows, num_rows: length(rows), decoder: :deferred}
     |> Result.decode
-  end
-
-  defp strip_column_names(row) do
-    Enum.map(row, &(elem(&1, 1)))
   end
 
   defp changes_result(pid) do
