@@ -422,14 +422,14 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "limit and offset" do
-    query = Model |> limit([r], 3) |> select([], 0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3}
+    query = Model |> limit([r], 3) |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 LIMIT 3}
 
-    query = Model |> offset([r], 5) |> select([], 0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 OFFSET 5}
+    query = Model |> offset([r], 5) |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 OFFSET 5}
 
-    query = Model |> offset([r], 5) |> limit([r], 3) |> select([], 0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3 OFFSET 5}
+    query = Model |> offset([r], 5) |> limit([r], 3) |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 LIMIT 3 OFFSET 5}
   end
 
   test "lock" do
@@ -440,11 +440,11 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "string escape" do
-    query = Model |> select([], "'\\  ") |> normalize
-    assert SQL.all(query) == ~s{SELECT '''\\  ' FROM "model" AS m0}
+    query = "model" |> where(foo: "'\\  ") |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM \"model\" AS m0 WHERE (m0.\"foo\" = '''\\  ')}
 
-    query = Model |> select([], "'") |> normalize
-    assert SQL.all(query) == ~s{SELECT '''' FROM "model" AS m0}
+    query = "model" |> where(foo: "'") |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 WHERE (m0."foo" = '''')}
   end
 
   test "binary ops" do
@@ -490,26 +490,23 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "literals" do
-    query = Model |> select([], nil) |> normalize
-    assert SQL.all(query) == ~s{SELECT NULL FROM "model" AS m0}
+    query = "model" |> where(foo: true) |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 WHERE (m0."foo" = 1)}
 
-    query = Model |> select([], true) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0}
+    query = "model" |> where(foo: false) |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 WHERE (m0."foo" = 0)}
 
-    query = Model |> select([], false) |> normalize
-    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0}
+    query = "model" |> where(foo: "abc") |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 WHERE (m0."foo" = 'abc')}
 
-    query = Model |> select([], "abc") |> normalize
-    assert SQL.all(query) == ~s{SELECT 'abc' FROM "model" AS m0}
+    query = "model" |> where(foo: <<0,?a,?b,?c>>) |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 WHERE (m0."foo" = X'00616263')}
 
-    query = Model |> select([], <<0, ?a,?b,?c>>) |> normalize
-    assert SQL.all(query) == ~s{SELECT X'00616263' FROM "model" AS m0}
+    query = "model" |> where(foo: 123) |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 WHERE (m0."foo" = 123)}
 
-    query = Model |> select([], 123) |> normalize
-    assert SQL.all(query) == ~s{SELECT 123 FROM "model" AS m0}
-
-    query = Model |> select([], 123.0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 123.0 FROM "model" AS m0}
+    query = "model" |> where(foo: 123.0) |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 WHERE (m0."foo" = 123.0)}
   end
 
   test "tagged type" do
@@ -549,11 +546,11 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "having" do
-    query = Model |> having([p], p.x == p.x) |> select([], 0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x")}
+    query = Model |> having([p], p.x == p.x) |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 HAVING (m0."x" = m0."x")}
 
-    query = Model |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], 0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x") AND (m0."y" = m0."y")}
+    query = Model |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 FROM "model" AS m0 HAVING (m0."x" = m0."x") AND (m0."y" = m0."y")}
   end
 
    test "group by" do
@@ -599,33 +596,33 @@ defmodule Sqlite.Ecto.Test do
     ## Joins
 
   test "join" do
-    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], true) |> normalize
     assert SQL.all(query) ==
-           ~s{SELECT 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z"}
+           ~s{SELECT 1 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z"}
 
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z)
-                  |> join(:inner, [], Model, true) |> select([], 0) |> normalize
+                  |> join(:inner, [], Model, true) |> select([], true) |> normalize
     assert SQL.all(query) ==
-           ~s{SELECT 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z" } <>
+           ~s{SELECT 1 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z" } <>
            ~s{INNER JOIN "model" AS m2 ON 1}
   end
 
   test "join with nothing bound" do
-    query = Model |> join(:inner, [], q in Model2, q.z == q.z) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [], q in Model2, q.z == q.z) |> select([], true) |> normalize
     assert SQL.all(query) ==
-           ~s{SELECT 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m1."z" = m1."z"}
+           ~s{SELECT 1 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m1."z" = m1."z"}
   end
 
   test "join without model" do
-    query = "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], 0) |> normalize
+    query = "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], true) |> normalize
     assert SQL.all(query) ==
-           ~s{SELECT 0 FROM "posts" AS p0 INNER JOIN "comments" AS c1 ON p0."x" = c1."z"}
+           ~s{SELECT 1 FROM "posts" AS p0 INNER JOIN "comments" AS c1 ON p0."x" = c1."z"}
   end
 
   test "join with prefix" do
-    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], true) |> normalize
     assert SQL.all(%{query | prefix: "prefix"}) ==
-           ~s{SELECT 0 FROM "prefix"."model" AS m0 INNER JOIN "prefix"."model2" AS m1 ON m0."x" = m1."z"}
+           ~s{SELECT 1 FROM "prefix"."model" AS m0 INNER JOIN "prefix"."model2" AS m1 ON m0."x" = m1."z"}
   end
 
   test "join with fragment" do
@@ -643,21 +640,21 @@ defmodule Sqlite.Ecto.Test do
   ## Associations
 
   test "association join belongs_to" do
-    query = Model2 |> join(:inner, [c], p in assoc(c, :post)) |> select([], 0) |> normalize
+    query = Model2 |> join(:inner, [c], p in assoc(c, :post)) |> select([], true) |> normalize
     assert SQL.all(query) ==
-           "SELECT 0 FROM \"model2\" AS m0 INNER JOIN \"model\" AS m1 ON m1.\"x\" = m0.\"z\""
+           "SELECT 1 FROM \"model2\" AS m0 INNER JOIN \"model\" AS m1 ON m1.\"x\" = m0.\"z\""
   end
 
   test "association join has_many" do
-    query = Model |> join(:inner, [p], c in assoc(p, :comments)) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [p], c in assoc(p, :comments)) |> select([], true) |> normalize
     assert SQL.all(query) ==
-           "SELECT 0 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON m1.\"z\" = m0.\"x\""
+           "SELECT 1 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON m1.\"z\" = m0.\"x\""
   end
 
   test "association join has_one" do
-    query = Model |> join(:inner, [p], pp in assoc(p, :permalink)) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [p], pp in assoc(p, :permalink)) |> select([], true) |> normalize
     assert SQL.all(query) ==
-           "SELECT 0 FROM \"model\" AS m0 INNER JOIN \"model3\" AS m1 ON m1.\"id\" = m0.\"y\""
+           "SELECT 1 FROM \"model\" AS m0 INNER JOIN \"model3\" AS m1 ON m1.\"id\" = m0.\"y\""
   end
 
   test "join produces correct bindings" do
