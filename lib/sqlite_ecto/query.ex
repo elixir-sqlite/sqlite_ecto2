@@ -205,29 +205,38 @@ defmodule Sqlite.Ecto.Query do
   # Execute a query with (possibly) binded parameters and handle busy signals
   # from the database.
   defp do_query(pid, sql, params, opts) do
-    opts = Keyword.put(opts, :bind, params)
+    opts = opts
+           |> Keyword.put(:decode, :manual)
+           |> Keyword.put(:into, :raw_list)
+           |> Keyword.put(:types, true)
+           |> Keyword.put(:bind, params)
     case Sqlitex.Server.query(pid, sql, opts) do
       # busy error means another process is writing to the database; try again
       {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
       {:error, msg} -> {:error, Sqlite.Ecto.Error.exception(msg)}
-      {:ok, rows} when is_list(rows) -> query_result(pid, sql, rows, opts)
+      {:ok, rows, columns, types} when is_list(rows)
+        -> query_result(pid, sql, rows, columns, types, opts)
     end
   end
 
   # If this is an INSERT, UPDATE, or DELETE, then return the number of changed
   # rows.  Otherwise (e.g. for SELECT) return the queried column values.
-  defp query_result(pid, <<"INSERT ", _::binary>>, [], _opts), do: changes_result(pid)
-  defp query_result(pid, <<"UPDATE ", _::binary>>, [], _opts), do: changes_result(pid)
-  defp query_result(pid, <<"DELETE ", _::binary>>, [], _opts), do: changes_result(pid)
-  defp query_result(_pid, _sql, rows, opts) do
-    {:ok, decode(rows, Keyword.fetch(opts, :decode))}
+  defp query_result(pid, <<"INSERT ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
+  defp query_result(pid, <<"UPDATE ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
+  defp query_result(pid, <<"DELETE ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
+  defp query_result(_pid, _sql, rows, columns, types, opts) do
+    {:ok, decode(rows, columns, types, Keyword.fetch(opts, :decode))}
   end
 
-  defp decode(rows, {:ok, :manual}) do
-    %Result{rows: rows, num_rows: length(rows), decoder: :deferred}
+  defp decode(rows, columns, column_types, {:ok, :manual}) do
+    %Result{rows: rows,
+            columns: columns,
+            column_types: column_types,
+            num_rows: length(rows),
+            decoder: :deferred}
   end
-  defp decode(rows, _) do # not specified or :auto
-    %Result{rows: rows, num_rows: length(rows), decoder: :deferred}
+  defp decode(rows, columns, column_types, _) do # not specified or :auto
+    decode(rows, columns, column_types, {:ok, :manual})
     |> Result.decode
   end
 
