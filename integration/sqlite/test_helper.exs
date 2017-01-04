@@ -66,7 +66,7 @@ defmodule Ecto.Integration.Case do
 end
 
 # Load support models and migration
-Code.require_file "../../deps/ecto/integration_test/support/models.exs", __DIR__
+Code.require_file "../../deps/ecto/integration_test/support/schemas.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/support/migration.exs", __DIR__
 
 # Load up the repository, start it, and run migrations
