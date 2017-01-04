@@ -91,9 +91,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
     def all(query) do
       sources = create_names(query, :select)
+      distinct_exprs = distinct_exprs(query, sources)
 
-      select = select(query.select, query.distinct, sources)
       from = from(sources)
+      select = select(query, distinct_exprs, sources)
       join = join(query, sources)
       where = where(query, sources)
       group_by = group_by(query.group_bys, query.havings, sources)
@@ -331,17 +332,23 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%SelectExpr{fields: fields}, distinct, sources) do
-      fields = Enum.map_join(fields, ", ", fn (f) ->
-        assemble(expr(f, sources, "query"))
-      end)
-      ["SELECT", distinct(distinct), fields]
+    defp select(%Query{select: %SelectExpr{fields: fields}, distinct: distinct} = query,
+                distinct_exprs, sources) do
+      "SELECT " <>
+        distinct(distinct, distinct_exprs) <>
+        Enum.map_join(fields, ", ", &expr(&1, sources, query))
     end
 
-    defp distinct(nil), do: []
-    defp distinct(%QueryExpr{expr: true}), do: "DISTINCT"
-    defp distinct(%QueryExpr{expr: false}), do: []
-    defp distinct(%QueryExpr{expr: exprs}) when is_list(exprs) do
+    defp distinct_exprs(%Query{distinct: %QueryExpr{expr: exprs}} = query, sources)
+        when is_list(exprs) do
+      Enum.map_join(exprs, ", ", &expr(&1, sources, query))
+    end
+    defp distinct_exprs(_, _), do: ""
+
+    defp distinct(nil, _sources), do: ""
+    defp distinct(%QueryExpr{expr: true}, _exprs),  do: "DISTINCT "
+    defp distinct(%QueryExpr{expr: false}, _exprs), do: ""
+    defp distinct(_query, exprs) do
       raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite"
     end
 
