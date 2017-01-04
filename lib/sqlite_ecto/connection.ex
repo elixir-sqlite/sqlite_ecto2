@@ -994,9 +994,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp error!(nil, message) do
       raise ArgumentError, message: message
     end
-    defp error!("query", message) do # TEMPORARY while we plumb query through
-      raise ArgumentError, message: message
-    end
     defp error!(query, message) do
       raise Ecto.QueryError, query: query, message: message
     end
