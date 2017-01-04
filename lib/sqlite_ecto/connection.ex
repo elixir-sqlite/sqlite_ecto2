@@ -100,9 +100,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       group_by = group_by(query, sources)
       having   = having(query, sources)
       order_by = order_by(query, distinct_exprs, sources)
-      limit = limit(query.limit, query.offset, sources)
+      limit    = limit(query, sources)
+      offset   = offset(query, sources)
 
-      assemble [select, from, join, where, group_by, having, order_by, limit]
+      assemble [select, from, join, where, group_by, having, order_by, limit, offset]
     end
 
     def update_all(%Ecto.Query{joins: [_ | _]}) do
@@ -491,14 +492,14 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end
     end
 
-    defp limit(nil, _offset, _sources), do: []
-    defp limit(%QueryExpr{expr: expr}, offset, sources) do
-      ["LIMIT", expr(expr, sources, "query"), offset(offset, sources)]
+    defp limit(%Query{limit: nil}, _sources), do: []
+    defp limit(%Query{limit: %QueryExpr{expr: expr}} = query, sources) do
+      "LIMIT " <> expr(expr, sources, query)
     end
 
-    defp offset(nil, _sources), do: []
-    defp offset(%QueryExpr{expr: expr}, sources) do
-      ["OFFSET", expr(expr, sources, "query")]
+    defp offset(%Query{offset: nil}, _sources), do: []
+    defp offset(%Query{offset: %QueryExpr{expr: expr}} = query, sources) do
+      "OFFSET " <> expr(expr, sources, query)
     end
 
     defp boolean(_name, [], _sources, _query), do: []
