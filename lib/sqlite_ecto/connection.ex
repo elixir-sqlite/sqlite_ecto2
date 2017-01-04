@@ -79,24 +79,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       "ROLLBACK TO SAVEPOINT " <> savepoint
     end
 
-    def release_savepoint(name) do
-      "RELEASE " <> name
-    end
-
-    # Initiate a transaction with a savepoint. If any error occurs when we call
-    # the func parameter, rollback our changes. Returns the result of the call
-    # to func.
-    def with_savepoint(pid, func) do
-      sp = "sp_" <> random_id
-      :ok = exec(pid, savepoint(sp))
-      result = safe_call(pid, func, sp)
-      if is_tuple(result) and elem(result, 0) == :error do
-        :ok = exec(pid, rollback_to_savepoint(sp))
-      end
-      :ok = exec(pid, release_savepoint(sp))
-      result
-    end
-
     ## Query
 
     alias Ecto.Query
@@ -109,16 +91,19 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
     def all(query) do
       sources = create_names(query, :select)
+      distinct_exprs = distinct_exprs(query, sources)
 
-      select = select(query.select, query.distinct, sources)
       from = from(sources)
+      select = select(query, distinct_exprs, sources)
       join = join(query, sources)
       where = where(query, sources)
-      group_by = group_by(query.group_bys, query.havings, sources)
-      order_by = order_by(query.order_bys, sources)
-      limit = limit(query.limit, query.offset, sources)
+      group_by = group_by(query, sources)
+      having   = having(query, sources)
+      order_by = order_by(query, distinct_exprs, sources)
+      limit    = limit(query, sources)
+      offset   = offset(query, sources)
 
-      assemble [select, from, join, where, group_by, order_by, limit]
+      assemble([select, from, join, where, group_by, having, order_by, limit, offset])
     end
 
     def update_all(%Ecto.Query{joins: [_ | _]}) do
@@ -349,17 +334,23 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%SelectExpr{fields: fields}, distinct, sources) do
-      fields = Enum.map_join(fields, ", ", fn (f) ->
-        assemble(expr(f, sources, "query"))
-      end)
-      ["SELECT", distinct(distinct), fields]
+    defp select(%Query{select: %SelectExpr{fields: fields}, distinct: distinct} = query,
+                distinct_exprs, sources) do
+      "SELECT " <>
+        distinct(distinct, distinct_exprs) <>
+        Enum.map_join(fields, ", ", &expr(&1, sources, query))
     end
 
-    defp distinct(nil), do: []
-    defp distinct(%QueryExpr{expr: true}), do: "DISTINCT"
-    defp distinct(%QueryExpr{expr: false}), do: []
-    defp distinct(%QueryExpr{expr: exprs}) when is_list(exprs) do
+    defp distinct_exprs(%Query{distinct: %QueryExpr{expr: exprs}} = query, sources)
+        when is_list(exprs) do
+      Enum.map_join(exprs, ", ", &expr(&1, sources, query))
+    end
+    defp distinct_exprs(_, _), do: ""
+
+    defp distinct(nil, _sources), do: ""
+    defp distinct(%QueryExpr{expr: true}, _exprs),  do: "DISTINCT "
+    defp distinct(%QueryExpr{expr: false}, _exprs), do: ""
+    defp distinct(_query, exprs) do
       raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite"
     end
 
@@ -376,7 +367,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           where = expr(expr, sources, query)
           "USING #{table} AS #{name} WHERE " <> where
         %JoinExpr{qual: qual} ->
-            error!(query, "PostgreSQL supports only inner joins on delete_all, got: `#{qual}`")
+            error!(query, "SQLite supports only inner joins on delete_all, got: `#{qual}`")
       end)
     end
 
@@ -459,49 +450,56 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       ["WHERE" | Enum.intersperse(filters, "AND")]
     end
 
-    defp having([], _sources), do: []
-    defp having(havings, sources) do
-      exprs = map_intersperse havings, "AND", fn %QueryExpr{expr: expr} ->
-        ["(", expr(expr, sources, "query"), ")"]
+    defp having(%Query{havings: havings} = query, sources) do
+      boolean("HAVING", havings, sources, query)
+    end
+
+    defp group_by(%Query{group_bys: group_bys} = query, sources) do
+      exprs =
+        Enum.map_join(group_bys, ", ", fn
+          %QueryExpr{expr: expr} ->
+            Enum.map_join(expr, ", ", &expr(&1, sources, query))
+        end)
+
+      case exprs do
+        "" -> []
+        _  -> "GROUP BY " <> exprs
       end
-      ["HAVING" | exprs]
     end
 
-    defp group_by(group_bys, havings, sources) do
-      Enum.map_join(group_bys, ", ", fn %QueryExpr{expr: expr} ->
-        Enum.map_join(expr, ", ", &assemble(expr(&1, sources, "query")))
-      end)
-      |> group_by_clause(havings, sources)
+    defp order_by(%Query{order_bys: order_bys} = query, distinct_exprs, sources) do
+      exprs =
+        Enum.map_join(order_bys, ", ", fn
+          %QueryExpr{expr: expr} ->
+            Enum.map_join(expr, ", ", &order_by_expr(&1, sources, query))
+        end)
+
+      case {distinct_exprs, exprs} do
+        {_, ""} ->
+          []
+        {"", _} ->
+          "ORDER BY " <> exprs
+        {_, _}  ->
+          "ORDER BY " <> distinct_exprs <> ", " <> exprs
+      end
     end
 
-    defp group_by_clause("", _, _), do: []
-    defp group_by_clause(exprs, havings, sources) do
-      ["GROUP BY", exprs, having(havings, sources)]
+    defp order_by_expr({dir, expr}, sources, query) do
+      str = expr(expr, sources, query)
+      case dir do
+        :asc  -> str
+        :desc -> str <> " DESC"
+      end
     end
 
-    defp order_by(order_bys, sources) do
-      Enum.map_join(order_bys, ", ", fn %QueryExpr{expr: expr} ->
-        Enum.map_join(expr, ", ", &ordering_term(&1, sources))
-      end)
-      |> order_by_clause
+    defp limit(%Query{limit: nil}, _sources), do: []
+    defp limit(%Query{limit: %QueryExpr{expr: expr}} = query, sources) do
+      "LIMIT " <> expr(expr, sources, query)
     end
 
-    defp order_by_clause(""), do: []
-    defp order_by_clause(exprs), do: ["ORDER BY", exprs]
-
-    defp ordering_term({:asc, expr}, sources), do: assemble(expr(expr, sources, "query"))
-    defp ordering_term({:desc, expr}, sources) do
-      assemble(expr(expr, sources, "query")) <> " DESC"
-    end
-
-    defp limit(nil, _offset, _sources), do: []
-    defp limit(%QueryExpr{expr: expr}, offset, sources) do
-      ["LIMIT", expr(expr, sources, "query"), offset(offset, sources)]
-    end
-
-    defp offset(nil, _sources), do: []
-    defp offset(%QueryExpr{expr: expr}, sources) do
-      ["OFFSET", expr(expr, sources, "query")]
+    defp offset(%Query{offset: nil}, _sources), do: []
+    defp offset(%Query{offset: %QueryExpr{expr: expr}} = query, sources) do
+      "OFFSET " <> expr(expr, sources, query)
     end
 
     defp boolean(_name, [], _sources, _query), do: []
@@ -519,17 +517,19 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query) when is_atom(field) do
       {_, name, _} = elem(sources, idx)
-      "#{name}.#{quote_id(field)}"
+      "#{name}.#{quote_name(field)}"
     end
 
-    defp expr({:&, _, [idx]}, sources, _query) do
+    defp expr({:&, _, [idx]}, sources, query) do
       {table, name, model} = elem(sources, idx)
       unless model do
-        raise ArgumentError, "SQLite requires a model when using selector #{inspect name} but " <>
-                             "only the table #{inspect table} was given. Please specify a model " <>
-                             "or specify exactly which fields from #{inspect name} you desire"
+        error!(query, "SQLite requires a model when using selector " <>
+          "#{inspect name} but only the table #{inspect table} was given. " <>
+          "Please specify a model or specify exactly which fields from " <>
+          "#{inspect name} you desire")
       end
-      map_intersperse(model.__schema__(:fields), ",", &"#{name}.#{quote_id(&1)}")
+      fields = model.__schema__(:fields)
+      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
 
     defp expr({:in, _, [left, right]}, sources, query) when is_list(right) do
@@ -554,8 +554,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       "NOT (" <> expr(expr, sources, query) <> ")"
     end
 
-    defp expr({:fragment, _, [kw]}, _sources, _query) when is_list(kw) or tuple_size(kw) == 3 do
-      raise ArgumentError, "SQLite adapter does not support keyword or interpolated fragments"
+    defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
+      error!(query, "SQLite adapter does not support keyword or interpolated fragments")
     end
 
     defp expr({:fragment, _, parts}, sources, query) do
@@ -565,20 +565,16 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end)
     end
 
-    # start of SQLite function to display date
-    # NOTE the open parenthesis must be closed
-    @date_format "strftime('%Y-%m-%d'"
-
-    defp expr({:date_add, _, [date, count, interval]}, sources, query) do
-      "CAST (#{@date_format},#{expr(date, sources, query)},#{interval(count, interval, sources)}) AS TEXT_DATE)"
-    end
-
-    # start of SQLite function to display datetime
-    # NOTE the open parenthesis must be closed
-    @datetime_format "strftime('%Y-%m-%d %H:%M:%f000'"
+    @datetime_format "strftime('%Y-%m-%d %H:%M:%f000'" # NOTE: Open paren must be closed
 
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
       "CAST (#{@datetime_format},#{expr(datetime, sources, query)},#{interval(count, interval, sources)}) AS TEXT_DATETIME)"
+    end
+
+    @date_format "strftime('%Y-%m-%d'" # NOTE: Open paren must be closed
+
+    defp expr({:date_add, _, [date, count, interval]}, sources, query) do
+      "CAST (#{@date_format},#{expr(date, sources, query)},#{interval(count, interval, sources)}) AS TEXT_DATE)"
     end
 
     defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do
@@ -604,7 +600,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       Decimal.to_string(decimal, :normal)
     end
 
-    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources, _query) when is_binary(binary) do
+    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources, _query)
+        when is_binary(binary) do
       "X'#{Base.encode16(binary, case: :upper)}'"
     end
 
@@ -888,6 +885,24 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # Use Ecto's JSON library (currently Poison) for embedded JSON datatypes.
     def json_library, do: Application.get_env(:ecto, :json_library)
 
+    # Initiate a transaction with a savepoint. If any error occurs when we call
+    # the func parameter, rollback our changes. Returns the result of the call
+    # to func.
+    defp with_savepoint(pid, func) do
+      sp = "sp_" <> random_id
+      :ok = exec(pid, savepoint(sp))
+      result = safe_call(pid, func, sp)
+      if is_tuple(result) and elem(result, 0) == :error do
+        :ok = exec(pid, rollback_to_savepoint(sp))
+      end
+      :ok = exec(pid, release_savepoint(sp))
+      result
+    end
+
+    defp release_savepoint(name) do
+      "RELEASE " <> name
+    end
+
     # Call func.() and return the result. If any exceptions are encountered,
     # safely rollback and release the transaction.
     defp safe_call(pid, func, sp) do
@@ -977,7 +992,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp error!(nil, message) do
-      raise ArgumentError, message
+      raise ArgumentError, message: message
     end
     defp error!(query, message) do
       raise Ecto.QueryError, query: query, message: message

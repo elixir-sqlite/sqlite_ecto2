@@ -357,7 +357,7 @@ defmodule Sqlite.Ecto.Test do
     query = "posts" |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
 
-    assert_raise ArgumentError, ~r"SQLite requires a model", fn ->
+    assert_raise Ecto.QueryError, ~r"SQLite requires a model", fn ->
       SQL.all from(p in "posts", select: p) |> normalize()
     end
   end
@@ -473,7 +473,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT ltrim(m0."x", ?) FROM "model" AS m0}
 
     query = Model |> select([], fragment(title: 2)) |> normalize
-    assert_raise ArgumentError, "SQLite adapter does not support keyword or interpolated fragments", fn ->
+    assert_raise Ecto.QueryError, ~r"SQLite adapter does not support keyword or interpolated fragments", fn ->
       SQL.all(query)
     end
   end
