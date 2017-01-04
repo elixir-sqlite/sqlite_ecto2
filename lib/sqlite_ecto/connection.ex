@@ -97,11 +97,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       select = select(query, distinct_exprs, sources)
       join = join(query, sources)
       where = where(query, sources)
-      group_by = group_by(query.group_bys, query.havings, sources)
+      group_by = group_by(query, sources)
+      having   = having(query, sources)
       order_by = order_by(query.order_bys, sources)
       limit = limit(query.limit, query.offset, sources)
 
-      assemble [select, from, join, where, group_by, order_by, limit]
+      assemble [select, from, join, where, group_by, having, order_by, limit]
     end
 
     def update_all(%Ecto.Query{joins: [_ | _]}) do
@@ -448,24 +449,21 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       ["WHERE" | Enum.intersperse(filters, "AND")]
     end
 
-    defp having([], _sources), do: []
-    defp having(havings, sources) do
-      exprs = map_intersperse havings, "AND", fn %QueryExpr{expr: expr} ->
-        ["(", expr(expr, sources, "query"), ")"]
+    defp having(%Query{havings: havings} = query, sources) do
+      boolean("HAVING", havings, sources, query)
+    end
+
+    defp group_by(%Query{group_bys: group_bys} = query, sources) do
+      exprs =
+        Enum.map_join(group_bys, ", ", fn
+          %QueryExpr{expr: expr} ->
+            Enum.map_join(expr, ", ", &expr(&1, sources, query))
+        end)
+
+      case exprs do
+        "" -> []
+        _  -> "GROUP BY " <> exprs
       end
-      ["HAVING" | exprs]
-    end
-
-    defp group_by(group_bys, havings, sources) do
-      Enum.map_join(group_bys, ", ", fn %QueryExpr{expr: expr} ->
-        Enum.map_join(expr, ", ", &assemble(expr(&1, sources, "query")))
-      end)
-      |> group_by_clause(havings, sources)
-    end
-
-    defp group_by_clause("", _, _), do: []
-    defp group_by_clause(exprs, havings, sources) do
-      ["GROUP BY", exprs, having(havings, sources)]
     end
 
     defp order_by(order_bys, sources) do
