@@ -27,7 +27,7 @@ defmodule Sqlite.Ecto do
 
   """
 
-  import Sqlite.Ecto.Util, only: [json_library: 0]
+  import Sqlite.Ecto.Connection, only: [json_library: 0]
 
   # Inherit all behaviour from Ecto.Adapters.SQL
   use Ecto.Adapters.SQL, :sqlitex

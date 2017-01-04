@@ -519,16 +519,16 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT 1 IN () FROM "model" AS m0}
 
     query = Model |> select([e], 1 in [1,e.x,3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN (1, m0."x", 3) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN (1,m0."x",3) FROM "model" AS m0}
 
     query = Model |> select([e], 1 in ^[]) |> normalize
     assert SQL.all(query) == ~s{SELECT 1 IN () FROM "model" AS m0}
 
     query = Model |> select([e], 1 in ^[1, 2, 3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN (?, ?, ?) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN ($1,$2,$3) FROM "model" AS m0}
 
     query = Model |> select([e], 1 in [1, ^2, 3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN (1, ?, 3) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN (1,?,3) FROM "model" AS m0}
 
     query = Model |> select([e], 1 in fragment("foo")) |> normalize
     assert SQL.all(query) == ~s{SELECT 1 IN (foo) FROM "model" AS m0}
@@ -617,7 +617,10 @@ defmodule Sqlite.Ecto.Test do
             |> select([p], {p.id, ^0})
             |> where([p], p.id > 0 and p.id < ^100)
             |> normalize
-    assert SQL.all(query) == ~s{SELECT m0."id", ? FROM "model" AS m0 INNER JOIN (SELECT * FROM model2 AS m2 WHERE m2.id = m0."x" AND m2.field = ?) AS f1 ON 1 WHERE ((m0."id" > 0) AND (m0."id" < ?))}
+    assert SQL.all(query) ==
+      ~s{SELECT m0."id", ? FROM "model" AS m0 INNER JOIN } <>
+      ~s{(SELECT * FROM model2 AS m2 WHERE m2.id = m0."x" AND m2.field = ?) AS f1 ON 1 } <>
+      ~s{WHERE ((m0."id" > 0) AND (m0."id" < ?))}
   end
 
   ## Associations
