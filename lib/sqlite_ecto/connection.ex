@@ -99,7 +99,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       where = where(query, sources)
       group_by = group_by(query, sources)
       having   = having(query, sources)
-      order_by = order_by(query.order_bys, sources)
+      order_by = order_by(query, distinct_exprs, sources)
       limit = limit(query.limit, query.offset, sources)
 
       assemble [select, from, join, where, group_by, having, order_by, limit]
@@ -466,19 +466,29 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end
     end
 
-    defp order_by(order_bys, sources) do
-      Enum.map_join(order_bys, ", ", fn %QueryExpr{expr: expr} ->
-        Enum.map_join(expr, ", ", &ordering_term(&1, sources))
-      end)
-      |> order_by_clause
+    defp order_by(%Query{order_bys: order_bys} = query, distinct_exprs, sources) do
+      exprs =
+        Enum.map_join(order_bys, ", ", fn
+          %QueryExpr{expr: expr} ->
+            Enum.map_join(expr, ", ", &order_by_expr(&1, sources, query))
+        end)
+
+      case {distinct_exprs, exprs} do
+        {_, ""} ->
+          []
+        {"", _} ->
+          "ORDER BY " <> exprs
+        {_, _}  ->
+          "ORDER BY " <> distinct_exprs <> ", " <> exprs
+      end
     end
 
-    defp order_by_clause(""), do: []
-    defp order_by_clause(exprs), do: ["ORDER BY", exprs]
-
-    defp ordering_term({:asc, expr}, sources), do: assemble(expr(expr, sources, "query"))
-    defp ordering_term({:desc, expr}, sources) do
-      assemble(expr(expr, sources, "query")) <> " DESC"
+    defp order_by_expr({dir, expr}, sources, query) do
+      str = expr(expr, sources, query)
+      case dir do
+        :asc  -> str
+        :desc -> str <> " DESC"
+      end
     end
 
     defp limit(nil, _offset, _sources), do: []
