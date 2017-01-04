@@ -32,7 +32,12 @@ defmodule Sqlite.Ecto.Query do
     end
   end
 
+  ## Query
+
   alias Ecto.Query
+  alias Ecto.Query.SelectExpr
+  alias Ecto.Query.QueryExpr
+  alias Ecto.Query.JoinExpr
 
   def all(%Ecto.Query{lock: lock}) when lock != nil do
     raise ArgumentError, "locks are not supported by SQLite"
@@ -279,38 +284,6 @@ defmodule Sqlite.Ecto.Query do
 
   defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-  ## Generic Query Helpers
-
-  alias Ecto.Query.JoinExpr
-  alias Ecto.Query.QueryExpr
-  alias Ecto.Query.SelectExpr
-
-  defp create_names(%{prefix: prefix, sources: sources}, stmt) do
-    create_names(prefix, sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
-  end
-
-  defp create_names(prefix, sources, pos, limit, stmt) when pos < limit do
-    current =
-      case elem(sources, pos) do
-        {table, model} ->
-          {quote_table(prefix, table), table_identifier(stmt, table, pos), model}
-        {:fragment, _, _} ->
-          {nil, "f" <> Integer.to_string(pos), nil}
-      end
-    [current|create_names(prefix, sources, pos + 1, limit, stmt)]
-  end
-
-  defp create_names(_prefix, _sources, pos, pos, _stmt) do
-    []
-  end
-
-  defp table_identifier(:select, table, pos) do
-    String.first(table) <> Integer.to_string(pos)
-  end
-  defp table_identifier(_stmt, table, _pos), do: quote_id(table)
-
-  defp fragment_identifier(pos), do: "f" <> Integer.to_string(pos)
-
   defp select(%SelectExpr{fields: fields}, distinct, sources) do
     fields = Enum.map_join(fields, ", ", fn (f) ->
       assemble(expr(f, sources, "query"))
@@ -340,6 +313,129 @@ defmodule Sqlite.Ecto.Query do
       %JoinExpr{qual: qual} ->
           error!(query, "PostgreSQL supports only inner joins on delete_all, got: `#{qual}`")
     end)
+  end
+
+  defp update_fields(%Query{updates: updates} = query, sources) do
+    for(%{expr: expr} <- updates,
+        {op, kw} <- expr,
+        {key, value} <- kw,
+        do: update_op(op, key, value, sources, query)) |> Enum.join(", ")
+  end
+
+  defp update_op(:set, key, value, sources, query) do
+    quote_name(key) <> " = " <> expr(value, sources, query)
+  end
+
+  defp update_op(:inc, key, value, sources, query) do
+    quoted = quote_name(key)
+    quoted <> " = " <> quoted <> " + " <> expr(value, sources, query)
+  end
+
+  defp update_op(command, _key, _value, _sources, query) do
+    error!(query, "Unknown update operation #{inspect command} for SQLite")
+  end
+
+  defp update_join(%Query{joins: []}, _sources), do: {[], []}
+  defp update_join(%Query{joins: joins} = query, sources) do
+    froms =
+      "FROM " <> Enum.map_join(joins, ", ", fn
+        %JoinExpr{qual: :inner, ix: ix, source: source} ->
+          {join, name, _model} = elem(sources, ix)
+          join = join || "(" <> expr(source, sources, query) <> ")"
+          join <> " AS " <> name
+        %JoinExpr{qual: qual} ->
+          error!(query, "SQLite supports only inner joins on update_all, got: `#{qual}`")
+      end)
+
+    wheres =
+      for %JoinExpr{on: %QueryExpr{expr: value} = expr} <- joins,
+          value != true,
+          do: expr
+
+    {froms, wheres}
+  end
+
+  defp join(%Query{joins: []}, _sources), do: []
+  defp join(%Query{joins: joins} = query, sources) do
+    Enum.map_join(joins, " ", fn
+      %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
+        {join, name, _model} = elem(sources, ix)
+        qual = join_qual(qual)
+        join = join || "(" <> expr(source, sources, query) <> ")"
+        "#{qual} JOIN " <> join <> " AS " <> name <> " ON " <> expr(expr, sources, query)
+    end)
+  end
+
+  defp join_qual(:inner), do: "INNER"
+  defp join_qual(:left),  do: "LEFT"
+  defp join_qual(:right) do
+    raise ArgumentError, "RIGHT OUTER JOIN not supported by SQLite"
+  end
+  defp join_qual(:full) do
+    raise ArgumentError, "FULL OUTER JOIN not supported by SQLite"
+  end
+
+  defp delete_all_where([], query, sources), do: where(query, sources)
+  defp delete_all_where(_joins, %Query{wheres: wheres} = query, sources) do
+    boolean("AND", wheres, sources, query)
+  end
+
+  defp where(%Query{wheres: wheres} = query, sources) do
+    boolean("WHERE", wheres, sources, query)
+  end
+
+  defp having([], _sources), do: []
+  defp having(havings, sources) do
+    exprs = map_intersperse havings, "AND", fn %QueryExpr{expr: expr} ->
+      ["(", expr(expr, sources, "query"), ")"]
+    end
+    ["HAVING" | exprs]
+  end
+
+  defp group_by(group_bys, havings, sources) do
+    Enum.map_join(group_bys, ", ", fn %QueryExpr{expr: expr} ->
+      Enum.map_join(expr, ", ", &assemble(expr(&1, sources, "query")))
+    end)
+    |> group_by_clause(havings, sources)
+  end
+
+  defp group_by_clause("", _, _), do: []
+  defp group_by_clause(exprs, havings, sources) do
+    ["GROUP BY", exprs, having(havings, sources)]
+  end
+
+  defp order_by(order_bys, sources) do
+    Enum.map_join(order_bys, ", ", fn %QueryExpr{expr: expr} ->
+      Enum.map_join(expr, ", ", &ordering_term(&1, sources))
+    end)
+    |> order_by_clause
+  end
+
+  defp order_by_clause(""), do: []
+  defp order_by_clause(exprs), do: ["ORDER BY", exprs]
+
+  defp ordering_term({:asc, expr}, sources), do: assemble(expr(expr, sources, "query"))
+  defp ordering_term({:desc, expr}, sources) do
+    assemble(expr(expr, sources, "query")) <> " DESC"
+  end
+
+  ## Generic Query Helpers
+
+  defp select(%SelectExpr{fields: fields}, distinct, sources) do
+    fields = Enum.map_join(fields, ", ", fn (f) ->
+      assemble(expr(f, sources, "query"))
+    end)
+    ["SELECT", distinct(distinct), fields]
+  end
+
+  defp limit(nil, _offset, _sources), do: []
+  defp limit(%QueryExpr{expr: expr}, offset, sources) do
+    ["LIMIT", expr(expr, sources, "query"), offset(offset, sources)]
+  end
+
+  defp offset(nil, _sources), do: []
+  defp offset(%QueryExpr{expr: expr}, sources) do
+    ["OFFSET", expr(expr, sources, "query")]
   end
 
   defp boolean(_name, [], _sources, _query), do: []
@@ -510,10 +606,6 @@ defmodule Sqlite.Ecto.Query do
     end
   end
 
-  defp where(%Query{wheres: wheres} = query, sources) do
-    boolean("WHERE", wheres, sources, query)
-  end
-
   # Generate a where clause from the given filters.
   defp where_filter(filters), do: where_filter(filters, 1)
   defp where_filter([], _start), do: []
@@ -524,115 +616,31 @@ defmodule Sqlite.Ecto.Query do
     ["WHERE" | Enum.intersperse(filters, "AND")]
   end
 
-  defp order_by(order_bys, sources) do
-    Enum.map_join(order_bys, ", ", fn %QueryExpr{expr: expr} ->
-      Enum.map_join(expr, ", ", &ordering_term(&1, sources))
-    end)
-    |> order_by_clause
+  defp create_names(%{prefix: prefix, sources: sources}, stmt) do
+    create_names(prefix, sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
   end
 
-  defp order_by_clause(""), do: []
-  defp order_by_clause(exprs), do: ["ORDER BY", exprs]
-
-  defp ordering_term({:asc, expr}, sources), do: assemble(expr(expr, sources, "query"))
-  defp ordering_term({:desc, expr}, sources) do
-    assemble(expr(expr, sources, "query")) <> " DESC"
+  defp create_names(prefix, sources, pos, limit, stmt) when pos < limit do
+    current =
+      case elem(sources, pos) do
+        {table, model} ->
+          {quote_table(prefix, table), table_identifier(stmt, table, pos), model}
+        {:fragment, _, _} ->
+          {nil, "f" <> Integer.to_string(pos), nil}
+      end
+    [current|create_names(prefix, sources, pos + 1, limit, stmt)]
   end
 
-  defp limit(nil, _offset, _sources), do: []
-  defp limit(%QueryExpr{expr: expr}, offset, sources) do
-    ["LIMIT", expr(expr, sources, "query"), offset(offset, sources)]
+  defp create_names(_prefix, _sources, pos, pos, _stmt) do
+    []
   end
 
-  defp offset(nil, _sources), do: []
-  defp offset(%QueryExpr{expr: expr}, sources) do
-    ["OFFSET", expr(expr, sources, "query")]
+  defp table_identifier(:select, table, pos) do
+    String.first(table) <> Integer.to_string(pos)
   end
+  defp table_identifier(_stmt, table, _pos), do: quote_id(table)
 
-  defp group_by(group_bys, havings, sources) do
-    Enum.map_join(group_bys, ", ", fn %QueryExpr{expr: expr} ->
-      Enum.map_join(expr, ", ", &assemble(expr(&1, sources, "query")))
-    end)
-    |> group_by_clause(havings, sources)
-  end
-
-  defp group_by_clause("", _, _), do: []
-  defp group_by_clause(exprs, havings, sources) do
-    ["GROUP BY", exprs, having(havings, sources)]
-  end
-
-  defp having([], _sources), do: []
-  defp having(havings, sources) do
-    exprs = map_intersperse havings, "AND", fn %QueryExpr{expr: expr} ->
-      ["(", expr(expr, sources, "query"), ")"]
-    end
-    ["HAVING" | exprs]
-  end
-
-  defp update_fields(%Query{updates: updates} = query, sources) do
-    for(%{expr: expr} <- updates,
-        {op, kw} <- expr,
-        {key, value} <- kw,
-        do: update_op(op, key, value, sources, query)) |> Enum.join(", ")
-  end
-
-  defp update_op(:set, key, value, sources, query) do
-    quote_name(key) <> " = " <> expr(value, sources, query)
-  end
-
-  defp update_op(:inc, key, value, sources, query) do
-    quoted = quote_name(key)
-    quoted <> " = " <> quoted <> " + " <> expr(value, sources, query)
-  end
-
-  defp update_op(command, _key, _value, _sources, query) do
-    error!(query, "Unknown update operation #{inspect command} for SQLite")
-  end
-
-  defp update_join(%Query{joins: []}, _sources), do: {[], []}
-  defp update_join(%Query{joins: joins} = query, sources) do
-    froms =
-      "FROM " <> Enum.map_join(joins, ", ", fn
-        %JoinExpr{qual: :inner, ix: ix, source: source} ->
-          {join, name, _model} = elem(sources, ix)
-          join = join || "(" <> expr(source, sources, query) <> ")"
-          join <> " AS " <> name
-        %JoinExpr{qual: qual} ->
-          error!(query, "SQLite supports only inner joins on update_all, got: `#{qual}`")
-      end)
-
-    wheres =
-      for %JoinExpr{on: %QueryExpr{expr: value} = expr} <- joins,
-          value != true,
-          do: expr
-
-    {froms, wheres}
-  end
-
-  defp join(%Query{joins: []}, _sources), do: []
-  defp join(%Query{joins: joins} = query, sources) do
-    Enum.map_join(joins, " ", fn
-      %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
-        {join, name, _model} = elem(sources, ix)
-        qual = join_qual(qual)
-        join = join || "(" <> expr(source, sources, query) <> ")"
-        "#{qual} JOIN " <> join <> " AS " <> name <> " ON " <> expr(expr, sources, query)
-    end)
-  end
-
-  defp join_qual(:inner), do: "INNER"
-  defp join_qual(:left),  do: "LEFT"
-  defp join_qual(:right) do
-    raise ArgumentError, "RIGHT OUTER JOIN not supported by SQLite"
-  end
-  defp join_qual(:full) do
-    raise ArgumentError, "FULL OUTER JOIN not supported by SQLite"
-  end
-
-  defp delete_all_where([], query, sources), do: where(query, sources)
-  defp delete_all_where(_joins, %Query{wheres: wheres} = query, sources) do
-    boolean("AND", wheres, sources, query)
-  end
+  defp fragment_identifier(pos), do: "f" <> Integer.to_string(pos)
 
   ## Helpers
 
