@@ -307,7 +307,7 @@ defmodule Sqlite.Ecto.Test do
   alias Ecto.Queryable
 
   defmodule Model do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "model" do
       field :x, :integer
@@ -324,7 +324,7 @@ defmodule Sqlite.Ecto.Test do
   end
 
   defmodule Model2 do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "model2" do
       belongs_to :post, Sqlite.Ecto.Test.Model,
@@ -334,7 +334,7 @@ defmodule Sqlite.Ecto.Test do
   end
 
   defmodule Model3 do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "model3" do
       field :list1, {:array, :string}
@@ -375,6 +375,14 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
   end
 
+  test "aggregates" do
+    query = Model |> select([r], count(r.x)) |> normalize
+    assert SQL.all(query) == ~s{SELECT count(m0."x") FROM "model" AS m0}
+
+    query = Model |> select([r], count(r.x, :distinct)) |> normalize
+    assert SQL.all(query) == ~s{SELECT count(DISTINCT m0."x") FROM "model" AS m0}
+  end
+
   test "distinct" do
     assert_raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite", fn ->
       query = Model |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
@@ -387,10 +395,10 @@ defmodule Sqlite.Ecto.Test do
     query = Model |> distinct([r], false) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
 
-    query = Model |> distinct([], true) |> select([r], {r.x, r.y}) |> normalize
+    query = Model |> distinct(true) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT DISTINCT m0."x", m0."y" FROM "model" AS m0}
 
-    query = Model |> distinct([], false) |> select([r], {r.x, r.y}) |> normalize
+    query = Model |> distinct(false) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
   end
 
@@ -416,6 +424,9 @@ defmodule Sqlite.Ecto.Test do
   test "limit and offset" do
     query = Model |> limit([r], 3) |> select([], 0) |> normalize
     assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3}
+
+    query = Model |> offset([r], 5) |> select([], 0) |> normalize
+    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 OFFSET 5}
 
     query = Model |> offset([r], 5) |> limit([r], 3) |> select([], 0) |> normalize
     assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 LIMIT 3 OFFSET 5}
@@ -491,6 +502,9 @@ defmodule Sqlite.Ecto.Test do
     query = Model |> select([], "abc") |> normalize
     assert SQL.all(query) == ~s{SELECT 'abc' FROM "model" AS m0}
 
+    query = Model |> select([], <<0, ?a,?b,?c>>) |> normalize
+    assert SQL.all(query) == ~s{SELECT X'00616263' FROM "model" AS m0}
+
     query = Model |> select([], 123) |> normalize
     assert SQL.all(query) == ~s{SELECT 123 FROM "model" AS m0}
 
@@ -534,21 +548,23 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT 1 IN (foo) FROM "model" AS m0}
   end
 
-  test "group by" do
+  test "having" do
+    query = Model |> having([p], p.x == p.x) |> select([], 0) |> normalize
+    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x")}
+
+    query = Model |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], 0) |> normalize
+    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x") AND (m0."y" = m0."y")}
+  end
+
+   test "group by" do
     query = Model |> group_by([r], r.x) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x"}
-
-    query = Model |> group_by([r], r.x) |> having([r], r.x == r.x) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x" HAVING (m0."x" = m0."x")}
 
     query = Model |> group_by([r], 2) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY 2}
 
     query = Model |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y"}
-
-    query = Model |> group_by([r], [r.x, r.y]) |> having([r], r.x == r.x) |> having([r], r.y == r.y) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y" HAVING (m0."x" = m0."x") AND (m0."y" = m0."y")}
 
     query = Model |> group_by([r], []) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
@@ -580,7 +596,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == String.rstrip(result)
   end
 
-  ## Joins
+    ## Joins
 
   test "join" do
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], 0) |> normalize
@@ -608,7 +624,8 @@ defmodule Sqlite.Ecto.Test do
 
   test "join with prefix" do
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], 0) |> normalize
-    assert SQL.all(%{query | prefix: "prefix"}) == ~s{SELECT 0 FROM "prefix"."model" AS m0 INNER JOIN "prefix"."model2" AS m1 ON m0."x" = m1."z"}
+    assert SQL.all(%{query | prefix: "prefix"}) ==
+           ~s{SELECT 0 FROM "prefix"."model" AS m0 INNER JOIN "prefix"."model2" AS m1 ON m0."x" = m1."z"}
   end
 
   test "join with fragment" do
