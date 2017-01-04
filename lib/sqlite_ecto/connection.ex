@@ -98,10 +98,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       join = join(query, sources)
       where = where(query, sources)
       group_by = group_by(query, sources)
-      having   = having(query, sources)
+      having = having(query, sources)
       order_by = order_by(query, distinct_exprs, sources)
-      limit    = limit(query, sources)
-      offset   = offset(query, sources)
+      limit = limit(query, sources)
+      offset = offset(query, sources)
 
       assemble([select, from, join, where, group_by, having, order_by, limit, offset])
     end
@@ -338,8 +338,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
                 distinct_exprs, sources) do
       "SELECT " <>
         distinct(distinct, distinct_exprs) <>
-        Enum.map_join(fields, ", ", &expr(&1, sources, query))
+        select_fields(fields, sources, query)
     end
+
+    defp select_fields([], _sources, _query),
+      do: "1"
+    defp select_fields(fields, sources, query),
+      do: Enum.map_join(fields, ", ", &expr(&1, sources, query))
 
     defp distinct_exprs(%Query{distinct: %QueryExpr{expr: exprs}} = query, sources)
         when is_list(exprs) do
