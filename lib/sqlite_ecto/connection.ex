@@ -358,7 +358,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           where = expr(expr, sources, query)
           "USING #{table} AS #{name} WHERE " <> where
         %JoinExpr{qual: qual} ->
-            error!(query, "PostgreSQL supports only inner joins on delete_all, got: `#{qual}`")
+            error!(query, "SQLite supports only inner joins on delete_all, got: `#{qual}`")
       end)
     end
 
@@ -501,17 +501,19 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query) when is_atom(field) do
       {_, name, _} = elem(sources, idx)
-      "#{name}.#{quote_id(field)}"
+      "#{name}.#{quote_name(field)}"
     end
 
-    defp expr({:&, _, [idx]}, sources, _query) do
+    defp expr({:&, _, [idx]}, sources, query) do
       {table, name, model} = elem(sources, idx)
       unless model do
-        raise ArgumentError, "SQLite requires a model when using selector #{inspect name} but " <>
-                             "only the table #{inspect table} was given. Please specify a model " <>
-                             "or specify exactly which fields from #{inspect name} you desire"
+        error!(query, "SQLite requires a model when using selector " <>
+          "#{inspect name} but only the table #{inspect table} was given. " <>
+          "Please specify a model or specify exactly which fields from " <>
+          "#{inspect name} you desire")
       end
-      map_intersperse(model.__schema__(:fields), ",", &"#{name}.#{quote_id(&1)}")
+      fields = model.__schema__(:fields)
+      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
 
     defp expr({:in, _, [left, right]}, sources, query) when is_list(right) do
@@ -536,8 +538,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       "NOT (" <> expr(expr, sources, query) <> ")"
     end
 
-    defp expr({:fragment, _, [kw]}, _sources, _query) when is_list(kw) or tuple_size(kw) == 3 do
-      raise ArgumentError, "SQLite adapter does not support keyword or interpolated fragments"
+    defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
+      error!(query, "SQLite adapter does not support keyword or interpolated fragments")
     end
 
     defp expr({:fragment, _, parts}, sources, query) do
@@ -547,20 +549,16 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end)
     end
 
-    # start of SQLite function to display date
-    # NOTE the open parenthesis must be closed
-    @date_format "strftime('%Y-%m-%d'"
-
-    defp expr({:date_add, _, [date, count, interval]}, sources, query) do
-      "CAST (#{@date_format},#{expr(date, sources, query)},#{interval(count, interval, sources)}) AS TEXT_DATE)"
-    end
-
-    # start of SQLite function to display datetime
-    # NOTE the open parenthesis must be closed
-    @datetime_format "strftime('%Y-%m-%d %H:%M:%f000'"
+    @datetime_format "strftime('%Y-%m-%d %H:%M:%f000'" # NOTE: Open paren must be closed
 
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
       "CAST (#{@datetime_format},#{expr(datetime, sources, query)},#{interval(count, interval, sources)}) AS TEXT_DATETIME)"
+    end
+
+    @date_format "strftime('%Y-%m-%d'" # NOTE: Open paren must be closed
+
+    defp expr({:date_add, _, [date, count, interval]}, sources, query) do
+      "CAST (#{@date_format},#{expr(date, sources, query)},#{interval(count, interval, sources)}) AS TEXT_DATE)"
     end
 
     defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do
@@ -586,7 +584,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       Decimal.to_string(decimal, :normal)
     end
 
-    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources, _query) when is_binary(binary) do
+    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources, _query)
+        when is_binary(binary) do
       "X'#{Base.encode16(binary, case: :upper)}'"
     end
 
@@ -977,7 +976,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp error!(nil, message) do
-      raise ArgumentError, message
+      raise ArgumentError, message: message
+    end
+    defp error!("query", message) do # TEMPORARY while we plumb query through
+      raise ArgumentError, message: message
     end
     defp error!(query, message) do
       raise Ecto.QueryError, query: query, message: message
