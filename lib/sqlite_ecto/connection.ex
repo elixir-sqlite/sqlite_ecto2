@@ -103,7 +103,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       limit    = limit(query, sources)
       offset   = offset(query, sources)
 
-      assemble [select, from, join, where, group_by, having, order_by, limit, offset]
+      assemble([select, from, join, where, group_by, having, order_by, limit, offset])
     end
 
     def update_all(%Ecto.Query{joins: [_ | _]}) do
