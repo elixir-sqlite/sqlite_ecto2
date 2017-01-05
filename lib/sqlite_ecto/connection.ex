@@ -355,7 +355,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp distinct(nil, _sources), do: ""
     defp distinct(%QueryExpr{expr: true}, _exprs),  do: "DISTINCT "
     defp distinct(%QueryExpr{expr: false}, _exprs), do: ""
-    defp distinct(_query, exprs) do
+    defp distinct(_query, _exprs) do
       raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite"
     end
 
@@ -698,8 +698,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
     defp table_identifier(_stmt, table, _pos), do: quote_id(table)
 
-    defp fragment_identifier(pos), do: "f" <> Integer.to_string(pos)
-
     # DDL
 
     alias Ecto.Migration.Table
@@ -888,7 +886,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     ## Helpers
 
     # Use Ecto's JSON library (currently Poison) for embedded JSON datatypes.
-    def json_library, do: Application.get_env(:ecto, :json_library)
+    defp json_library, do: Application.get_env(:ecto, :json_library)
 
     # Initiate a transaction with a savepoint. If any error occurs when we call
     # the func parameter, rollback our changes. Returns the result of the call
@@ -986,14 +984,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # assemble.
     defp map_intersperse(list, item, func) when is_function(func, 1) do
       list |> Enum.map(&func.(&1)) |> Enum.intersperse(item)
-    end
-
-    defp if_do(condition, value) do
-      if condition, do: value, else: []
-    end
-
-    defp escape_string(value) when is_binary(value) do
-      :binary.replace(value, "'", "''", [:global])
     end
 
     defp error!(nil, message) do
