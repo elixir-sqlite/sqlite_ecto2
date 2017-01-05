@@ -41,51 +41,6 @@ defmodule Sqlite.Ecto.Test do
     |> (fn(name) -> "/tmp/test_" <> name <> ".db" end).()
   end
 
-  test "insert" do
-    query = SQL.insert(nil, "model", [:x, :y], [:id])
-    assert query == ~s{INSERT INTO "model" ("x", "y") VALUES (?1, ?2) ;--RETURNING ON INSERT "model","id"}
-
-    query = SQL.insert(nil, "model", [], [:id])
-    assert query == ~s{INSERT INTO "model" DEFAULT VALUES ;--RETURNING ON INSERT "model","id"}
-
-    query = SQL.insert("prefix", "model", [], [:id])
-    assert query == ~s{INSERT INTO "prefix"."model" DEFAULT VALUES ;--RETURNING ON INSERT "prefix"."model","id"}
-
-    query = SQL.insert(nil, "model", [], [])
-    assert query == ~s{INSERT INTO "model" DEFAULT VALUES}
-
-    query = SQL.insert("prefix", "model", [], [])
-    assert query == ~s{INSERT INTO "prefix"."model" DEFAULT VALUES}
-  end
-
-  test "update" do
-    query = SQL.update(nil, "model", [:x, :y], [:id], [:x, :z])
-    assert query == ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "model","x","z"}
-
-    query = SQL.update("prefix", "model", [:x, :y], [:id], [:x, :z])
-    assert query == ~s{UPDATE "prefix"."model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "prefix"."model","x","z"}
-
-    query = SQL.update(nil, "model", [:x, :y], [:id], [])
-    assert query == ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3}
-
-    query = SQL.update("prefix", "model", [:x, :y], [:id], [])
-    assert query == ~s{UPDATE "prefix"."model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3}
-  end
-
-  test "delete" do
-    query = SQL.delete(nil, "model", [:x, :y], [:z])
-    assert query == ~s{DELETE FROM "model" WHERE "x" = ?1 AND "y" = ?2 ;--RETURNING ON DELETE "model","z"}
-
-    query = SQL.delete("prefix", "model", [:x, :y], [:z])
-    assert query == ~s{DELETE FROM "prefix"."model" WHERE "x" = ?1 AND "y" = ?2 ;--RETURNING ON DELETE "prefix"."model","z"}
-
-    query = SQL.delete(nil, "model", [:x, :y], [])
-    assert query == ~s{DELETE FROM "model" WHERE "x" = ?1 AND "y" = ?2}
-
-    query = SQL.delete("prefix", "model", [:x, :y], [])
-    assert query == ~s{DELETE FROM "prefix"."model" WHERE "x" = ?1 AND "y" = ?2}
-  end
-
   test "query", context do
     sql = context[:sql]
     {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE model (id, x, y, z)", [], [])
@@ -593,7 +548,53 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == String.rstrip(result)
   end
 
-    ## Joins
+  test "update all" do
+    query = from(m in Model, update: [set: [x: 0]]) |> normalize(:update_all)
+    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0}
+
+    query = from(m in Model, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
+    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
+
+    query = from(e in Model, update: [set: [x: 0, y: "123"]]) |> normalize(:update_all)
+    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = 123}
+
+    query = from(m in Model, update: [set: [x: ^0]]) |> normalize(:update_all)
+    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = ?}
+
+    assert_raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite", fn ->
+      query = Model |> join(:inner, [p], q in Model2, p.x == q.z)
+                    |> update([_], set: [x: 0]) |> normalize(:update_all)
+      SQL.update_all(query)
+    end
+  end
+
+  test "delete all" do
+    query = Model |> Queryable.to_query |> normalize
+    assert SQL.delete_all(query) == ~s{DELETE FROM "model"}
+
+    query = from(e in Model, where: e.x == 123) |> normalize
+    assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE ("model"."x" = 123)}
+
+    assert_raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite", fn ->
+      query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
+      SQL.delete_all(query)
+    end
+
+    # NOTE: The assertions commented out below represent how joins *could* be
+    # handled in SQLite to produce the same effect. Evenually, joins should
+    # be converted to the below output. Until then, joins should raise
+    # exceptions.
+
+    # query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
+    # #assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z"}
+    # assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE "model"."x" IN ( SELECT m1."z" FROM "model2" AS m1 )}
+    #
+    # query = from(e in Model, where: e.x == 123, join: q in Model2, on: e.x == q.z) |> normalize
+    # #assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z" AND (m0."x" = 123)}
+    # assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE "model"."x" IN ( SELECT m1."z" FROM "model2" AS m1 ) AND ( "model"."x" = 123 )}
+  end
+
+  ## Joins
 
   test "join" do
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], true) |> normalize
@@ -665,49 +666,57 @@ defmodule Sqlite.Ecto.Test do
            "SELECT m0.\"id\", m2.\"id\" FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON 1 INNER JOIN \"model2\" AS m2 ON 1"
   end
 
-  test "update all" do
-    query = from(m in Model, update: [set: [x: 0]]) |> normalize(:update_all)
-    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0}
+  # Schema based
 
-    query = from(m in Model, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
-    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
+  test "insert" do
+    query = SQL.insert(nil, "model", [:x, :y], [:id])
+    assert query == ~s{INSERT INTO "model" ("x", "y") VALUES (?1, ?2) ;--RETURNING ON INSERT "model","id"}
 
-    query = from(e in Model, update: [set: [x: 0, y: "123"]]) |> normalize(:update_all)
-    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = 123}
+    # query = SQL.insert(nil, "model", [:x, :y], [[:x, :y], [nil, :z]], [:id])
+    # assert query == ~s{INSERT INTO "model" ("x","y") VALUES ($1,$2),(DEFAULT,$3) RETURNING "id"}
 
-    query = from(m in Model, update: [set: [x: ^0]]) |> normalize(:update_all)
-    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = ?}
+    query = SQL.insert(nil, "model", [], [:id])
+    assert query == ~s{INSERT INTO "model" DEFAULT VALUES ;--RETURNING ON INSERT "model","id"}
 
-    assert_raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite", fn ->
-      query = Model |> join(:inner, [p], q in Model2, p.x == q.z)
-                    |> update([_], set: [x: 0]) |> normalize(:update_all)
-      SQL.update_all(query)
-    end
+    query = SQL.insert(nil, "model", [], [])
+    assert query == ~s{INSERT INTO "model" DEFAULT VALUES}
+
+    query = SQL.insert("prefix", "model", [], [:id])
+    assert query == ~s{INSERT INTO "prefix"."model" DEFAULT VALUES ;--RETURNING ON INSERT "prefix"."model","id"}
+
+    query = SQL.insert("prefix", "model", [], [])
+    assert query == ~s{INSERT INTO "prefix"."model" DEFAULT VALUES}
   end
 
-  test "delete all" do
-    query = Model |> Queryable.to_query |> normalize
-    assert SQL.delete_all(query) == ~s{DELETE FROM "model"}
+  test "update" do
+    query = SQL.update(nil, "model", [:x, :y], [:id], [])
+    assert query == ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3}
 
-    query = from(e in Model, where: e.x == 123) |> normalize
-    assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE ("model"."x" = 123)}
+    query = SQL.update(nil, "model", [:x, :y], [:id], [:x, :z])
+    assert query == ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "model","x","z"}
 
-    assert_raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite", fn ->
-      query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
-      SQL.delete_all(query)
-    end
+    query = SQL.update("prefix", "model", [:x, :y], [:id], [:x, :z])
+    assert query == ~s{UPDATE "prefix"."model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "prefix"."model","x","z"}
 
-    # NOTE:  The assertions commented out below represent how joins *could* be
-    # handled in SQLite to produce the same effect.  Evenually, joins should
-    # be converted to the below output.  Until then, joins should raise
-    # exceptions.
 
-#    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
-#    #assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z"}
-#    assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE "model"."x" IN ( SELECT m1."z" FROM "model2" AS m1 )}
-#
-#    query = from(e in Model, where: e.x == 123, join: q in Model2, on: e.x == q.z) |> normalize
-#    #assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z" AND (m0."x" = 123)}
-#    assert SQL.delete_all(query) == ~s{DELETE FROM "model" WHERE "model"."x" IN ( SELECT m1."z" FROM "model2" AS m1 ) AND ( "model"."x" = 123 )}
+    query = SQL.update("prefix", "model", [:x, :y], [:id], [])
+    assert query == ~s{UPDATE "prefix"."model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3}
+  end
+
+  test "delete" do
+    query = SQL.delete(nil, "model", [:x, :y], [])
+    assert query == ~s{DELETE FROM "model" WHERE "x" = ?1 AND "y" = ?2}
+
+    query = SQL.delete(nil, "model", [:x, :y], [:z])
+    assert query == ~s{DELETE FROM "model" WHERE "x" = ?1 AND "y" = ?2 ;--RETURNING ON DELETE "model","z"}
+
+    query = SQL.delete("prefix", "model", [:x, :y], [:z])
+    assert query == ~s{DELETE FROM "prefix"."model" WHERE "x" = ?1 AND "y" = ?2 ;--RETURNING ON DELETE "prefix"."model","z"}
+
+    query = SQL.delete(nil, "model", [:x, :y], [])
+    assert query == ~s{DELETE FROM "model" WHERE "x" = ?1 AND "y" = ?2}
+
+    query = SQL.delete("prefix", "model", [:x, :y], [])
+    assert query == ~s{DELETE FROM "prefix"."model" WHERE "x" = ?1 AND "y" = ?2}
   end
 end
