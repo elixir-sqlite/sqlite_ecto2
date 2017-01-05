@@ -1,4 +1,4 @@
-defmodule Sqlite.Ecto do
+  defmodule Sqlite.Ecto do
   @moduledoc ~S"""
   Ecto Adapter module for SQLite.
 
@@ -27,8 +27,6 @@ defmodule Sqlite.Ecto do
 
   """
 
-  import Sqlite.Ecto.Connection, only: [json_library: 0]
-
   # Inherit all behaviour from Ecto.Adapters.SQL
   use Ecto.Adapters.SQL, :sqlitex
 
@@ -37,13 +35,21 @@ defmodule Sqlite.Ecto do
 
   ## Custom SQLite Types
 
-  def load({:embed, _} = type, binary) when is_binary(binary) do
-    super(type, json_library.decode!(binary))
-  end
-  def load(:map, binary) when is_binary(binary) do
-    super(:map, json_library.decode!(binary))
-  end
-  def load(type, value), do: super(type, value)
+  def loaders(:map, type), do: [&json_decode/1, type]
+  def loaders(:boolean, type), do: [&bool_decode/1, type]
+  def loaders(:binary_id, type), do: [Ecto.UUID, type]
+  def loaders({:embed, _} = type, _),
+    do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
+  def loaders(_primitive, type), do: [type]
+
+  defp bool_decode(0), do: {:ok, false}
+  defp bool_decode(1), do: {:ok, true}
+  defp bool_decode(x), do: {:ok, x}
+
+  defp json_decode(x) when is_binary(x),
+    do: {:ok, Application.get_env(:ecto, :json_library).decode!(x)}
+  defp json_decode(x),
+    do: {:ok, x}
 
   ## Storage API
 
