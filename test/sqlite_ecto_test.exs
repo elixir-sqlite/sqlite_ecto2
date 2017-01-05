@@ -568,16 +568,16 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "interpolated values" do
-    query = Model
+    query = "model"
             |> select([], ^0)
             |> join(:inner, [], Model2, ^true)
             |> join(:inner, [], Model2, ^false)
-            |> where([], ^true)
-            |> where([], ^false)
-            |> group_by([], ^1)
-            |> group_by([], ^2)
-            |> having([], ^true)
-            |> having([], ^false)
+            |> where([], fragment("?", ^true))
+            |> where([], fragment("?", ^false))
+            |> having([], fragment("?", ^true))
+            |> having([], fragment("?", ^false))
+            |> group_by([], fragment("?", ^1))
+            |> group_by([], fragment("?", ^2))
             |> order_by([], fragment("?", ^3))
             |> order_by([], ^:x)
             |> limit([], ^4)
