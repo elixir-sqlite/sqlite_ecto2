@@ -28,7 +28,7 @@ defmodule Sqlite.Ecto.Mixfile do
 
   # Dependencies
   defp deps do
-    [{:coverex, "~> 1.4.11", only: :coverage},
+    [{:coverex, "~> 1.4.11", only: :test},
      {:ex_doc, "~> 0.14.5", only: :dev},
      {:ecto, git: "https://github.com/scouten/ecto.git", ref: "79506d286d7edd11e3acff75da2904fc9b9259a1"},
      {:poison, "~> 1.0"},
