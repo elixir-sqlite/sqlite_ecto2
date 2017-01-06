@@ -5,25 +5,35 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     @behaviour Ecto.Adapters.SQL.Query
 
+    ## Module and Options
+
+    def mod_and_opts(opts) do
+      raise "not sure what to do here"
+      # no equivalent to Postgrex.Procotol as shown in
+      # https://github.com/elixir-ecto/ecto/compare/0a040036...2bdb157#diff-ee25bf8df5589fbf812f652738bfbdaeR22
+    end
+
     ## Connection
 
-    # Connect to a new Sqlite.Server.  Enable and verify the foreign key
-    # constraints for the connection.
-    def connect(opts) do
-      {database, opts} = Keyword.pop(opts, :database)
-      case Sqlitex.Server.start_link(database, opts) do
-        {:ok, pid} ->
-          :ok = Sqlitex.Server.exec(pid, "PRAGMA foreign_keys = ON")
-          {:ok, [[foreign_keys: 1]]} = Sqlitex.Server.query(pid, "PRAGMA foreign_keys")
-          {:ok, pid}
-        error -> error
-      end
-    end
+    # This chunk appears to be no longer relevant.
 
-    def disconnect(pid) do
-      Sqlitex.Server.stop(pid)
-      :ok
-    end
+    # # Connect to a new Sqlite.Server.  Enable and verify the foreign key
+    # # constraints for the connection.
+    # def connect(opts) do
+    #   {database, opts} = Keyword.pop(opts, :database)
+    #   case Sqlitex.Server.start_link(database, opts) do
+    #     {:ok, pid} ->
+    #       :ok = Sqlitex.Server.exec(pid, "PRAGMA foreign_keys = ON")
+    #       {:ok, [[foreign_keys: 1]]} = Sqlitex.Server.query(pid, "PRAGMA foreign_keys")
+    #       {:ok, pid}
+    #     error -> error
+    #   end
+    # end
+    #
+    # def disconnect(pid) do
+    #   Sqlitex.Server.stop(pid)
+    #   :ok
+    # end
 
     # ALTER TABLE queries:
     def query(pid, <<"ALTER TABLE ", _ :: binary>>=sql, params, opts) do
@@ -57,19 +67,16 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     def to_constraints(_), do: []
 
-    ## Transaction
+    ## Query
 
-    def begin_transaction do
-      "BEGIN"
+    def query(statement) do
+      raise "not sure what to do here"
+      # no equivalent to Postgrex.Procotol as shown in
+      # https://github.com/elixir-ecto/ecto/compare/0a040036...2bdb157#diff-ee25bf8df5589fbf812f652738bfbdaeR67
     end
 
-    def rollback do
-      "ROLLBACK"
-    end
-
-    def commit do
-      "COMMIT"
-    end
+    def encode_mapper(%Ecto.Query.Tagged{value: value}), do: value
+    def encode_mapper(value), do: value
 
     def savepoint(savepoint) do
       "SAVEPOINT " <> savepoint
@@ -78,8 +85,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     def rollback_to_savepoint(savepoint) do
       "ROLLBACK TO SAVEPOINT " <> savepoint
     end
-
-    ## Query
 
     alias Ecto.Query
     alias Ecto.Query.SelectExpr
