@@ -13,9 +13,7 @@ sed -i "" '/test "insert all"/ i\
 
 else
 
-sed -i -e '/test "insert all"/ i\ 
-  @tag :insert_cell_wise_defaults
-' deps/ecto/integration_test/cases/repo.exs
+sed '/test "insert all"/ i @tag :insert_cell_wise_defaults' deps/ecto/integration_test/cases/repo.exs
 
 fi
 
