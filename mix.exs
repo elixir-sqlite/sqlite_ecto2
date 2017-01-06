@@ -10,10 +10,7 @@ defmodule Sqlite.Ecto.Mixfile do
 
      # testing
      build_per_environment: false,
-     test_paths: test_paths(Mix.env),
-     aliases: ["test.all": &test_all/1,
-               "test.integration": &test_integration/1],
-     preferred_cli_env: ["test.all": :test],
+     test_paths: test_paths,
      test_coverage: [tool: Coverex.Task, coveralls: true],
 
      # hex
@@ -46,19 +43,5 @@ defmodule Sqlite.Ecto.Mixfile do
       links: %{"Github" => "https://github.com/scouten/sqlite_ecto2"}]
   end
 
-  defp test_paths(:coverage), do: ["integration/sqlite", "test"]
-  defp test_paths(:integration), do: ["integration/sqlite"]
-  defp test_paths(_), do: ["test"]
-
-  defp test_integration(args) do
-    args = if IO.ANSI.enabled?, do: ["--color" | args], else: ["--no-color" | args]
-    System.cmd "mix", ["test" | args], into: IO.binstream(:stdio, :line),
-                                       env: [{"MIX_ENV", "integration"}]
-  end
-
-  defp test_all(args) do
-    Mix.Task.run "test", args
-    {_, res} = test_integration(args)
-    if res != 0, do: exit {:shutdown, 1}
-  end
+  defp test_paths(), do: ["integration/sqlite", "test"]
 end
