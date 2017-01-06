@@ -5,6 +5,12 @@
 
 # WARNING: There is trailing whitespace on the `sed` line that must be retained.
 
-sed -i "" '/test "insert all"/ i\ 
+if [ `uname` == "Darwin" ] ; then
+  sedi="/usr/bin/sed -i ''"
+else
+  sedi="sed -i"
+fi
+
+$sedi '/test "insert all"/ i\ 
   @tag :insert_cell_wise_defaults
 ' deps/ecto/integration_test/cases/repo.exs
