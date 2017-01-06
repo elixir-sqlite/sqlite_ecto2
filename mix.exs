@@ -30,7 +30,7 @@ defmodule Sqlite.Ecto.Mixfile do
   defp deps do
     [{:coverex, "~> 1.4.11", only: :test},
      {:ex_doc, "~> 0.14.5", only: :dev},
-     {:ecto, git: "https://github.com/scouten/ecto.git", ref: "7081ae3e2ee62049f700a215d4c50deca506d1e4"},
+     {:ecto, git: "https://github.com/scouten/ecto.git", ref: "38c0228b36eae7e0717ef8ce0f1ccf76fd124a75"},
      {:poison, "~> 1.0"},
      {:sqlitex, git: "https://github.com/scouten/sqlitex.git", ref: "c997c613a69ece59d8dd6b7e7ee557d4c4a1c709"}]
   end
