@@ -22,7 +22,7 @@ matrix:
     otp_release: 19.1
 
 script:
-  - MIX_ENV=coverage mix test --cover
+  - mix deps.get && ./integration/hack_out_incompatible_tests.sh && mix test --cover
 
 branches:
   only:

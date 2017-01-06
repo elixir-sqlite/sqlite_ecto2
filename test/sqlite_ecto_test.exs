@@ -669,22 +669,22 @@ defmodule Sqlite.Ecto.Test do
   # Schema based
 
   test "insert" do
-    query = SQL.insert(nil, "model", [:x, :y], [:id])
-    assert query == ~s{INSERT INTO "model" ("x", "y") VALUES (?1, ?2) ;--RETURNING ON INSERT "model","id"}
+    query = SQL.insert(nil, "model", [:x, :y], [[:x, :y]], [:id])
+    assert query == ~s{INSERT INTO "model" ("x","y") VALUES (?1,?2) ;--RETURNING ON INSERT "model","id"}
 
     # query = SQL.insert(nil, "model", [:x, :y], [[:x, :y], [nil, :z]], [:id])
     # assert query == ~s{INSERT INTO "model" ("x","y") VALUES ($1,$2),(DEFAULT,$3) RETURNING "id"}
 
-    query = SQL.insert(nil, "model", [], [:id])
+    query = SQL.insert(nil, "model", [], [[]], [:id])
     assert query == ~s{INSERT INTO "model" DEFAULT VALUES ;--RETURNING ON INSERT "model","id"}
 
-    query = SQL.insert(nil, "model", [], [])
+    query = SQL.insert(nil, "model", [], [[]], [])
     assert query == ~s{INSERT INTO "model" DEFAULT VALUES}
 
-    query = SQL.insert("prefix", "model", [], [:id])
+    query = SQL.insert("prefix", "model", [], [[]], [:id])
     assert query == ~s{INSERT INTO "prefix"."model" DEFAULT VALUES ;--RETURNING ON INSERT "prefix"."model","id"}
 
-    query = SQL.insert("prefix", "model", [], [])
+    query = SQL.insert("prefix", "model", [], [[]], [])
     assert query == ~s{INSERT INTO "prefix"."model" DEFAULT VALUES}
   end
 

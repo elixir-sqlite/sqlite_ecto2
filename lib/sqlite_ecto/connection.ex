@@ -133,16 +133,33 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       assemble(["DELETE FROM #{table}", join, where])
     end
 
-    def insert(prefix, table, [], returning) do
-      return = returning_clause(prefix, table, returning, "INSERT")
-      assemble ["INSERT INTO", quote_id({prefix, table}), "DEFAULT VALUES", return]
+    def insert(prefix, table, header, rows, returning) do
+      values =
+        if header == [] do
+          "DEFAULT VALUES"
+        else
+          "(" <> Enum.map_join(header, ",", &quote_name/1) <> ") " <>
+          "VALUES " <> insert_all(rows, 1, "")
+        end
+
+      return = String.rstrip(" " <> assemble(returning_clause(prefix, table, returning, "INSERT")))
+      "INSERT INTO #{quote_table(prefix, table)} #{values}#{return}"
     end
-    def insert(prefix, table, fields, returning) do
-      cols = map_intersperse(fields, ",", &quote_id/1)
-      vals = map_intersperse(1..length(fields), ",", &"?#{&1}")
-      return = returning_clause(prefix, table, returning, "INSERT")
-      assemble ["INSERT INTO", quote_id({prefix, table}), "(", cols, ")", "VALUES (", vals, ")", return]
+
+    defp insert_all([row|rows], counter, acc) do
+      {counter, row} = insert_each(row, counter, "")
+      insert_all(rows, counter, acc <> ",(" <> row <> ")")
     end
+    defp insert_all([], _counter, "," <> acc) do
+      acc
+    end
+
+    defp insert_each([nil|t], counter, acc),
+      do: raise ArgumentError, "Cell-wise default values are not supported on INSERT statements by SQLite"
+    defp insert_each([_|t], counter, acc),
+      do: insert_each(t, counter + 1, acc <> ",?" <> Integer.to_string(counter))
+    defp insert_each([], counter, "," <> acc),
+      do: {counter, acc}
 
     def update(prefix, table, fields, filters, returning) do
       {vals, count} = Enum.map_reduce(fields, 1, fn (i, acc) ->
@@ -967,6 +984,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       <<?", name::binary, ?">>
     end
 
+    def assemble([]), do: ""
     def assemble(list) when is_list(list) do
       list = for x <- List.flatten(list), x != nil, do: x
       Enum.reduce list, fn word, result ->
