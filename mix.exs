@@ -8,6 +8,7 @@ defmodule Sqlite.Ecto.Mixfile do
      elixir: "~> 1.2",
      elixirc_options: [warnings_as_errors: true],
      deps: deps(),
+     elixirc_paths: elixirc_paths(Mix.env),
 
      # testing
      build_per_environment: false,
@@ -44,6 +45,9 @@ defmodule Sqlite.Ecto.Mixfile do
       licenses: ["MIT"],
       links: %{"Github" => "https://github.com/scouten/sqlite_ecto2"}]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/sqlite_db_connection/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   defp test_paths(), do: ["integration/sqlite", "test"]
 end
