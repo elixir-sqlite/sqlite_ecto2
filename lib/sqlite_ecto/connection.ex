@@ -154,7 +154,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       acc
     end
 
-    defp insert_each([nil|t], counter, acc),
+    defp insert_each([nil|_t], _counter, _acc),
       do: raise ArgumentError, "Cell-wise default values are not supported on INSERT statements by SQLite"
     defp insert_each([_|t], counter, acc),
       do: insert_each(t, counter + 1, acc <> ",?" <> Integer.to_string(counter))
@@ -945,7 +945,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     # Generate a random string.
-    defp random_id, do: :random.uniform |> Float.to_string |> String.slice(2..10)
+    defp random_id, do: :rand.uniform |> Float.to_string |> String.slice(2..10)
 
     defp quote_name(name)
     defp quote_name(name) when is_atom(name),

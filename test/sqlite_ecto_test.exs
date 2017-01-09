@@ -36,7 +36,7 @@ defmodule Sqlite.Ecto.Test do
   # return a unique temporary filename
   defp tempfilename do
     1..10
-    |> Enum.map(fn(_) -> :random.uniform(10) - 1 end)
+    |> Enum.map(fn(_) -> :rand.uniform(10) - 1 end)
     |> Enum.join
     |> (fn(name) -> "/tmp/test_" <> name <> ".db" end).()
   end

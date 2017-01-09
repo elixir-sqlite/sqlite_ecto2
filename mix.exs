@@ -6,6 +6,7 @@ defmodule Sqlite.Ecto.Mixfile do
      version: "2.0.0-dev.1",
      name: "Sqlite.Ecto2",
      elixir: "~> 1.2",
+     elixirc_options: [warnings_as_errors: true],
      deps: deps,
 
      # testing
