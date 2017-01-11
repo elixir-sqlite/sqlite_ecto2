@@ -7,12 +7,16 @@ defmodule Sqlite.DbConnection.Protocol do
   # import Sqlite.DbConnection.BinaryUtils
   require Logger
 
+  # IMPORTANT: This is closely modeled on Postgrex's protocol.ex file.
+  # We strive to avoid structural differences between that file and this one.
+
   # @sock_opts [packet: :raw, mode: :binary, active: false]
 
-  defstruct [db: nil, path: nil]
+  defstruct [db: nil, path: nil, checked_out?: false]
 
   @type state :: %__MODULE__{db: Sqlitex.Connection,
-                             path: String.t}
+                             path: String.t,
+                             checked_out?: false}
 
   @reserved_prefix "Sqlite.DbConnection_"
   @reserved_queries ["BEGIN", "COMMIT", "ROLLBACK"]
@@ -25,7 +29,7 @@ defmodule Sqlite.DbConnection.Protocol do
          :ok <- Sqlitex.exec(db, "PRAGMA foreign_keys = ON"),
          {:ok, [[foreign_keys: 1]]} = Sqlitex.query(db, "PRAGMA foreign_keys")
     do
-      s = %__MODULE__{db: db, path: db_path}
+      s = %__MODULE__{db: db, path: db_path, checked_out?: false}
       {:ok, s}
     else
       {:error, _reason} = error -> error
@@ -51,28 +55,21 @@ defmodule Sqlite.DbConnection.Protocol do
   #   status = %{notify: notify([]), sync: :sync}
   #   sync(%{s | buffer: nil}, status, buffer)
   # end
-  #
-  # @spec checkout(state) ::
-  #   {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
-  # def checkout(%{postgres: :transaction} = s) do
-  #   sync_error(s, :transaction)
-  # end
-  # def checkout(%{buffer: :active_once} = s) do
-  #   case setopts(s, [active: :false], :active_once) do
-  #     :ok                       -> recv_buffer(s)
-  #     {:disconnect, _, _} = dis -> dis
-  #   end
-  # end
-  #
-  # @spec checkin(state) ::
-  # {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
-  # def checkin(%{postgres: :transaction} = s) do
-  #   sync_error(s, :transaction)
-  # end
-  # def checkin(%{buffer: buffer} = s) when is_binary(buffer) do
-  #   activate(s, buffer)
-  # end
-  #
+
+  @spec checkout(state) ::
+    {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
+  def checkout(%{checked_out?: true} = s), do:
+    {:disconnect, :not_checked_in, s}  # FIXME: Proper error here
+  def checkout(%{checked_out?: false} = s), do:
+    {:ok, %{s | checked_out?: true}}
+
+  @spec checkin(state) ::
+    {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
+  def checkin(%{checked_out?: false} = s), do:
+    {:disconnect, :not_checked_out, s}  # FIXME: Proper error here
+  def checkin(%{checked_in?: true} = s), do:
+    {:ok, %{s | checked_out?: false}}
+
   # @spec handle_prepare(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
   #   {:ok, Sqlite.DbConnection.Query.t, state} |
   #   {:error, ArgumentError.t, state} |
