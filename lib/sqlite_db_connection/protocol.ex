@@ -59,7 +59,7 @@ defmodule Sqlite.DbConnection.Protocol do
   @spec checkout(state) ::
     {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
   def checkout(%{checked_out?: true} = s), do:
-    {:disconnect, :not_checked_in, s}  # FIXME: Proper error here
+    {:disconnect, :already_checked_out, s}  # FIXME: Proper error here
   def checkout(%{checked_out?: false} = s), do:
     {:ok, %{s | checked_out?: true}}
 
