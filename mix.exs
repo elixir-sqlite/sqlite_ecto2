@@ -7,16 +7,16 @@ defmodule Sqlite.Ecto.Mixfile do
      name: "Sqlite.Ecto2",
      elixir: "~> 1.2",
      elixirc_options: [warnings_as_errors: true],
-     deps: deps,
+     deps: deps(),
 
      # testing
      build_per_environment: false,
-     test_paths: test_paths,
+     test_paths: test_paths(),
      test_coverage: [tool: Coverex.Task, coveralls: true],
 
      # hex
-     description: description,
-     package: package,
+     description: description(),
+     package: package(),
 
      # docs
      docs: [main: Sqlite.Ecto]]
