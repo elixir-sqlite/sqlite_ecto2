@@ -31,4 +31,21 @@ defmodule QueryTest do
     assert [["ẽric"]] = query("SELECT 'ẽric'", [])
     assert [[<<1, 2, 3>>]] = query("SELECT cast(x'010203' as blob)", [])
   end
+
+  # Note: Most of the decoding tests don't apply because those types don't exist
+  # in SQLite.
+
+  test "encode basic types", context do
+    assert [[nil, nil]] = query("SELECT cast($1 as text), cast($2 as int)", [nil, nil])
+    assert [[1, 0]] = query("SELECT $1, $2", [true, false])
+    assert [["ẽ"]] = query("SELECT cast($1 as char)", ["ẽ"])
+    assert [[42]] = query("SELECT cast($1 as int)", [42])
+    assert [[42.0, 43.0]] = query("SELECT cast($1 as float), cast($2 as float)", [42, 43.0])
+    # assert [[:NaN]] = query("SELECT $1::float", [:NaN])
+    # assert [[:inf]] = query("SELECT $1::float", [:inf])
+    # assert [[:"-inf"]] = query("SELECT $1::float", [:"-inf"])
+      # ^^ doesn't exist in SQLite
+    assert [["ẽric"]] = query("SELECT cast($1 as varchar)", ["ẽric"])
+    assert [[<<1, 2, 3>>]] = query("SELECT cast($1 as blob)", [<<1, 2, 3>>])
+  end
 end

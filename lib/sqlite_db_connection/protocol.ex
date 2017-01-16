@@ -558,6 +558,10 @@ defmodule Sqlite.DbConnection.Protocol do
     {:ok, rows, _columnNames} = Sqlitex.Statement.fetch_all(stmt, :raw_list)
     {:ok, %Sqlite.DbConnection.Result{rows: rows}}
   end
+  defp run_stmt(stmt, params) when is_list(params) do
+    {:ok, stmt} = Sqlitex.Statement.bind_values(stmt, params)
+    run_stmt(stmt, [])
+  end
 
   # defp execute_send(s, %{sync: sync} = status, query, params, buffer) do
   #   %Query{param_formats: pfs, result_formats: rfs, name: name} = query
