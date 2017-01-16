@@ -2,7 +2,7 @@ defmodule Sqlite.DbConnection.Protocol do
   @moduledoc false
 
   # alias Sqlite.DbConnection.Types
-  # alias Sqlite.DbConnection.Query
+  alias Sqlite.DbConnection.Query
   # import Sqlite.DbConnection.Messages
   # import Sqlite.DbConnection.BinaryUtils
   require Logger
@@ -67,25 +67,25 @@ defmodule Sqlite.DbConnection.Protocol do
     {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
   def checkin(%{checked_out?: false} = s), do:
     {:disconnect, :not_checked_out, s}  # FIXME: Proper error here
-  def checkin(%{checked_in?: true} = s), do:
+  def checkin(%{checked_out?: true} = s), do:
     {:ok, %{s | checked_out?: false}}
 
-  # @spec handle_prepare(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
-  #   {:ok, Sqlite.DbConnection.Query.t, state} |
-  #   {:error, ArgumentError.t, state} |
-  #   {:error | :disconnect, Sqlite.DbConnection.Query.t, state}
-  # def handle_prepare(%Query{name: @reserved_prefix <> _} = query, _, s) do
-  #   reserved_error(query, s)
-  # end
-  # def handle_prepare(query, opts, s) do
-  #   case query do
-  #     %Query{param_formats: pfs, encoders: encoders} when is_list(pfs) and is_list(encoders) ->
-  #       handle_prepare(query, :parse, opts, s)
-  #     _ ->
-  #       handle_prepare(query, :parse_describe, opts, s)
-  #   end
-  # end
-  #
+  @spec handle_prepare(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
+    {:ok, Sqlite.DbConnection.Query.t, state} |
+    {:error, ArgumentError.t, state} |
+    {:error | :disconnect, Sqlite.DbConnection.Query.t, state}
+  def handle_prepare(%Query{name: @reserved_prefix <> _} = query, _, s) do
+    reserved_error(query, s)
+  end
+  def handle_prepare(query, opts, s) do
+    case query do
+      %Query{param_formats: pfs, encoders: encoders} when is_list(pfs) and is_list(encoders) ->
+        handle_prepare(query, :parse, opts, s)
+      _ ->
+        handle_prepare(query, :parse_describe, opts, s)
+    end
+  end
+
   # @spec handle_execute(Sqlite.DbConnection.Query.t, list, Keyword.t, state) ::
   #   {:ok, Sqlite.DbConnection.Result.t, state} |
   #   {:prepare, state} |
@@ -106,19 +106,19 @@ defmodule Sqlite.DbConnection.Protocol do
   #       {:error, %Sqlite.DbConnection.Error{message: "parameters not available"}, s}
   #   end
   # end
-  #
-  # @spec handle_execute_close(Sqlite.DbConnection.Query.t, list, Keyword.t, state) ::
-  #   {:ok, Sqlite.DbConnection.Result.t, state} |
-  #   {:prepare, state} |
-  #   {:error, ArgumentError.t, state} |
-  #   {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
-  # def handle_execute_close(%Query{name: @reserved_prefix <> _} = query, _, _, s) do
-  #   reserved_error(query, s)
-  # end
-  # def handle_execute_close(query, params, opts, s) do
-  #   handle_execute(query, params, :sync_close, opts, s)
-  # end
-  #
+
+  @spec handle_execute_close(Sqlite.DbConnection.Query.t, list, Keyword.t, state) ::
+    {:ok, Sqlite.DbConnection.Result.t, state} |
+    {:prepare, state} |
+    {:error, ArgumentError.t, state} |
+    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
+  def handle_execute_close(%Query{name: @reserved_prefix <> _} = query, _, _, s) do
+    reserved_error(query, s)
+  end
+  def handle_execute_close(query, params, opts, s) do
+    handle_execute(query, params, :sync_close, opts, s)
+  end
+
   # @spec handle_close(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
   #   {:ok, state} |
   #   {:error, ArgumentError.t, state} |
@@ -443,9 +443,23 @@ defmodule Sqlite.DbConnection.Protocol do
   #       dis
   #   end
   # end
-  #
-  # ## prepare
-  #
+
+  ## prepare
+
+  defp handle_prepare(%Query{statement: statement} = query, :parse_describe, _opts,
+                      %__MODULE__{checked_out?: true, db: db} = s)
+  do
+    binary_stmt = :erlang.iolist_to_binary(statement)
+    case Sqlitex.Statement.prepare(db, binary_stmt) do
+      {:ok, prepared_stmt} ->
+        updated_query = %{query | prepared: prepared_stmt}
+        {:ok, updated_query, s}
+      other ->
+        IO.puts "handle_prepare failed #inspect {other}"
+        other
+    end
+  end
+
   # defp handle_prepare(query, prepare, opts, %{buffer: buffer} = s) do
   #   status = %{notify: notify(opts), prepare: prepare, sync: :sync}
   #   prepare_send(%{s | buffer: nil}, status, query, buffer)
@@ -514,28 +528,37 @@ defmodule Sqlite.DbConnection.Protocol do
   #     {:disconnect, _, _} = dis -> dis
   #   end
   # end
-  #
-  # ## execute
-  #
-  # defp handle_execute(query, params, sync, opts, s) do
-  #   %{types: types, buffer: buffer} = s
-  #   case query do
-  #     %Query{types: nil} ->
-  #       query_error(s, "query #{inspect query} has not been prepared")
-  #     %Query{param_formats: nil, types: ^types} ->
-  #       query_error(s, "query #{inspect query} has not been described")
-  #     %Query{types: ^types} = query ->
-  #      status = %{notify: notify(opts), sync: sync}
-  #      execute_send(%{s | buffer: nil}, status, query, params, buffer)
-  #     %Query{} = query ->
-  #       query_error(s, "query #{inspect query} has invalid types for the connection")
-  #   end
-  # end
-  #
-  # defp query_error(s, msg) do
-  #   {:error, ArgumentError.exception(msg), s}
-  # end
-  #
+
+  ## execute
+
+  defp handle_execute(query, params, _sync, _opts, s) do
+    case query do
+      %Query{prepared: nil} ->
+        query_error(s, "query #{inspect query} has not been prepared")
+      # %Query{param_formats: nil, types: ^types} ->
+      #   query_error(s, "query #{inspect query} has not been described")
+      #  ^^ not sure we'll need this for SQLite
+      %Query{prepared: stmt} ->
+        case run_stmt(stmt, params) do
+          {:ok, result} ->
+            {:ok, result, s}
+          other ->
+            other
+        end
+      %Query{} ->
+        query_error(s, "query #{inspect query} has invalid types for the connection")
+    end
+  end
+
+  defp query_error(s, msg) do
+    {:error, ArgumentError.exception(msg), s}
+  end
+
+  defp run_stmt(stmt, []) do
+    {:ok, rows, _columnNames} = Sqlitex.Statement.fetch_all(stmt, :raw_list)
+    {:ok, %Sqlite.DbConnection.Result{rows: rows}}
+  end
+
   # defp execute_send(s, %{sync: sync} = status, query, params, buffer) do
   #   %Query{param_formats: pfs, result_formats: rfs, name: name} = query
   #   msgs =
@@ -881,12 +904,12 @@ defmodule Sqlite.DbConnection.Protocol do
   # defp disconnect(s, err, buffer) do
   #   {:disconnect, err, %{s | buffer: buffer}}
   # end
-  #
-  # defp reserved_error(query, s) do
-  #   err = ArgumentError.exception("query #{inspect query} uses reserved name")
-  #   {:error, err, s}
-  # end
-  #
+
+  defp reserved_error(query, s) do
+    err = ArgumentError.exception("query #{inspect query} uses reserved name")
+    {:error, err, s}
+  end
+
   # # Query has completed so ok to use state timeout as message should either be
   # # buffer or in flight. sync_recv/4 used by simple queries so can't use
   # # :infinity.

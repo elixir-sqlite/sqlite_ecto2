@@ -18,6 +18,7 @@ defmodule Sqlite.DbConnection.Query do
   @type t :: %__MODULE__{
     name:           iodata,
     statement:      iodata,
+    prepared:       reference,
     param_formats:  [:binary | :text] | nil,
     encoders:       [Sqlite.DbConnection.Types.oid] | [(term -> iodata)] | nil,
     columns:        [String.t] | nil,
@@ -25,7 +26,7 @@ defmodule Sqlite.DbConnection.Query do
     decoders:       [Sqlite.DbConnection.Types.oid] | [(binary -> term)] | nil,
     types:          Sqlite.DbConnection.TypeServer.table | nil}
 
-  defstruct [:name, :statement, :param_formats, :encoders, :columns,
+  defstruct [:name, :statement, :prepared, :param_formats, :encoders, :columns,
     :result_formats, :decoders, :types]
 end
 
@@ -43,19 +44,23 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
                             result_formats: rfs, decoders: decoders}
   end
 
-  def encode(%Sqlite.DbConnection.Query{types: nil} = query, _params, _mapper) do
-    raise ArgumentError, "query #{inspect query} has not been prepared"
-  end
+  # TODO: Commenting out for now in SQLite. We don't really have a meaningful
+  # :types entry. Waiting to see if that will be necessary.
+  # def encode(%Sqlite.DbConnection.Query{types: nil} = query, _params, _mapper) do
+  #   raise ArgumentError, "query #{inspect query} has not been prepared"
+  # end
 
-  def encode(%Sqlite.DbConnection.Query{encoders: encoders} = query, params, opts) do
-    mapper = opts[:encode_mapper] || fn x -> x end
-    case encode(params || [], encoders, mapper, []) do
-      :error ->
-        raise ArgumentError,
-        "parameters must be of length #{length encoders} for query #{inspect query}"
-      params ->
-       params
-    end
+  def encode(%Sqlite.DbConnection.Query{encoders: _encoders} = _query, params, _opts) do
+    params
+    # IO.inspect "encode q = #{inspect query} params = #{inspect params} opts = #{inspect opts}"
+    # mapper = opts[:encode_mapper] || fn x -> x end
+    # case encode(params || [], encoders, mapper, []) do
+    #   :error ->
+    #     raise ArgumentError,
+    #     "parameters must be of length #{length encoders} for query #{inspect query}"
+    #   params ->
+    #    params
+    # end
   end
 
   def decode(%Sqlite.DbConnection.Query{decoders: nil}, res, _), do: res
@@ -68,20 +73,24 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
 
   ## helpers
 
-  # TODO: Not sure how encoders and decoders will map. What's an oid?
-  defp encoders(oids, _types) do
-    oids
+  defp encoders(nil, _types) do
+    {[], nil}
+  end
+  defp encoders(_oids, _types) do
+    raise "Sqlite.DbConnection.Query is not prepared for encoders"
+    # oids
     # |> Enum.map(&Sqlite.DbConnection.Types.encoder(&1, types))
-    |> :lists.unzip()
+    # |> :lists.unzip()
   end
 
   defp decoders(nil, _) do
     {[], nil}
   end
-  defp decoders(oids, _types) do
-    oids
+  defp decoders(_oids, _types) do
+    raise "Sqlite.DbConnection.Query is not prepared for decoders"
+    # oids
     # |> Enum.map(&Sqlite.DbConnection.Types.decoder(&1, types))
-    |> :lists.unzip()
+    # |> :lists.unzip()
   end
 
   # TODO: No obvious mapping for this version of function to SQLite.
@@ -95,8 +104,8 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   #       encode(params, encoders, mapper, encoded)
   #   end
   # end
-  defp encode([], [], _, encoded), do: Enum.reverse(encoded)
-  defp encode(params, _, _, _) when is_list(params), do: :error
+  # defp encode([], [], _, encoded), do: Enum.reverse(encoded)
+  # defp encode(params, _, _, _) when is_list(params), do: :error
 
   defp decode([row | rows], decoders, mapper, decoded) do
     decoded = [mapper.(decode_row(row, decoders, [])) | decoded]
