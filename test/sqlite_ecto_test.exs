@@ -10,7 +10,7 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "storage up (twice)" do
-    tmp = [database: tempfilename]
+    tmp = [database: tempfilename()]
     assert Sqlite.Ecto.storage_up(tmp) == :ok
     assert File.exists? tmp[:database]
     assert Sqlite.Ecto.storage_up(tmp) == {:error, :already_up}
@@ -18,7 +18,7 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "storage down (twice)" do
-    tmp = [database: tempfilename]
+    tmp = [database: tempfilename()]
     assert Sqlite.Ecto.storage_up(tmp) == :ok
     assert Sqlite.Ecto.storage_down(tmp) == :ok
     assert not File.exists? tmp[:database]
@@ -28,7 +28,7 @@ defmodule Sqlite.Ecto.Test do
   test "storage up creates directory" do
     dir = "/tmp/my_sqlite_ecto_directory/"
     File.rm_rf! dir
-    tmp = [database: dir <> tempfilename]
+    tmp = [database: dir <> tempfilename()]
     :ok = Sqlite.Ecto.storage_up(tmp)
     assert File.exists?(dir <> "tmp/") && File.dir?(dir <> "tmp/")
   end

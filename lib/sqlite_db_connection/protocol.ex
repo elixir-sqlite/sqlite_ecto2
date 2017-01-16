@@ -19,7 +19,7 @@ defmodule Sqlite.DbConnection.Protocol do
                              checked_out?: false}
 
   @reserved_prefix "Sqlite.DbConnection_"
-  @reserved_queries ["BEGIN", "COMMIT", "ROLLBACK"]
+  # @reserved_queries ["BEGIN", "COMMIT", "ROLLBACK"]
 
   @spec connect(Keyword.t) ::
     {:ok, state} | {:error, Sqlite.DbConnection.Error.t}
