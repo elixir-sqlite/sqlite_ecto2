@@ -48,4 +48,16 @@ defmodule QueryTest do
     assert [["ẽric"]] = query("SELECT cast($1 as varchar)", ["ẽric"])
     assert [[<<1, 2, 3>>]] = query("SELECT cast($1 as blob)", [<<1, 2, 3>>])
   end
+
+  test "fail on parameter length mismatch", context do
+    assert_raise ArgumentError, "parameters must match number of placeholders in query", fn ->
+      query("SELECT $1::integer", [1, 2])
+    end
+
+    assert_raise ArgumentError, "parameters must match number of placeholders in query", fn ->
+      query("SELECT 42", [1])
+    end
+
+    assert [[42]] = query("SELECT 42", [])
+  end
 end

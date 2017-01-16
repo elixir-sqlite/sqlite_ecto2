@@ -539,7 +539,7 @@ defmodule Sqlite.DbConnection.Protocol do
       #   query_error(s, "query #{inspect query} has not been described")
       #  ^^ not sure we'll need this for SQLite
       %Query{prepared: stmt} ->
-        case run_stmt(stmt, params) do
+        case run_stmt(stmt, params, s) do
           {:ok, result} ->
             {:ok, result, s}
           other ->
@@ -554,13 +554,17 @@ defmodule Sqlite.DbConnection.Protocol do
     {:error, ArgumentError.exception(msg), s}
   end
 
-  defp run_stmt(stmt, []) do
+  defp run_stmt(stmt, [], _s) do
     {:ok, rows, _columnNames} = Sqlitex.Statement.fetch_all(stmt, :raw_list)
     {:ok, %Sqlite.DbConnection.Result{rows: rows}}
   end
-  defp run_stmt(stmt, params) when is_list(params) do
-    {:ok, stmt} = Sqlitex.Statement.bind_values(stmt, params)
-    run_stmt(stmt, [])
+  defp run_stmt(stmt, params, s) when is_list(params) do
+    case Sqlitex.Statement.bind_values(stmt, params) do
+      {:ok, stmt} ->
+        run_stmt(stmt, [], s)
+      {:error, :args_wrong_length} ->
+        query_error(s, "parameters must match number of placeholders in query")
+    end
   end
 
   # defp execute_send(s, %{sync: sync} = status, query, params, buffer) do
