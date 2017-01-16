@@ -17,6 +17,11 @@ ExUnit.start exclude: [:array_type,
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :primary_key_type, :id)
 
+# Old Ecto files don't compile cleanly in Elixir 1.4, so we disable warnings first.
+if ("1.4." <> _) = System.version() do
+  Code.compiler_options(warnings_as_errors: false)
+end
+
 # Load support files
 Code.require_file "../../deps/ecto/integration_test/support/repo.exs", __DIR__
 
