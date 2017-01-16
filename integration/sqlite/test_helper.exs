@@ -18,8 +18,9 @@ ExUnit.start exclude: [:array_type,
 Application.put_env(:ecto, :primary_key_type, :id)
 
 # Old Ecto files don't compile cleanly in Elixir 1.4, so we disable warnings first.
-if ("1.4." <> _) = System.version() do
-  Code.compiler_options(warnings_as_errors: false)
+case System.version() do
+  "1.4." <> _ -> Code.compiler_options(warnings_as_errors: false)
+  _ -> :ok
 end
 
 # Load support files
