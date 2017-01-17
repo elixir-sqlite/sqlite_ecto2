@@ -555,8 +555,8 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   defp run_stmt(stmt, [], _s) do
-    {:ok, rows, _columnNames} = Sqlitex.Statement.fetch_all(stmt, :raw_list)
-    {:ok, %Sqlite.DbConnection.Result{rows: rows}}
+    {:ok, rows, columnNames} = Sqlitex.Statement.fetch_all(stmt, :raw_list)
+    {:ok, result_for_rows_and_columns(rows, columnNames)}
   end
   defp run_stmt(stmt, params, s) when is_list(params) do
     case Sqlitex.Statement.bind_values(stmt, params) do
@@ -566,6 +566,11 @@ defmodule Sqlite.DbConnection.Protocol do
         query_error(s, "parameters must match number of placeholders in query")
     end
   end
+
+  defp result_for_rows_and_columns([], []), do:
+    %Sqlite.DbConnection.Result{rows: nil, columns: nil}
+  defp result_for_rows_and_columns(rows, columnNames), do:
+    %Sqlite.DbConnection.Result{rows: rows, columns: columnNames}
 
   # defp execute_send(s, %{sync: sync} = status, query, params, buffer) do
   #   %Query{param_formats: pfs, result_formats: rfs, name: name} = query

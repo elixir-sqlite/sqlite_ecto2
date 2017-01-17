@@ -63,6 +63,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     # end
   end
 
+  def decode(_query, %Sqlite.DbConnection.Result{rows: nil} = res, _opts), do: res
   def decode(%Sqlite.DbConnection.Query{decoders: nil},
              %Sqlite.DbConnection.Result{rows: rows} = res,
              _opts)

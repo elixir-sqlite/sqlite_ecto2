@@ -60,4 +60,9 @@ defmodule QueryTest do
 
     assert [[42]] = query("SELECT 42", [])
   end
+
+  test "non data statement", context do
+    assert :ok = query("BEGIN", [])
+    assert :ok = query("COMMIT", [])
+  end
 end
