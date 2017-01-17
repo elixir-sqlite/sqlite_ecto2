@@ -555,8 +555,8 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   defp run_stmt(stmt, [], _s) do
-    {:ok, rows, columnNames} = Sqlitex.Statement.fetch_all(stmt, :raw_list)
-    {:ok, result_for_rows_and_columns(rows, columnNames)}
+    {:ok, rows} = Sqlitex.Statement.fetch_all(stmt, :raw_list)
+    {:ok, result_for_rows_and_stmt(rows, stmt)}
   end
   defp run_stmt(stmt, params, s) when is_list(params) do
     case Sqlitex.Statement.bind_values(stmt, params) do
@@ -567,10 +567,10 @@ defmodule Sqlite.DbConnection.Protocol do
     end
   end
 
-  defp result_for_rows_and_columns([], []), do:
+  defp result_for_rows_and_stmt([], %Sqlitex.Statement{column_names: []}), do:
     %Sqlite.DbConnection.Result{rows: nil, columns: nil}
-  defp result_for_rows_and_columns(rows, columnNames), do:
-    %Sqlite.DbConnection.Result{rows: rows, columns: columnNames}
+  defp result_for_rows_and_stmt(rows, %Sqlitex.Statement{column_names: column_names}), do:
+    %Sqlite.DbConnection.Result{rows: rows, columns: column_names}
 
   # defp execute_send(s, %{sync: sync} = status, query, params, buffer) do
   #   %Query{param_formats: pfs, result_formats: rfs, name: name} = query

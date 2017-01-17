@@ -287,14 +287,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp do_query(pid, sql, params, opts) do
       opts = opts
              |> Keyword.put(:decode, :manual)
-             |> Keyword.put(:into, :raw_list)
              |> Keyword.put(:types, true)
              |> Keyword.put(:bind, params)
-      case Sqlitex.Server.query(pid, sql, opts) do
+      case Sqlitex.Server.query_rows(pid, sql, opts) do
         # busy error means another process is writing to the database; try again
         {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
         {:error, msg} -> {:error, Sqlite.Ecto.Error.exception(msg)}
-        {:ok, rows, columns, types} when is_list(rows)
+        {:ok, %{columns: columns, rows: rows, types: types}} when is_list(rows)
           -> query_result(pid, sql, rows, columns, types, opts)
       end
     end
