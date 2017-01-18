@@ -84,4 +84,9 @@ defmodule QueryTest do
     assert res.num_rows == 2
     assert res.rows == [[1, 2], [3, 4]]
   end
+
+  test "multi row result struct with decode mapper", context do
+    map = &Enum.map(&1, fn x -> x * 2 end)
+    assert [[2,4], [6,8]] = query("VALUES (1, 2), (3, 4)", [], decode_mapper: map)
+  end
 end

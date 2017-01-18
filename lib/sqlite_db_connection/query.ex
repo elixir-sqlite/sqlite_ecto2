@@ -64,13 +64,24 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   end
 
   def decode(_query, %Sqlite.DbConnection.Result{rows: nil} = res, _opts), do: res
+
   def decode(%Sqlite.DbConnection.Query{decoders: nil},
              %Sqlite.DbConnection.Result{rows: rows} = res,
-             _opts)
+             %{decode_mapper: mapper})
   do
-    decoded_rows = Enum.map(rows, &decode_row/1)
+    decoded_rows = Enum.map(rows, &(decode_row(&1, mapper)))
     %{res | rows: decoded_rows}
   end
+
+  def decode(%Sqlite.DbConnection.Query{decoders: nil},
+             %Sqlite.DbConnection.Result{rows: rows} = res,
+             opts)
+  do
+    mapper = opts[:decode_mapper]
+    decoded_rows = Enum.map(rows, &(decode_row(&1, mapper)))
+    %{res | rows: decoded_rows}
+  end
+
   def decode(%Sqlite.DbConnection.Query{decoders: _decoders}, _res, _opts) do
     raise "Sqlite.DbConnection.Query is not prepared for decoders"
     # mapper = opts[:decode_mapper] || fn x -> x end
@@ -129,8 +140,11 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   # end
   # defp decode_row([], [], decoded), do: Enum.reverse(decoded)
 
-  defp decode_row(row) do
+  defp decode_row(row, nil) do
     Enum.map(row, &decode_cell/1)
+  end
+  defp decode_row(row, mapper) do
+    mapper.(Enum.map(row, &decode_cell/1))
   end
 
   defp decode_cell(:undefined), do: nil
