@@ -77,7 +77,7 @@ defmodule QueryTest do
 
   # Disabled: I don't know of a way to trigger a runtime error in Sqlite.
   # test "error struct", context do
-  #   assert {:error, %Postgrex.Error{}} = P.query(context[:pid], "SELECT 123 + 'a'", [])
+  #   assert {:error, %Sqlite.DbConnection.Error{}} = P.query(context[:pid], "SELECT 123 + 'a'", [])
   # end
 
   test "multi row result struct", context do
@@ -158,5 +158,38 @@ defmodule QueryTest do
     assert :ok = query("BEGIN", [])
     assert :ok = query("ROLLBACK", [])
     assert [[42]] = query("SELECT 42", [])
+  end
+
+  test "connection works after failure in prepare", context do
+    assert %Sqlite.DbConnection.Error{} = prepare("bad", "wat")
+    assert [[42]] = query("SELECT 42", [])
+  end
+
+  test "connection works after failure in execute", context do
+    %Sqlite.DbConnection.Query{} = query = prepare("unique", "insert into uniques values (1), (1);")
+    assert %Sqlite.DbConnection.Error{sqlite: %{code: :constraint}} =
+      execute(query, [])
+    assert %Sqlite.DbConnection.Error{sqlite: %{code: :constraint}} =
+      execute(query, [])
+    assert [[42]] = query("SELECT 42", [])
+  end
+
+  test "connection reuses prepared query after query", context do
+    %Sqlite.DbConnection.Query{} = query = prepare("", "SELECT 41")
+    assert [[42]] = query("SELECT 42", [])
+    assert [[41]] = execute(query, [])
+  end
+
+  test "connection reuses prepared query after failure in preparing state", context do
+    %Sqlite.DbConnection.Query{} = query = prepare("", "SELECT 41")
+    assert %Sqlite.DbConnection.Error{} = query("wat", [])
+    assert [[41]] = execute(query, [])
+  end
+
+  test "connection reuses prepared query after failure in executing state", context do
+    %Sqlite.DbConnection.Query{} = query = prepare("", "SELECT 41")
+    assert %Sqlite.DbConnection.Error{sqlite: %{code: :constraint}} =
+      query("insert into uniques values (1), (1);", [])
+    assert [[41]] = execute(query, [])
   end
 end
