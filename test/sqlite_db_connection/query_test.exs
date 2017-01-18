@@ -111,4 +111,11 @@ defmodule QueryTest do
     assert :ok = close(query)
     assert [[42]] = execute(query, [42])
   end
+
+  test "execute with encode mapper", context do
+    assert (%Sqlite.DbConnection.Query{} = query) = prepare("mapper", "SELECT cast($1 as int)")
+    assert [[84]] = execute(query, [42], [encode_mapper: fn(n) -> n * 2 end])
+    assert :ok = close(query)
+    assert [[42]] = query("SELECT 42", [])
+  end
 end

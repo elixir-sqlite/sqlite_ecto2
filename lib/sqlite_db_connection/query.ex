@@ -50,17 +50,12 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   #   raise ArgumentError, "query #{inspect query} has not been prepared"
   # end
 
-  def encode(%Sqlite.DbConnection.Query{encoders: _encoders} = _query, params, _opts) do
-    params
-    # IO.inspect "encode q = #{inspect query} params = #{inspect params} opts = #{inspect opts}"
-    # mapper = opts[:encode_mapper] || fn x -> x end
-    # case encode(params || [], encoders, mapper, []) do
-    #   :error ->
-    #     raise ArgumentError,
-    #     "parameters must be of length #{length encoders} for query #{inspect query}"
-    #   params ->
-    #    params
-    # end
+  def encode(%Sqlite.DbConnection.Query{encoders: [_]}, _params, _opts) do
+    raise "Sqlite.DbConnection.Query is not prepared for encoders"
+  end
+
+  def encode(%Sqlite.DbConnection.Query{}, params, opts) do
+    encode_params(opts[:encode_mapper], params)
   end
 
   def decode(_query, %Sqlite.DbConnection.Result{rows: nil} = res, _opts), do: res
@@ -125,7 +120,10 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   # end
   # defp encode([], [], _, encoded), do: Enum.reverse(encoded)
   # defp encode(params, _, _, _) when is_list(params), do: :error
-  #
+
+  defp encode_params(nil, params), do: params
+  defp encode_params(encode_mapper, params), do: Enum.map(params, encode_mapper)
+
   # defp decode([row | rows], decoders, mapper, decoded) do
   #   decoded = [mapper.(decode_row(row, decoders, [])) | decoded]
   #   decode(rows, decoders, mapper, decoded)
