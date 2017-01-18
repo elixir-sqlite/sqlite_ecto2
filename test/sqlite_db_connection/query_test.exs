@@ -96,4 +96,12 @@ defmodule QueryTest do
     :ok = query("INSERT INTO test VALUES ($1, $2)", [42, "fortytwo"], [])
     [[42, "fortytwo"]] = query("SELECT * FROM test", [])
   end
+
+  test "prepare, execute and close", context do
+    assert (%Sqlite.DbConnection.Query{} = query) = prepare("42", "SELECT 42")
+    assert [[42]] = execute(query, [])
+    assert [[42]] = execute(query, [])
+    assert :ok = close(query)
+    assert [[42]] = query("SELECT 42", [])
+  end
 end

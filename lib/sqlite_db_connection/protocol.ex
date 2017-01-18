@@ -86,14 +86,14 @@ defmodule Sqlite.DbConnection.Protocol do
     end
   end
 
-  # @spec handle_execute(Sqlite.DbConnection.Query.t, list, Keyword.t, state) ::
-  #   {:ok, Sqlite.DbConnection.Result.t, state} |
-  #   {:prepare, state} |
-  #   {:error, ArgumentError.t, state} |
-  #   {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
-  # def handle_execute(%Query{} = query, params, opts, s) do
-  #   handle_execute(query, params, :sync, opts, s)
-  # end
+  @spec handle_execute(Sqlite.DbConnection.Query.t, list, Keyword.t, state) ::
+    {:ok, Sqlite.DbConnection.Result.t, state} |
+    {:prepare, state} |
+    {:error, ArgumentError.t, state} |
+    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
+  def handle_execute(%Query{} = query, params, opts, s) do
+    handle_execute(query, params, :sync, opts, s)
+  end
   # @spec handle_execute(Sqlite.DbConnection.Parameters.t, nil, Keyword.t, state) ::
   #   {:ok, %{binary => binary}, state} |
   #   {:error, Sqlite.DbConnection.Errpr.t, state}
@@ -126,11 +126,12 @@ defmodule Sqlite.DbConnection.Protocol do
   # def handle_close(%Query{name: @reserved_prefix <> _} = query, _, s) do
   #   reserved_error(query, s)
   # end
-  # def handle_close(query, opts, %{buffer: buffer} = s) do
-  #   status = %{notify: notify(opts)}
-  #   close(%{s | buffer: nil}, status, query, nil, buffer)
-  # end
-  #
+  def handle_close(_query, _opts, s) do
+    # no-op: esqlite doesn't expose statement close.
+    # Instead it relies on statements getting garbage collected.
+    {:ok, s}
+  end
+
   # def handle_begin(opts, s) do
   #   handle_transaction(@reserved_prefix <> "BEGIN", :transaction, opts, s)
   # end
