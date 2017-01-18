@@ -567,10 +567,31 @@ defmodule Sqlite.DbConnection.Protocol do
     end
   end
 
-  defp result_for_rows_and_stmt([], %Sqlitex.Statement{column_names: []}), do:
-    %Sqlite.DbConnection.Result{rows: nil, columns: nil}
-  defp result_for_rows_and_stmt(rows, %Sqlitex.Statement{column_names: column_names}), do:
-    %Sqlite.DbConnection.Result{rows: rows, columns: column_names}
+  defp result_for_rows_and_stmt(rows, %Sqlitex.Statement{} = stmt) do
+    {rows, num_rows, column_names} = rows_and_column_names_from_stmt(rows, stmt)
+    command = command_from_stmt(stmt)
+    %Sqlite.DbConnection.Result{rows: rows,
+                                num_rows: num_rows,
+                                columns: column_names,
+                                command: command}
+  end
+
+  defp rows_and_column_names_from_stmt([], %{column_names: []}), do:
+    {nil, nil, nil}
+  defp rows_and_column_names_from_stmt(rows, %{column_names: column_names}), do:
+    {rows, length(rows), Enum.map(column_names, &Atom.to_string/1)}
+
+  defp command_from_stmt(%Sqlitex.Statement{sql: sql}) do
+    first_words = String.split(String.downcase(sql), " ", parts: 3)
+    command_from_words(first_words)
+  end
+
+  defp command_from_words([verb, subject, _])
+    when verb == "alter" or verb == "create" or verb == "drop",
+  do: String.to_atom("#{verb}_#{subject}")
+
+  defp command_from_words(words) when is_list(words), do:
+    String.to_atom(List.first(words))
 
   # defp execute_send(s, %{sync: sync} = status, query, params, buffer) do
   #   %Query{param_formats: pfs, result_formats: rfs, name: name} = query
