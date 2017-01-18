@@ -104,4 +104,11 @@ defmodule QueryTest do
     assert :ok = close(query)
     assert [[42]] = query("SELECT 42", [])
   end
+
+  test "prepare, close and execute", context do
+    assert (%Sqlite.DbConnection.Query{} = query) = prepare("reuse", "SELECT $1::int")
+    assert [[42]] = execute(query, [42])
+    assert :ok = close(query)
+    assert [[42]] = execute(query, [42])
+  end
 end
