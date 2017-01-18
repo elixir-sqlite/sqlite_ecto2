@@ -73,4 +73,15 @@ defmodule QueryTest do
     assert res.columns == ["a", "b"]
     assert res.num_rows == 1
   end
+
+  # Disabled: I don't know of a way to trigger a runtime error in Sqlite.
+  # test "error struct", context do
+  #   assert {:error, %Postgrex.Error{}} = P.query(context[:pid], "SELECT 123 + 'a'", [])
+  # end
+
+  test "multi row result struct", context do
+    assert {:ok, res} = P.query(context[:pid], "VALUES (1, 2), (3, 4)", [])
+    assert res.num_rows == 2
+    assert res.rows == [[1, 2], [3, 4]]
+  end
 end
