@@ -89,4 +89,11 @@ defmodule QueryTest do
     map = &Enum.map(&1, fn x -> x * 2 end)
     assert [[2,4], [6,8]] = query("VALUES (1, 2), (3, 4)", [], decode_mapper: map)
   end
+
+  test "insert", context do
+    :ok = query("CREATE TABLE test (id int, text text)", [])
+    [] = query("SELECT * FROM test", [])
+    :ok = query("INSERT INTO test VALUES ($1, $2)", [42, "fortytwo"], [])
+    [[42, "fortytwo"]] = query("SELECT * FROM test", [])
+  end
 end
