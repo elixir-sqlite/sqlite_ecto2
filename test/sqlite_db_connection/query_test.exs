@@ -140,4 +140,15 @@ defmodule QueryTest do
       query("insert into uniques values (1), (1);", [])
     assert [[42]] = query("SELECT 42", [])
   end
+
+  test "connection works after failure during transaction", context do
+    assert :ok = query("BEGIN", [])
+    assert %Sqlite.DbConnection.Error{sqlite: %{code: :constraint}} =
+      query("insert into uniques values (1), (1);", [])
+    # assert %Sqlite.DbConnection.Error{postgres: %{code: :in_failed_sql_transaction}} =
+    #   query("SELECT 42", [])
+    # ^^ Unlike Postgres, SQLite does not fail this second command. Skip that test.
+    assert :ok = query("ROLLBACK", [])
+    assert [[42]] = query("SELECT 42", [])
+  end
 end
