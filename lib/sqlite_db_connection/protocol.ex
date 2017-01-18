@@ -455,8 +455,8 @@ defmodule Sqlite.DbConnection.Protocol do
       {:ok, prepared_stmt} ->
         updated_query = %{query | prepared: prepared_stmt}
         {:ok, updated_query, s}
-      {:error, {sqlite_errcode, message}} ->
-        {:error, %Sqlite.DbConnection.Error{sqlite: %{code: sqlite_errcode}, message: message}, s}
+      {:error, {_sqlite_errcode, _message}} = err ->
+        sqlite_error(err, s)
     end
   end
 
@@ -553,10 +553,17 @@ defmodule Sqlite.DbConnection.Protocol do
   defp query_error(s, msg) do
     {:error, ArgumentError.exception(msg), s}
   end
+  defp sqlite_error({:error, {sqlite_errcode, message}}, s) do
+    {:error, %Sqlite.DbConnection.Error{sqlite: %{code: sqlite_errcode}, message: message}, s}
+  end
 
-  defp run_stmt(stmt, [], _s) do
-    {:ok, rows} = Sqlitex.Statement.fetch_all(stmt, :raw_list)
-    {:ok, result_for_rows_and_stmt(rows, stmt)}
+  defp run_stmt(stmt, [], s) do
+    case Sqlitex.Statement.fetch_all(stmt, :raw_list) do
+      {:ok, rows} ->
+        {:ok, result_for_rows_and_stmt(rows, stmt)}
+      {:error, {_sqlite_errcode, _message}} = err ->
+        sqlite_error(err, s)
+    end
   end
   defp run_stmt(stmt, params, s) when is_list(params) do
     case Sqlitex.Statement.bind_values(stmt, params) do

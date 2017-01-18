@@ -7,8 +7,9 @@ defmodule QueryTest do
   alias Sqlite.DbConnection.Connection, as: P
 
   setup do
-    opts = [ database: ":memory:", backoff_type: :stop ]
+    opts = [database: ":memory:", backoff_type: :stop]
     {:ok, pid} = P.start_link(opts)
+    {:ok, _} = Sqlite.DbConnection.Connection.query(pid, "CREATE TABLE uniques (a int UNIQUE)", [])
     {:ok, [pid: pid]}
   end
 
@@ -131,6 +132,12 @@ defmodule QueryTest do
 
   test "connection works after failure in parsing state", context do
     assert %Sqlite.DbConnection.Error{} = query("wat", [])
+    assert [[42]] = query("SELECT 42", [])
+  end
+
+  test "connection works after failure in executing state", context do
+    assert %Sqlite.DbConnection.Error{sqlite: %{code: :constraint}} =
+      query("insert into uniques values (1), (1);", [])
     assert [[42]] = query("SELECT 42", [])
   end
 end
