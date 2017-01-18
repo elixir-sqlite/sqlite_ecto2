@@ -118,4 +118,10 @@ defmodule QueryTest do
     assert :ok = close(query)
     assert [[42]] = query("SELECT 42", [])
   end
+
+  test "closing prepared query that does not exist succeeds", context do
+    assert (%Sqlite.DbConnection.Query{} = query) = prepare("42", "SELECT 42")
+    assert :ok = close(query)
+    assert :ok = close(query)
+  end
 end
