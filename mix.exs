@@ -35,7 +35,7 @@ defmodule Sqlite.Ecto.Mixfile do
      {:ex_doc, "~> 0.14.5", only: :dev},
      {:ecto, git: "https://github.com/scouten/ecto.git", ref: "0a04003624aca5f2afdf15b0080d387ed36b7b72"},
      {:poison, "~> 1.0"},
-     {:sqlitex, "~> 1.1.1"}]
+     {:sqlitex, git: "https://github.com/scouten/sqlitex.git", ref: "8d7d8e2c8881dad644e3e9ef17d71312ecde4ea1"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto2 (not yet working)"
