@@ -128,4 +128,9 @@ defmodule QueryTest do
   test "error codes are translated", context do
     assert %Sqlite.DbConnection.Error{sqlite: %{code: :sqlite_error}} = query("wat", [])
   end
+
+  test "connection works after failure in parsing state", context do
+    assert %Sqlite.DbConnection.Error{} = query("wat", [])
+    assert [[42]] = query("SELECT 42", [])
+  end
 end
