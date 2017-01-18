@@ -1,5 +1,5 @@
 defmodule Sqlite.DbConnection.Error do
-  defexception [:message, :postgres]
+  defexception [:message, :sqlite, :postgres]
 
   # TODO: Retrofit to actual SQLite error schema.
 

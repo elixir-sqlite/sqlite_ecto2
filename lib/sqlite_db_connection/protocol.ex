@@ -73,7 +73,7 @@ defmodule Sqlite.DbConnection.Protocol do
   @spec handle_prepare(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Query.t, state} |
     {:error, ArgumentError.t, state} |
-    {:error | :disconnect, Sqlite.DbConnection.Query.t, state}
+    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
   def handle_prepare(%Query{name: @reserved_prefix <> _} = query, _, s) do
     reserved_error(query, s)
   end
@@ -455,9 +455,8 @@ defmodule Sqlite.DbConnection.Protocol do
       {:ok, prepared_stmt} ->
         updated_query = %{query | prepared: prepared_stmt}
         {:ok, updated_query, s}
-      other ->
-        IO.puts "handle_prepare failed #inspect {other}"
-        other
+      {:error, {sqlite_errcode, message}} ->
+        {:error, %Sqlite.DbConnection.Error{sqlite: %{code: sqlite_errcode}, message: message}, s}
     end
   end
 

@@ -124,4 +124,8 @@ defmodule QueryTest do
     assert :ok = close(query)
     assert :ok = close(query)
   end
+
+  test "error codes are translated", context do
+    assert %Sqlite.DbConnection.Error{sqlite: %{code: :sqlite_error}} = query("wat", [])
+  end
 end
