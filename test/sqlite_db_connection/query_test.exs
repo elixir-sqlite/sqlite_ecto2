@@ -151,4 +151,12 @@ defmodule QueryTest do
     assert :ok = query("ROLLBACK", [])
     assert [[42]] = query("SELECT 42", [])
   end
+
+  test "connection works on custom transactions", context do
+    assert :ok = query("BEGIN", [])
+    assert :ok = query("COMMIT", [])
+    assert :ok = query("BEGIN", [])
+    assert :ok = query("ROLLBACK", [])
+    assert [[42]] = query("SELECT 42", [])
+  end
 end
