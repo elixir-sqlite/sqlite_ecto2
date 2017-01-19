@@ -59,4 +59,23 @@ defmodule ConnectionTest do
     assert %Sqlite.DbConnection.Error{message: "UNIQUE constraint failed: uniques.a",
                                       sqlite: %{code: :constraint}} = err
   end
+
+  test "execute!", context do
+    pid = context[:pid]
+    stmt = P.prepare!(pid, "execute_test", "SELECT 42", [])
+    result = P.execute!(pid, stmt, [])
+    assert %Sqlite.DbConnection.Result{columns: ["42"],
+                                       command: :select,
+                                       num_rows: 1,
+                                       rows: [[42]]} = result
+  end
+
+  test "execute! failure case", context do
+    pid = context[:pid]
+    stmt = P.prepare!(pid, "execute_fail",
+                      "INSERT INTO uniques values (1), (1)", [])
+    assert_raise Sqlite.DbConnection.Error, fn ->
+      P.execute!(pid, stmt, [])
+    end
+  end
 end
