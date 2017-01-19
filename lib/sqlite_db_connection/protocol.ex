@@ -212,7 +212,8 @@ defmodule Sqlite.DbConnection.Protocol do
     {:error, ArgumentError.exception(msg), s}
   end
   defp sqlite_error({:error, {sqlite_errcode, message}}, s) do
-    {:error, %Sqlite.DbConnection.Error{sqlite: %{code: sqlite_errcode}, message: message}, s}
+    {:error, %Sqlite.DbConnection.Error{sqlite: %{code: sqlite_errcode},
+                                        message: to_string(message)}, s}
   end
 
   defp run_stmt(stmt, [], s) do
