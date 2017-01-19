@@ -18,9 +18,6 @@ defmodule Sqlite.DbConnection.Protocol do
                              path: String.t,
                              checked_out?: false}
 
-  @reserved_prefix "Sqlite.DbConnection_"
-  # @reserved_queries ["BEGIN", "COMMIT", "ROLLBACK"]
-
   @spec connect(Keyword.t) ::
     {:ok, state} | {:error, Sqlite.DbConnection.Error.t}
   def connect(opts) do
