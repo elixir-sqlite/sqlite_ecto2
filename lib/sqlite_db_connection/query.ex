@@ -50,23 +50,15 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   #   raise ArgumentError, "query #{inspect query} has not been prepared"
   # end
 
-  def encode(%Sqlite.DbConnection.Query{encoders: [_]}, _params, _opts) do
-    raise "Sqlite.DbConnection.Query is not prepared for encoders"
-  end
+  # def encode(%Sqlite.DbConnection.Query{encoders: [_]}, _params, _opts) do
+  #   raise "Sqlite.DbConnection.Query is not prepared for encoders"
+  # end
 
-  def encode(%Sqlite.DbConnection.Query{}, params, opts) do
+  def encode(%Sqlite.DbConnection.Query{encoders: nil}, params, opts) do
     encode_params(opts[:encode_mapper], params)
   end
 
   def decode(_query, %Sqlite.DbConnection.Result{rows: nil} = res, _opts), do: res
-
-  def decode(%Sqlite.DbConnection.Query{decoders: nil},
-             %Sqlite.DbConnection.Result{rows: rows} = res,
-             %{decode_mapper: mapper})
-  do
-    decoded_rows = Enum.map(rows, &(decode_row(&1, mapper)))
-    %{res | rows: decoded_rows}
-  end
 
   def decode(%Sqlite.DbConnection.Query{decoders: nil},
              %Sqlite.DbConnection.Result{rows: rows} = res,
@@ -77,35 +69,35 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     %{res | rows: decoded_rows}
   end
 
-  def decode(%Sqlite.DbConnection.Query{decoders: _decoders}, _res, _opts) do
-    raise "Sqlite.DbConnection.Query is not prepared for decoders"
-    # mapper = opts[:decode_mapper] || fn x -> x end
-    # %Sqlite.DbConnection.Result{rows: rows} = res
-    # rows = decode(rows, decoders, mapper, [])
-    # %Sqlite.DbConnection.Result{res | rows: rows}
-  end
+  # def decode(%Sqlite.DbConnection.Query{decoders: _decoders}, _res, _opts) do
+  #   raise "Sqlite.DbConnection.Query is not prepared for decoders"
+  #   # mapper = opts[:decode_mapper] || fn x -> x end
+  #   # %Sqlite.DbConnection.Result{rows: rows} = res
+  #   # rows = decode(rows, decoders, mapper, [])
+  #   # %Sqlite.DbConnection.Result{res | rows: rows}
+  # end
 
   ## helpers
 
   defp encoders(nil, _types) do
     {[], nil}
   end
-  defp encoders(_oids, _types) do
-    raise "Sqlite.DbConnection.Query is not prepared for encoders"
-    # oids
-    # |> Enum.map(&Sqlite.DbConnection.Types.encoder(&1, types))
-    # |> :lists.unzip()
-  end
+  # defp encoders(_oids, _types) do
+  #   raise "Sqlite.DbConnection.Query is not prepared for encoders"
+  #   # oids
+  #   # |> Enum.map(&Sqlite.DbConnection.Types.encoder(&1, types))
+  #   # |> :lists.unzip()
+  # end
 
   defp decoders(nil, _) do
     {[], nil}
   end
-  defp decoders(_oids, _types) do
-    raise "Sqlite.DbConnection.Query is not prepared for decoders"
-    # oids
-    # |> Enum.map(&Sqlite.DbConnection.Types.decoder(&1, types))
-    # |> :lists.unzip()
-  end
+  # defp decoders(_oids, _types) do
+  #   raise "Sqlite.DbConnection.Query is not prepared for decoders"
+  #   # oids
+  #   # |> Enum.map(&Sqlite.DbConnection.Types.decoder(&1, types))
+  #   # |> :lists.unzip()
+  # end
 
   # TODO: No obvious mapping for this version of function to SQLite.
   # defp encode([param | params], [encoder | encoders], mapper, encoded) do
