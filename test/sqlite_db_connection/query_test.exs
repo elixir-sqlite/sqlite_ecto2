@@ -192,4 +192,13 @@ defmodule QueryTest do
       query("insert into uniques values (1), (1);", [])
     assert [[41]] = execute(query, [])
   end
+
+  test "raise when trying to execute unprepared query", context do
+    assert_raise ArgumentError, ~r/has not been prepared/,
+      fn -> execute(%Sqlite.DbConnection.Query{name: "hi", statement: "BEGIN"}, []) end
+  end
+
+  test "query struct interpolates to statement" do
+    assert "#{%Sqlite.DbConnection.Query{statement: "BEGIN"}}" == "BEGIN"
+  end
 end
