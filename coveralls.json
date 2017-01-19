@@ -1,5 +1,0 @@
-{
-  "skip_files": [
-    "test/sqlite_db_connection/support/test_helper.ex"
-  ]
-}

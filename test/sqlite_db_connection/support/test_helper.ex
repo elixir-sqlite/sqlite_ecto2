@@ -44,17 +44,4 @@ defmodule Sqlite.DbConnection.TestHelper do
       end
     end
   end
-
-  defmacro transaction(fun, opts \\ []) do
-    quote do
-      Sqlite.DbConnection.Connection.transaction(var!(context)[:pid], unquote(fun),
-                                                 unquote(opts))
-    end
-  end
-
-  def capture_log(fun) do
-    Logger.remove_backend(:console)
-    fun.()
-    Logger.add_backend(:console, flush: true)
-  end
 end
