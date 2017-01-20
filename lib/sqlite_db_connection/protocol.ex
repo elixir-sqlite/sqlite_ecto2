@@ -198,8 +198,8 @@ defmodule Sqlite.DbConnection.Protocol do
     case query do
       %Query{prepared: nil} ->
         query_error(s, "query #{inspect query} has not been prepared")
-      %Query{prepared: stmt} ->
-        case run_stmt(stmt, params, s) do
+      %Query{prepared: stmt, statement: sql} ->
+        case run_stmt(stmt, sql, params, s) do
           {:ok, result} ->
             {:ok, result, s}
           other ->
@@ -216,26 +216,26 @@ defmodule Sqlite.DbConnection.Protocol do
                                         message: to_string(message)}, s}
   end
 
-  defp run_stmt(stmt, [], s) do
+  defp run_stmt(stmt, sql, [], s) do
     case Sqlitex.Statement.fetch_all(stmt, :raw_list) do
       {:ok, rows} ->
-        {:ok, result_for_rows_and_stmt(rows, stmt)}
+        {:ok, result_for_rows_and_stmt(rows, stmt, sql)}
       {:error, {_sqlite_errcode, _message}} = err ->
         sqlite_error(err, s)
     end
   end
-  defp run_stmt(stmt, params, s) when is_list(params) do
+  defp run_stmt(stmt, sql, params, s) when is_list(params) do
     case Sqlitex.Statement.bind_values(stmt, params) do
       {:ok, stmt} ->
-        run_stmt(stmt, [], s)
+        run_stmt(stmt, sql, [], s)
       {:error, :args_wrong_length} ->
         query_error(s, "parameters must match number of placeholders in query")
     end
   end
 
-  defp result_for_rows_and_stmt(rows, %Sqlitex.Statement{} = stmt) do
+  defp result_for_rows_and_stmt(rows, %Sqlitex.Statement{} = stmt, sql) do
     {rows, num_rows, column_names} = rows_and_column_names_from_stmt(rows, stmt)
-    command = command_from_stmt(stmt)
+    command = command_from_sql(sql)
     %Sqlite.DbConnection.Result{rows: rows,
                                 num_rows: num_rows,
                                 columns: column_names,
@@ -247,9 +247,12 @@ defmodule Sqlite.DbConnection.Protocol do
   defp rows_and_column_names_from_stmt(rows, %{column_names: column_names}), do:
     {rows, length(rows), Enum.map(column_names, &Atom.to_string/1)}
 
-  defp command_from_stmt(%Sqlitex.Statement{sql: sql}) do
-    first_words = String.split(String.downcase(sql), " ", parts: 3)
-    command_from_words(first_words)
+  defp command_from_sql(sql) do
+    sql
+    |> :erlang.iolist_to_binary
+    |> String.downcase
+    |> String.split(" ", parts: 3)
+    |> command_from_words
   end
 
   defp command_from_words([verb, subject, _])
