@@ -143,39 +143,6 @@ defmodule Sqlite.DbConnection.Protocol do
   #   status = %{notify: notify(opts), sync: :sync}
   #   simple_send(%{s | buffer: nil}, status, statement, buffer)
   # end
-  #
-  # @spec handle_info(any, Keyword.t, state) ::
-  #   {:ok, state} | {:error | :disconnect, Sqlite.DbConnection.Error.t}
-  # def handle_info(msg, opts \\ [], s)
-  #
-  # def handle_info({:tcp, sock, data}, opts, %{sock: {:gen_tcp, sock}} = s) do
-  #   handle_data(s, opts, data)
-  # end
-  # def handle_info({:tcp_closed, sock}, _, %{sock: {:gen_tcp, sock}} = s) do
-  #   err = Sqlite.DbConnection.Error.exception(tag: :tcp, action: "async recv", reason: :closed)
-  #   {:disconnect, err, s}
-  # end
-  # def handle_info({:tcp_error, sock, reason}, _, %{sock: {:gen_tcp, sock}} = s) do
-  #   err = Sqlite.DbConnection.Error.exception(tag: :tcp, action: "async recv", reason: reason)
-  #   {:disconnect, err, s}
-  # end
-  # def handle_info({:ssl, sock, data}, opts, %{sock: {:ssl, sock}} = s) do
-  #   handle_data(s, opts, data)
-  # end
-  # def handle_info({:ssl_closed, sock}, _, %{sock: {:ssl, sock}} = s) do
-  #   err = Sqlite.DbConnection.Error.exception(tag: :ssl, action: "async recv", reason: :closed)
-  #   {:disconnect, err, s}
-  # end
-  # def handle_info({:ssl_error, sock, reason}, _, %{sock: {:ssl, sock}} = s) do
-  #   err = Sqlite.DbConnection.Error.exception(tag: :ssl, action: "async recv", reason: reason)
-  #   {:disconnect, err, s}
-  # end
-  # def handle_info(msg, _, s) do
-  #   Logger.info(fn() -> [inspect(__MODULE__), ?\s, inspect(self()),
-  #     " received unexpected message: " | inspect(msg)]
-  #   end)
-  #   {:ok, s}
-  # end
 
   ## prepare
 
