@@ -20,7 +20,7 @@ matrix:
     otp_release: 18.0
 
 script:
-  - mix deps.get && ./integration/hack_out_incompatible_tests.sh && mix test --cover
+  - mix deps.get && MIX_ENV=test mix deps.compile backoff && ./integration/hack_out_incompatible_tests.sh && mix test --cover
 
 branches:
   only:
