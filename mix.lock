@@ -1,4 +1,4 @@
-%{"backoff": {:hex, :backoff, "1.1.3", "de762c05ed6dfae862d83dc9e58ae936792b01302b3595f5cffe86f2d8e6c1dd", [:rebar3], []},
+%{"backoff": {:git, "https://github.com/scouten/backoff.git", "8f10cb83b5fbc2401e6a06b341417cad4c632f34", [ref: "8f10cb83b5fbc2401e6a06b341417cad4c632f34"]},
   "certifi": {:hex, :certifi, "0.7.0", "861a57f3808f7eb0c2d1802afeaae0fa5de813b0df0979153cbafcd853ababaf", [:rebar3], []},
   "connection": {:hex, :connection, "1.0.4", "a1cae72211f0eef17705aaededacac3eb30e6625b04a6117c1b2db6ace7d5976", [:mix], []},
   "coverex": {:hex, :coverex, "1.4.11", "fb963586be173e0e5253b200ca624e2708ed5dbe58b90ddbed27184a1f46d61e", [:mix], [{:hackney, "~> 1.5", [hex: :hackney, optional: false]}, {:poison, "~> 1.5 or ~> 2.0", [hex: :poison, optional: false]}]},
