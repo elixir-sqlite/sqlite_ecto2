@@ -1,7 +1,8 @@
-%{"certifi": {:hex, :certifi, "0.7.0", "861a57f3808f7eb0c2d1802afeaae0fa5de813b0df0979153cbafcd853ababaf", [:rebar3], []},
+%{"backoff": {:git, "https://github.com/scouten/backoff.git", "8f10cb83b5fbc2401e6a06b341417cad4c632f34", [ref: "8f10cb83b5fbc2401e6a06b341417cad4c632f34"]},
+  "certifi": {:hex, :certifi, "0.7.0", "861a57f3808f7eb0c2d1802afeaae0fa5de813b0df0979153cbafcd853ababaf", [:rebar3], []},
   "connection": {:hex, :connection, "1.0.4", "a1cae72211f0eef17705aaededacac3eb30e6625b04a6117c1b2db6ace7d5976", [:mix], []},
   "coverex": {:hex, :coverex, "1.4.11", "fb963586be173e0e5253b200ca624e2708ed5dbe58b90ddbed27184a1f46d61e", [:mix], [{:hackney, "~> 1.5", [hex: :hackney, optional: false]}, {:poison, "~> 1.5 or ~> 2.0", [hex: :poison, optional: false]}]},
-  "db_connection": {:git, "https://github.com/fishcakez/db_connection.git", "3e169b0b595276cc44fc935b200f428bd1abc08d", []},
+  "db_connection": {:git, "https://github.com/elixir-ecto/db_connection", "625e42521e2b72f597c388daa6ecf5a90d7bd6e7", [ref: "625e42521e2b72f597c388daa6ecf5a90d7bd6e7"]},
   "decimal": {:hex, :decimal, "1.1.1", "a8ff5b673105e6cdaca96f799aeefc6f07142881b616c65db16e14e556b16e76", [:mix], []},
   "earmark": {:hex, :earmark, "1.0.3", "89bdbaf2aca8bbb5c97d8b3b55c5dd0cff517ecc78d417e87f1d0982e514557b", [:mix], []},
   "ecto": {:git, "https://github.com/scouten/ecto.git", "0a04003624aca5f2afdf15b0080d387ed36b7b72", [ref: "0a04003624aca5f2afdf15b0080d387ed36b7b72"]},
@@ -15,5 +16,5 @@
   "pipe": {:hex, :pipe, "0.0.2", "eff98a868b426745acef103081581093ff5c1b88100f8ff5949b4a30e81d0d9f", [:mix], []},
   "poison": {:hex, :poison, "1.5.2", "560bdfb7449e3ddd23a096929fb9fc2122f709bcc758b2d5d5a5c7d0ea848910", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
-  "sqlitex": {:git, "https://github.com/scouten/sqlitex.git", "c997c613a69ece59d8dd6b7e7ee557d4c4a1c709", [ref: "c997c613a69ece59d8dd6b7e7ee557d4c4a1c709"]},
+  "sqlitex": {:hex, :sqlitex, "1.1.1", "9edf677476b53b7cf651d668a99429e23e6bf3b80cbca11221043be99d501ebe", [:mix], [{:decimal, "~> 1.1.0", [hex: :decimal, optional: false]}, {:esqlite, "~> 0.2.0", [hex: :esqlite, optional: false]}]},
   "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.1", "28a4d65b7f59893bc2c7de786dec1e1555bd742d336043fe644ae956c3497fbe", [:make, :rebar], []}}
