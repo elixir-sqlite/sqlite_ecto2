@@ -8,58 +8,46 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     ## Module and Options
 
     def mod_and_opts(opts) do
-      raise "not sure what to do here"
-      # no equivalent to Postgrex.Procotol as shown in
-      # https://github.com/elixir-ecto/ecto/compare/0a040036...2bdb157#diff-ee25bf8df5589fbf812f652738bfbdaeR22
+      # TODO: Support extensions. Will need some retrofitting work in Sqlite
+      # db_connection layer.
+      # json = Application.get_env(:ecto, :json_library)
+      # extensions = [{Ecto.Adapters.Postgres.DateTime, []},
+      #   {Postgrex.Extensions.JSON, library: json}]
+
+      # opts =
+      #  opts
+      #  |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
+      #  |> Keyword.put(:types, true)
+
+      {Sqlite.DbConnection.Protocol, opts}
     end
 
-    ## Connection
-
-    # This chunk appears to be no longer relevant.
-
-    # # Connect to a new Sqlite.Server.  Enable and verify the foreign key
-    # # constraints for the connection.
-    # def connect(opts) do
-    #   {database, opts} = Keyword.pop(opts, :database)
-    #   case Sqlitex.Server.start_link(database, opts) do
-    #     {:ok, pid} ->
-    #       :ok = Sqlitex.Server.exec(pid, "PRAGMA foreign_keys = ON")
-    #       {:ok, [[foreign_keys: 1]]} = Sqlitex.Server.query(pid, "PRAGMA foreign_keys")
-    #       {:ok, pid}
-    #     error -> error
+    # TODO: Do we still need these? See also query fn below.
+    # # ALTER TABLE queries:
+    # def query(pid, <<"ALTER TABLE ", _ :: binary>>=sql, params, opts) do
+    #   sql
+    #   |> String.split("; ")
+    #   |> Enum.reduce(:ok, fn
+    #     (_, {:error, _} = error) -> error
+    #     (alter_stmt, _) -> do_query(pid, alter_stmt, params, opts)
+    #   end)
+    # end
+    # # all other queries:
+    # def query(pid, sql, params, opts) do
+    #   params = Enum.map(params, fn
+    #     %Ecto.Query.Tagged{type: :binary, value: value} when is_binary(value) -> {:blob, value}
+    #     %Ecto.Query.Tagged{value: value} -> value
+    #     %{__struct__: _} = value -> value
+    #     %{} = value -> json_library().encode! value
+    #     value -> value
+    #   end)
+    #
+    #   if has_returning_clause?(sql) do
+    #     returning_query(pid, sql, params, opts)
+    #   else
+    #     do_query(pid, sql, params, opts)
     #   end
     # end
-    #
-    # def disconnect(pid) do
-    #   Sqlitex.Server.stop(pid)
-    #   :ok
-    # end
-
-    # ALTER TABLE queries:
-    def query(pid, <<"ALTER TABLE ", _ :: binary>>=sql, params, opts) do
-      sql
-      |> String.split("; ")
-      |> Enum.reduce(:ok, fn
-        (_, {:error, _} = error) -> error
-        (alter_stmt, _) -> do_query(pid, alter_stmt, params, opts)
-      end)
-    end
-    # all other queries:
-    def query(pid, sql, params, opts) do
-      params = Enum.map(params, fn
-        %Ecto.Query.Tagged{type: :binary, value: value} when is_binary(value) -> {:blob, value}
-        %Ecto.Query.Tagged{value: value} -> value
-        %{__struct__: _} = value -> value
-        %{} = value -> json_library().encode! value
-        value -> value
-      end)
-
-      if has_returning_clause?(sql) do
-        returning_query(pid, sql, params, opts)
-      else
-        do_query(pid, sql, params, opts)
-      end
-    end
 
     alias Sqlite.Ecto.Result
 
@@ -70,9 +58,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     ## Query
 
     def query(statement) do
-      raise "not sure what to do here"
-      # no equivalent to Postgrex.Procotol as shown in
-      # https://github.com/elixir-ecto/ecto/compare/0a040036...2bdb157#diff-ee25bf8df5589fbf812f652738bfbdaeR67
+      %Sqlite.DbConnection.Query{name: "", statement: statement}
     end
 
     def encode_mapper(%Ecto.Query.Tagged{value: value}), do: value
@@ -207,127 +193,139 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     #   RELEASE sp_<random>;
     #
     # which is implemented by the following code:
-    defp returning_query(pid, sql, params, opts) do
-      {sql, table, returning, query, ref} = parse_returning_clause(sql)
-
-      with_savepoint(pid, fn ->
-        with_temp_table(pid, returning, fn (tmp_tbl) ->
-          err = with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, fn ->
-            do_query(pid, sql, params, opts)
-          end)
-
-          case err do
-            {:error, _} -> err
-            _ ->
-              fields = Enum.join(returning, ", ")
-              do_query(pid, "SELECT #{fields} FROM #{tmp_tbl}", [], opts)
-          end
-        end)
-      end)
-    end
+    #
+    # TODO: Does this need to move down to db_connection layer?
+    #
+    # defp returning_query(pid, sql, params, opts) do
+    #   {sql, table, returning, query, ref} = parse_returning_clause(sql)
+    #
+    #   with_savepoint(pid, fn ->
+    #     with_temp_table(pid, returning, fn (tmp_tbl) ->
+    #       err = with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, fn ->
+    #         do_query(pid, sql, params, opts)
+    #       end)
+    #
+    #       case err do
+    #         {:error, _} -> err
+    #         _ ->
+    #           fields = Enum.join(returning, ", ")
+    #           do_query(pid, "SELECT #{fields} FROM #{tmp_tbl}", [], opts)
+    #       end
+    #     end)
+    #   end)
+    # end
 
     # Does this SQL statement have a returning clause in it?
-    defp has_returning_clause?(sql) do
-      String.contains?(sql, @pseudo_returning_statement)
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp has_returning_clause?(sql) do
+    #   String.contains?(sql, @pseudo_returning_statement)
+    # end
 
     # Find our fake returning clause and return the SQL statement without it,
     # table name, and returning fields that we saved from the call to
     # insert(), update(), or delete().
-    defp parse_returning_clause(sql) do
-      [sql, returning_clause] = String.split(sql, @pseudo_returning_statement)
-      {table, cols, query, ref} = parse_return_contents(returning_clause)
-      {sql, table, cols, query, ref}
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp parse_returning_clause(sql) do
+    #   [sql, returning_clause] = String.split(sql, @pseudo_returning_statement)
+    #   {table, cols, query, ref} = parse_return_contents(returning_clause)
+    #   {sql, table, cols, query, ref}
+    # end
 
     # From our returning clause, return the table, columns, command, and whether
     # we are interested in the "NEW" or "OLD" values of the modified rows.
-    defp parse_return_contents(<<"INSERT ", values::binary>>) do
-      [table | cols] = String.split(values, ",")
-      {table, cols, "INSERT", "NEW"}
-    end
-    defp parse_return_contents(<<"UPDATE ", values::binary>>) do
-      [table | cols] = String.split(values, ",")
-      {table, cols, "UPDATE", "NEW"}
-    end
-    defp parse_return_contents(<<"DELETE ", values::binary>>) do
-      [table | cols] = String.split(values, ",")
-      {table, cols, "DELETE", "OLD"}
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp parse_return_contents(<<"INSERT ", values::binary>>) do
+    #   [table | cols] = String.split(values, ",")
+    #   {table, cols, "INSERT", "NEW"}
+    # end
+    # defp parse_return_contents(<<"UPDATE ", values::binary>>) do
+    #   [table | cols] = String.split(values, ",")
+    #   {table, cols, "UPDATE", "NEW"}
+    # end
+    # defp parse_return_contents(<<"DELETE ", values::binary>>) do
+    #   [table | cols] = String.split(values, ",")
+    #   {table, cols, "DELETE", "OLD"}
+    # end
 
     # Create a temp table to save the values we will write with our trigger
     # (below), call func.(), and drop the table afterwards.  Returns the
     # result of func.().
-    defp with_temp_table(pid, returning, func) do
-      tmp = "t_" <> random_id()
-      fields = Enum.join(returning, ", ")
-      results = case exec(pid, "CREATE TEMP TABLE #{tmp} (#{fields})") do
-        {:error, _} = err -> err
-        _ -> func.(tmp)
-      end
-      exec(pid, "DROP TABLE IF EXISTS #{tmp}")
-      results
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp with_temp_table(pid, returning, func) do
+    #   tmp = "t_" <> random_id()
+    #   fields = Enum.join(returning, ", ")
+    #   results = case exec(pid, "CREATE TEMP TABLE #{tmp} (#{fields})") do
+    #     {:error, _} = err -> err
+    #     _ -> func.(tmp)
+    #   end
+    #   exec(pid, "DROP TABLE IF EXISTS #{tmp}")
+    #   results
+    # end
 
     # Create a trigger to capture the changes from our query, call func.(),
     # and drop the trigger when done.  Returns the result of func.().
-    defp with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, func) do
-      tmp = "tr_" <> random_id()
-      fields = Enum.map_join(returning, ", ", &"#{ref}.#{&1}")
-      sql = """
-      CREATE TEMP TRIGGER #{tmp} AFTER #{query} ON main.#{table} BEGIN
-          INSERT INTO #{tmp_tbl} SELECT #{fields};
-      END;
-      """
-      results = case exec(pid, sql) do
-        {:error, _} = err -> err
-        _ -> func.()
-      end
-      exec(pid, "DROP TRIGGER IF EXISTS #{tmp}")
-      results
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp with_temp_trigger(pid, table, tmp_tbl, returning, query, ref, func) do
+    #   tmp = "tr_" <> random_id()
+    #   fields = Enum.map_join(returning, ", ", &"#{ref}.#{&1}")
+    #   sql = """
+    #   CREATE TEMP TRIGGER #{tmp} AFTER #{query} ON main.#{table} BEGIN
+    #       INSERT INTO #{tmp_tbl} SELECT #{fields};
+    #   END;
+    #   """
+    #   results = case exec(pid, sql) do
+    #     {:error, _} = err -> err
+    #     _ -> func.()
+    #   end
+    #   exec(pid, "DROP TRIGGER IF EXISTS #{tmp}")
+    #   results
+    # end
 
     # Execute a query with (possibly) binded parameters and handle busy signals
     # from the database.
-    defp do_query(pid, sql, params, opts) do
-      opts = opts
-             |> Keyword.put(:decode, :manual)
-             |> Keyword.put(:types, true)
-             |> Keyword.put(:bind, params)
-      case Sqlitex.Server.query_rows(pid, sql, opts) do
-        # busy error means another process is writing to the database; try again
-        {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
-        {:error, msg} -> {:error, Sqlite.Ecto.Error.exception(msg)}
-        {:ok, %{columns: columns, rows: rows, types: types}} when is_list(rows)
-          -> query_result(pid, sql, rows, columns, types, opts)
-      end
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp do_query(pid, sql, params, opts) do
+    #   opts = opts
+    #          |> Keyword.put(:decode, :manual)
+    #          |> Keyword.put(:types, true)
+    #          |> Keyword.put(:bind, params)
+    #   case Sqlitex.Server.query_rows(pid, sql, opts) do
+    #     # busy error means another process is writing to the database; try again
+    #     {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
+    #     {:error, msg} -> {:error, Sqlite.Ecto.Error.exception(msg)}
+    #     {:ok, %{columns: columns, rows: rows, types: types}} when is_list(rows)
+    #       -> query_result(pid, sql, rows, columns, types, opts)
+    #   end
+    # end
 
     # If this is an INSERT, UPDATE, or DELETE, then return the number of changed
     # rows.  Otherwise (e.g. for SELECT) return the queried column values.
-    defp query_result(pid, <<"INSERT ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
-    defp query_result(pid, <<"UPDATE ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
-    defp query_result(pid, <<"DELETE ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
-    defp query_result(_pid, _sql, rows, columns, types, opts) do
-      {:ok, decode(rows, columns, types, Keyword.fetch(opts, :decode))}
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp query_result(pid, <<"INSERT ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
+    # defp query_result(pid, <<"UPDATE ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
+    # defp query_result(pid, <<"DELETE ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
+    # defp query_result(_pid, _sql, rows, columns, types, opts) do
+    #   {:ok, decode(rows, columns, types, Keyword.fetch(opts, :decode))}
+    # end
 
-    defp decode(rows, columns, column_types, {:ok, :manual}) do
-      %Result{rows: rows,
-              columns: columns,
-              column_types: column_types,
-              num_rows: length(rows),
-              decoder: :deferred}
-    end
-    defp decode(rows, columns, column_types, _) do # not specified or :auto
-      decode(rows, columns, column_types, {:ok, :manual})
-      |> Result.decode
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp decode(rows, columns, column_types, {:ok, :manual}) do
+    #   %Result{rows: rows,
+    #           columns: columns,
+    #           column_types: column_types,
+    #           num_rows: length(rows),
+    #           decoder: :deferred}
+    # end
+    # defp decode(rows, columns, column_types, _) do # not specified or :auto
+    #   decode(rows, columns, column_types, {:ok, :manual})
+    #   |> Result.decode
+    # end
 
-    defp changes_result(pid) do
-      {:ok, [["changes()": count]]} = Sqlitex.Server.query(pid, "SELECT changes()")
-      {:ok, %Result{rows: nil, num_rows: count}}
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp changes_result(pid) do
+    #   {:ok, [["changes()": count]]} = Sqlitex.Server.query(pid, "SELECT changes()")
+    #   {:ok, %Result{rows: nil, num_rows: count}}
+    # end
 
     # SQLite does not have a returning clause, but we append a pseudo one so
     # that query() can parse the string later and emulate it with a
@@ -906,50 +904,56 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     ## Helpers
 
     # Use Ecto's JSON library (currently Poison) for embedded JSON datatypes.
-    defp json_library, do: Application.get_env(:ecto, :json_library)
+    # TODO: Unused. Move to db_connection layer?
+    # defp json_library, do: Application.get_env(:ecto, :json_library)
 
     # Initiate a transaction with a savepoint. If any error occurs when we call
     # the func parameter, rollback our changes. Returns the result of the call
     # to func.
-    defp with_savepoint(pid, func) do
-      sp = "sp_" <> random_id()
-      :ok = exec(pid, savepoint(sp))
-      result = safe_call(pid, func, sp)
-      if is_tuple(result) and elem(result, 0) == :error do
-        :ok = exec(pid, rollback_to_savepoint(sp))
-      end
-      :ok = exec(pid, release_savepoint(sp))
-      result
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp with_savepoint(pid, func) do
+    #   sp = "sp_" <> random_id()
+    #   :ok = exec(pid, savepoint(sp))
+    #   result = safe_call(pid, func, sp)
+    #   if is_tuple(result) and elem(result, 0) == :error do
+    #     :ok = exec(pid, rollback_to_savepoint(sp))
+    #   end
+    #   :ok = exec(pid, release_savepoint(sp))
+    #   result
+    # end
 
-    defp release_savepoint(name) do
-      "RELEASE " <> name
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp release_savepoint(name) do
+    #   "RELEASE " <> name
+    # end
 
     # Call func.() and return the result. If any exceptions are encountered,
     # safely rollback and release the transaction.
-    defp safe_call(pid, func, sp) do
-      try do
-        func.()
-      rescue
-        e in RuntimeError ->
-          :ok = exec(pid, rollback_to_savepoint(sp))
-          :ok = exec(pid, release_savepoint(sp))
-          raise e
-      end
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp safe_call(pid, func, sp) do
+    #   try do
+    #     func.()
+    #   rescue
+    #     e in RuntimeError ->
+    #       :ok = exec(pid, rollback_to_savepoint(sp))
+    #       :ok = exec(pid, release_savepoint(sp))
+    #       raise e
+    #   end
+    # end
 
     # Execute a SQL query.
-    defp exec(pid, sql) do
-      case Sqlitex.Server.exec(pid, sql) do
-        # busy error means another process is writing to the database; try again
-        {:error, {:busy, _}} -> exec(pid, sql)
-        res -> res
-      end
-    end
+    # TODO: Unused. Move to db_connection layer?
+    # defp exec(pid, sql) do
+    #   case Sqlitex.Server.exec(pid, sql) do
+    #     # busy error means another process is writing to the database; try again
+    #     {:error, {:busy, _}} -> exec(pid, sql)
+    #     res -> res
+    #   end
+    # end
 
     # Generate a random string.
-    defp random_id, do: :rand.uniform |> Float.to_string |> String.slice(2..10)
+    # TODO: Unused. Move to db_connection layer?
+    # defp random_id, do: :rand.uniform |> Float.to_string |> String.slice(2..10)
 
     defp quote_name(name)
     defp quote_name(name) when is_atom(name),
