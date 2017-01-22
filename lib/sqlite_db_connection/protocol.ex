@@ -12,7 +12,12 @@ defmodule Sqlite.DbConnection.Protocol do
 
   # @sock_opts [packet: :raw, mode: :binary, active: false]
 
-  defstruct [db: nil, path: nil, checked_out?: false]
+  defstruct [db: nil,
+             path: nil,
+             checked_out?: false,
+             begin_stmt: nil,
+             commit_stmt: nil,
+             rollback_stmt: nil]
 
   @type state :: %__MODULE__{db: Sqlitex.Connection,
                              path: String.t,
@@ -24,10 +29,17 @@ defmodule Sqlite.DbConnection.Protocol do
     {db_path, _opts} = Keyword.pop(opts, :database)
     with {:ok, db} <- Sqlitex.open(db_path),
          :ok <- Sqlitex.exec(db, "PRAGMA foreign_keys = ON"),
-         {:ok, [[foreign_keys: 1]]} = Sqlitex.query(db, "PRAGMA foreign_keys")
+         {:ok, [[foreign_keys: 1]]} = Sqlitex.query(db, "PRAGMA foreign_keys"),
+         {:ok, begin_stmt} = Sqlitex.Statement.prepare(db, "BEGIN"),
+         {:ok, commit_stmt} = Sqlitex.Statement.prepare(db, "COMMIT"),
+         {:ok, rollback_stmt} = Sqlitex.Statement.prepare(db, "ROLLBACK")
     do
-      s = %__MODULE__{db: db, path: db_path, checked_out?: false}
-      {:ok, s}
+      {:ok, %__MODULE__{db: db,
+                        path: db_path,
+                        checked_out?: false,
+                        begin_stmt: begin_stmt,
+                        commit_stmt: commit_stmt,
+                        rollback_stmt: rollback_stmt}}
     else
       {:error, _reason} = error -> error
     end
@@ -124,18 +136,18 @@ defmodule Sqlite.DbConnection.Protocol do
     {:ok, s}
   end
 
-  # def handle_begin(opts, s) do
-  #   handle_transaction(@reserved_prefix <> "BEGIN", :transaction, opts, s)
-  # end
-  #
-  # def handle_commit(opts, s) do
-  #   handle_transaction(@reserved_prefix <> "COMMIT", :idle, opts, s)
-  # end
-  #
-  # def handle_rollback(opts, s) do
-  #   handle_transaction(@reserved_prefix <> "ROLLBACK", :idle, opts, s)
-  # end
-  #
+  def handle_begin(_opts, s) do
+    handle_transaction(s, :begin_stmt)
+  end
+
+  def handle_commit(_opts, s) do
+    handle_transaction(s, :commit_stmt)
+  end
+
+  def handle_rollback(_opts, s) do
+    handle_transaction(s, :rollback_stmt)
+  end
+
   # @spec handle_simple(String.t, Keyword.t, state) ::
   #   {:ok, Sqlite.DbConnection.Result.t, state} |
   #   {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
@@ -233,4 +245,15 @@ defmodule Sqlite.DbConnection.Protocol do
   #   err = ArgumentError.exception("query #{inspect query} uses reserved name")
   #   {:error, err, s}
   # end
+
+  ## transaction
+
+  defp handle_transaction(s, which_stmt) do
+    case Sqlitex.Statement.fetch_all(s[which_stmt], :raw_list) do
+      {:ok, _rows} ->
+        {:ok, s}
+      {:error, {_sqlite_errcode, _message}} = err ->
+        sqlite_error(err, s)
+    end
+  end
 end
