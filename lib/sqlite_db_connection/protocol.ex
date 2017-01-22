@@ -216,7 +216,7 @@ defmodule Sqlite.DbConnection.Protocol do
     {rows, num_rows, column_names} = rows_and_column_names_from_stmt(rows, stmt)
     command = command_from_sql(sql)
     %Sqlite.DbConnection.Result{rows: rows,
-                                num_rows: num_rows,
+                                num_rows: num_rows || 1,
                                 columns: column_names,
                                 command: command}
   end
