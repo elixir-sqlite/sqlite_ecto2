@@ -137,15 +137,15 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   def handle_begin(_opts, s) do
-    handle_transaction(s, :begin_stmt)
+    handle_transaction(s.begin_stmt, s)
   end
 
   def handle_commit(_opts, s) do
-    handle_transaction(s, :commit_stmt)
+    handle_transaction(s.commit_stmt, s)
   end
 
   def handle_rollback(_opts, s) do
-    handle_transaction(s, :rollback_stmt)
+    handle_transaction(s.rollback_stmt, s)
   end
 
   # @spec handle_simple(String.t, Keyword.t, state) ::
@@ -248,8 +248,8 @@ defmodule Sqlite.DbConnection.Protocol do
 
   ## transaction
 
-  defp handle_transaction(s, which_stmt) do
-    case Sqlitex.Statement.fetch_all(s[which_stmt], :raw_list) do
+  defp handle_transaction(stmt, s) do
+    case Sqlitex.Statement.fetch_all(stmt, :raw_list) do
       {:ok, _rows} ->
         {:ok, s}
       {:error, {_sqlite_errcode, _message}} = err ->
