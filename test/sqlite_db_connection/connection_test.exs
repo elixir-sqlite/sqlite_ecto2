@@ -12,10 +12,10 @@ defmodule ConnectionTest do
   test "prepare", context do
     pid = context[:pid]
     assert {:ok, stmt} = P.prepare(pid, "prepare_test", "SELECT 42", [])
-    assert %Sqlite.DbConnection.Query{prepared: sqlitex,
+    assert %Sqlite.DbConnection.Query{prepared: info,
                                       name: "prepare_test",
                                       statement: "SELECT 42"} = stmt
-    assert %Sqlitex.Statement{column_names: [:"42"]} = sqlitex
+    assert %{column_names: ["42"]} = info
   end
 
   test "prepare failure case", context do
@@ -28,10 +28,10 @@ defmodule ConnectionTest do
   test "prepare!", context do
     pid = context[:pid]
     stmt = P.prepare!(pid, "prepare_test", "SELECT 42", [])
-    assert %Sqlite.DbConnection.Query{prepared: sqlitex,
+    assert %Sqlite.DbConnection.Query{prepared: info,
                                       name: "prepare_test",
                                       statement: "SELECT 42"} = stmt
-    assert %Sqlitex.Statement{column_names: [:"42"]} = sqlitex
+    assert %{column_names: ["42"]} = info
   end
 
   test "prepare! failure case", context do
