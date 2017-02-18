@@ -18,5 +18,5 @@
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
   "postgrex": {:git, "https://github.com/ericmj/postgrex.git", "f773f8d4b88565aea435c6651b711ebfce74c9c2", [ref: "f773f8d4b88565aea435c6651b711ebfce74c9c2"]},
   "sbroker": {:hex, :sbroker, "1.0.0", "28ff1b5e58887c5098539f236307b36fe1d3edaa2acff9d6a3d17c2dcafebbd0", [:rebar3], []},
-  "sqlitex": {:hex, :sqlitex, "1.1.1", "9edf677476b53b7cf651d668a99429e23e6bf3b80cbca11221043be99d501ebe", [:mix], [{:decimal, "~> 1.1.0", [hex: :decimal, optional: false]}, {:esqlite, "~> 0.2.0", [hex: :esqlite, optional: false]}]},
+  "sqlitex": {:hex, :sqlitex, "1.2.0", "f789ae1918272cdc3bd75061fcb39c7a34ef5b2dc94e19e1f1037c13181c5662", [:mix], [{:decimal, "~> 1.1.0", [hex: :decimal, optional: false]}, {:esqlite, "~> 0.2.0", [hex: :esqlite, optional: false]}]},
   "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.1", "28a4d65b7f59893bc2c7de786dec1e1555bd742d336043fe644ae956c3497fbe", [:make, :rebar], []}}

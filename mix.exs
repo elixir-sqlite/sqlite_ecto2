@@ -38,7 +38,7 @@ defmodule Sqlite.Ecto.Mixfile do
      {:poison, "~> 1.0"},
      {:postgrex, git: "https://github.com/ericmj/postgrex.git", ref: "f773f8d4b88565aea435c6651b711ebfce74c9c2", override: true},
      {:sbroker, "~> 1.0", override: true},
-     {:sqlitex, "~> 1.1.1"}]
+     {:sqlitex, "~> 1.2.0"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto2 (not yet working)"
@@ -52,5 +52,5 @@ defmodule Sqlite.Ecto.Mixfile do
   defp elixirc_paths(:test), do: ["lib", "test/sqlite_db_connection/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  defp test_paths(), do: ["integration/sqlite", "test"]
+  defp test_paths, do: ["integration/sqlite", "test"]
 end
