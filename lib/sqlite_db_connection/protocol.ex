@@ -190,7 +190,7 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   defp run_stmt(query, params, s) do
-    case Sqlitex.Server.query_rows(s.db, query, bind: params) do
+    case Sqlitex.Server.query_rows(s.db, to_string(query), bind: params) do
       {:ok, %{rows: raw_rows, columns: raw_column_names}} ->
         {rows, num_rows, column_names} = case {raw_rows, raw_column_names} do
           {_, []} -> {nil, 1, nil}
@@ -202,6 +202,10 @@ defmodule Sqlite.DbConnection.Protocol do
                                           command: command_from_sql(query)}}
       {:error, {_sqlite_errcode, _message}} = err ->
         sqlite_error(err, s)
+      {:error, :args_wrong_length} ->
+        {:error,
+         %ArgumentError{message: "parameters must match number of placeholders in query"},
+         s}
     end
   end
 
