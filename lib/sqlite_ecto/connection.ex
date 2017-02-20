@@ -8,52 +8,16 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     ## Module and Options
 
     def mod_and_opts(opts) do
-      # TODO: Support extensions. Will need some retrofitting work in Sqlite
-      # db_connection layer.
-      # json = Application.get_env(:ecto, :json_library)
-      # extensions = [{Ecto.Adapters.Postgres.DateTime, []},
-      #   {Postgrex.Extensions.JSON, library: json}]
-
-      # opts =
-      #  opts
-      #  |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
-      #  |> Keyword.put(:types, true)
-
       {Sqlite.DbConnection.Protocol, opts}
     end
-
-    # TODO: Do we still need these? See also query fn below.
-    # # ALTER TABLE queries:
-    # def query(pid, <<"ALTER TABLE ", _ :: binary>>=sql, params, opts) do
-    #   sql
-    #   |> String.split("; ")
-    #   |> Enum.reduce(:ok, fn
-    #     (_, {:error, _} = error) -> error
-    #     (alter_stmt, _) -> do_query(pid, alter_stmt, params, opts)
-    #   end)
-    # end
-    # # all other queries:
-    # def query(pid, sql, params, opts) do
-    #   params = Enum.map(params, fn
-    #     %Ecto.Query.Tagged{type: :binary, value: value} when is_binary(value) -> {:blob, value}
-    #     %Ecto.Query.Tagged{value: value} -> value
-    #     %{__struct__: _} = value -> value
-    #     %{} = value -> json_library().encode! value
-    #     value -> value
-    #   end)
-    #
-    #   if has_returning_clause?(sql) do
-    #     returning_query(pid, sql, params, opts)
-    #   else
-    #     do_query(pid, sql, params, opts)
-    #   end
-    # end
 
     alias Sqlite.Ecto.Result
 
     defdelegate decode(result_set, mapper), to: Result
 
-    def to_constraints(_), do: []
+    def to_constraints(_) do
+      []  # does this get called?
+    end
 
     ## Query
 
@@ -180,56 +144,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     @pseudo_returning_statement " ;--RETURNING ON "
 
-    # Execute a query with (possibly) binded parameters and handle busy signals
-    # from the database.
-    # TODO: Unused. Move to db_connection layer?
-    # defp do_query(pid, sql, params, opts) do
-    #   opts = opts
-    #          |> Keyword.put(:decode, :manual)
-    #          |> Keyword.put(:types, true)
-    #          |> Keyword.put(:bind, params)
-    #   case Sqlitex.Server.query_rows(pid, sql, opts) do
-    #     # busy error means another process is writing to the database; try again
-    #     {:error, {:busy, _}} -> do_query(pid, sql, params, opts)
-    #     {:error, msg} -> {:error, Sqlite.Ecto.Error.exception(msg)}
-    #     {:ok, %{columns: columns, rows: rows, types: types}} when is_list(rows)
-    #       -> query_result(pid, sql, rows, columns, types, opts)
-    #   end
-    # end
-
-    # If this is an INSERT, UPDATE, or DELETE, then return the number of changed
-    # rows.  Otherwise (e.g. for SELECT) return the queried column values.
-    # TODO: Unused. Move to db_connection layer?
-    # defp query_result(pid, <<"INSERT ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
-    # defp query_result(pid, <<"UPDATE ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
-    # defp query_result(pid, <<"DELETE ", _::binary>>, [], _columns, _types, _opts), do: changes_result(pid)
-    # defp query_result(_pid, _sql, rows, columns, types, opts) do
-    #   {:ok, decode(rows, columns, types, Keyword.fetch(opts, :decode))}
-    # end
-
-    # TODO: Unused. Move to db_connection layer?
-    # defp decode(rows, columns, column_types, {:ok, :manual}) do
-    #   %Result{rows: rows,
-    #           columns: columns,
-    #           column_types: column_types,
-    #           num_rows: length(rows),
-    #           decoder: :deferred}
-    # end
-    # defp decode(rows, columns, column_types, _) do # not specified or :auto
-    #   decode(rows, columns, column_types, {:ok, :manual})
-    #   |> Result.decode
-    # end
-
-    # TODO: Unused. Move to db_connection layer?
-    # defp changes_result(pid) do
-    #   {:ok, [["changes()": count]]} = Sqlitex.Server.query(pid, "SELECT changes()")
-    #   {:ok, %Result{rows: nil, num_rows: count}}
-    # end
-
     # SQLite does not have a returning clause, but we append a pseudo one so
     # that query() can parse the string later and emulate it with a
-    # transaction and trigger.
-    # See: returning_query()
+    # transaction and trigger. See corresponding code in Sqlitex.
+
     defp returning_clause(_prefix, _table, [], _cmd), do: []
     defp returning_clause(prefix, table, returning, cmd) do
       return = String.strip(@pseudo_returning_statement)
