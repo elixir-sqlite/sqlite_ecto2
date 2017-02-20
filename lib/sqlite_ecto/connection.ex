@@ -794,58 +794,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     ## Helpers
 
-    # Use Ecto's JSON library (currently Poison) for embedded JSON datatypes.
-    # TODO: Unused. Move to db_connection layer?
-    # defp json_library, do: Application.get_env(:ecto, :json_library)
-
-    # Initiate a transaction with a savepoint. If any error occurs when we call
-    # the func parameter, rollback our changes. Returns the result of the call
-    # to func.
-    # TODO: Unused. Move to db_connection layer?
-    # defp with_savepoint(pid, func) do
-    #   sp = "sp_" <> random_id()
-    #   :ok = exec(pid, savepoint(sp))
-    #   result = safe_call(pid, func, sp)
-    #   if is_tuple(result) and elem(result, 0) == :error do
-    #     :ok = exec(pid, rollback_to_savepoint(sp))
-    #   end
-    #   :ok = exec(pid, release_savepoint(sp))
-    #   result
-    # end
-
-    # TODO: Unused. Move to db_connection layer?
-    # defp release_savepoint(name) do
-    #   "RELEASE " <> name
-    # end
-
-    # Call func.() and return the result. If any exceptions are encountered,
-    # safely rollback and release the transaction.
-    # TODO: Unused. Move to db_connection layer?
-    # defp safe_call(pid, func, sp) do
-    #   try do
-    #     func.()
-    #   rescue
-    #     e in RuntimeError ->
-    #       :ok = exec(pid, rollback_to_savepoint(sp))
-    #       :ok = exec(pid, release_savepoint(sp))
-    #       raise e
-    #   end
-    # end
-
-    # Execute a SQL query.
-    # TODO: Unused. Move to db_connection layer?
-    # defp exec(pid, sql) do
-    #   case Sqlitex.Server.exec(pid, sql) do
-    #     # busy error means another process is writing to the database; try again
-    #     {:error, {:busy, _}} -> exec(pid, sql)
-    #     res -> res
-    #   end
-    # end
-
-    # Generate a random string.
-    # TODO: Unused. Move to db_connection layer?
-    # defp random_id, do: :rand.uniform |> Float.to_string |> String.slice(2..10)
-
     defp quote_name(name)
     defp quote_name(name) when is_atom(name),
       do: quote_name(Atom.to_string(name))
