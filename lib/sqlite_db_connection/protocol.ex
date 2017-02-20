@@ -199,16 +199,17 @@ defmodule Sqlite.DbConnection.Protocol do
 
   defp run_stmt(query, params, s) do
     opts = [decode: :manual, types: true, bind: params]
+    command = command_from_sql(query)
     case Sqlitex.Server.query_rows(s.db, to_string(query), opts) do
       {:ok, %{rows: raw_rows, columns: raw_column_names}} ->
         {rows, num_rows, column_names} = case {raw_rows, raw_column_names} do
-          {_, []} -> {nil, 1, nil}
+          {_, []} -> {nil, get_changes_count(s.db, command), nil}
           _ -> {raw_rows, length(raw_rows), raw_column_names}
         end
         {:ok, %Sqlite.DbConnection.Result{rows: rows,
                                           num_rows: num_rows,
                                           columns: atoms_to_strings(column_names),
-                                          command: command_from_sql(query)}}
+                                          command: command}}
       {:error, {_sqlite_errcode, _message}} = err ->
         sqlite_error(err, s)
       {:error, :args_wrong_length} ->
@@ -217,6 +218,15 @@ defmodule Sqlite.DbConnection.Protocol do
          s}
     end
   end
+
+  defp get_changes_count(db, command)
+    when command in [:insert, :update, :delete]
+  do
+    # TODO: This statement should be cached.
+    {:ok, %{rows: [[changes_count]]}} = Sqlitex.Server.query_rows(db, "SELECT changes()")
+    changes_count
+  end
+  defp get_changes_count(_db, _command), do: 1
 
   defp command_from_sql(sql) do
     sql
