@@ -11,10 +11,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       {Sqlite.DbConnection.Protocol, opts}
     end
 
-    alias Sqlite.Ecto.Result
-
-    defdelegate decode(result_set, mapper), to: Result
-
     def to_constraints(_), do: []
 
     ## Query
