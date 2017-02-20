@@ -61,7 +61,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       %Sqlite.DbConnection.Query{name: "", statement: statement}
     end
 
+    def encode_mapper(%Ecto.Query.Tagged{type: :binary, value: value})
+      when is_binary(value)
+    do
+      {:blob, value}
+    end
+
     def encode_mapper(%Ecto.Query.Tagged{value: value}), do: value
+    def encode_mapper(%{__struct__: _} = value), do: value
+    def encode_mapper(%{} = value), do: json_library().encode!(value)
     def encode_mapper(value), do: value
 
     def savepoint(savepoint) do
@@ -856,5 +864,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp error!(query, message) do
       raise Ecto.QueryError, query: query, message: message
     end
+
+    # Use Ecto's JSON library (currently Poison) for embedded JSON datatypes.
+    defp json_library, do: Application.get_env(:ecto, :json_library)
   end
 end

@@ -198,7 +198,8 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   defp run_stmt(query, params, s) do
-    case Sqlitex.Server.query_rows(s.db, to_string(query), bind: params) do
+    opts = [decode: :manual, types: true, bind: params]
+    case Sqlitex.Server.query_rows(s.db, to_string(query), opts) do
       {:ok, %{rows: raw_rows, columns: raw_column_names}} ->
         {rows, num_rows, column_names} = case {raw_rows, raw_column_names} do
           {_, []} -> {nil, 1, nil}
