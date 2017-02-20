@@ -61,19 +61,20 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   def decode(_query, %Sqlite.DbConnection.Result{rows: nil} = res, _opts), do: res
 
   def decode(%Sqlite.DbConnection.Query{decoders: nil, prepared: %{types: types}},
-             %Sqlite.DbConnection.Result{rows: rows} = res,
+             %Sqlite.DbConnection.Result{rows: rows, columns: columns} = res,
              opts)
   do
     # IO.puts """
     #
     # decode:69
     #   types = #{inspect types}
+    #   column_names = #{inspect columns}
     #   res = #{inspect res}
     #   opts = #{inspect opts}
     #
     # """
     mapper = opts[:decode_mapper]
-    decoded_rows = Enum.map(rows, &(decode_row(&1, types, mapper)))
+    decoded_rows = Enum.map(rows, &(decode_row(&1, types, columns, mapper)))
     %{res | rows: decoded_rows}
   end
 
@@ -138,13 +139,15 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   # end
   # defp decode_row([], [], decoded), do: Enum.reverse(decoded)
 
-  defp decode_row(row, types, nil) do
+  defp decode_row(row, types, column_names, nil) do
     row
     |> Enum.zip(types)
     |> Enum.map(&translate_value/1)
+    |> Enum.zip(column_names)
+    |> cast_any_datetimes
   end
-  defp decode_row(row, types, mapper) do
-    mapper.(decode_row(row, types, nil))
+  defp decode_row(row, types, column_names, mapper) do
+    mapper.(decode_row(row, types, column_names, nil))
   end
 
   defp translate_value({:undefined, _type}), do: nil
@@ -188,9 +191,6 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   defp translate_value({binary, :blob}), do: binary
   defp translate_value({value, _type}), do: value
 
-  # defp do_rows_mapper(rows, nil), do: rows
-  # defp do_rows_mapper(rows, mapper), do: Enum.map(rows, mapper)
-
   defp to_date(date) do
     <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2)>> = date
     {String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}
@@ -205,6 +205,30 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary>>) when byte_size(fr) <= 6 do
     fr = String.to_integer(fr <> String.duplicate("0", 6 - String.length(fr)))
     {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), fr}
+  end
+
+  # HACK: We have to do a special conversion if the user is trying to cast to
+  # a DATETIME type.  Sqlitex cannot determine that the type of the cast is a
+  # datetime value because datetime defaults to an integer type in SQLite.
+  # Thus, we cast the value to a TEXT_DATETIME pseudo-type to preserve the
+  # datetime string.  Then when we get here, we convert the string to an Ecto
+  # datetime tuple if it looks like a cast was attempted.
+  defp cast_any_datetimes(row) do
+    Enum.map row, fn {value, column_name} ->
+      if String.contains?(column_name, "CAST (") && String.contains?(column_name, "TEXT_DATE") do
+        string_to_datetime(value)
+      else
+        value
+      end
+    end
+  end
+
+  defp string_to_datetime(<<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2)>>) do
+    {String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}
+  end
+  defp string_to_datetime(str) do
+    <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2), " ", hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary-size(6)>> = str
+    {{String.to_integer(yr), String.to_integer(mo), String.to_integer(da)},{String.to_integer(hr), String.to_integer(mi), String.to_integer(se), String.to_integer(fr)}}
   end
 end
 
