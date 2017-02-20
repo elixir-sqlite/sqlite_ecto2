@@ -60,12 +60,9 @@
       {:error, :already_up}
     else
       database |> Path.dirname |> File.mkdir_p!
-      case Sqlitex.open(database) do
-        {:error, _msg} = err -> err
-        {:ok, db} ->
-          Sqlitex.close(db)
-          :ok
-      end
+      {:ok, db} = Sqlitex.open(database)
+      Sqlitex.close(db)
+      :ok
     end
   end
 
