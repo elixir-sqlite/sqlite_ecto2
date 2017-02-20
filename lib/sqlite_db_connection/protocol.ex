@@ -28,8 +28,6 @@ defmodule Sqlite.DbConnection.Protocol do
     do
       s = %__MODULE__{db: db, path: db_path, checked_out?: false}
       {:ok, s}
-    else
-      {:error, _reason} = error -> error
     end
   end
 
