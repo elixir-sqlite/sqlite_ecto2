@@ -41,7 +41,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     {pfs, encoders} = encoders(poids, types)
     {rfs, decoders} = decoders(roids, types)
     %Sqlite.DbConnection.Query{query | param_formats: pfs, encoders: encoders,
-                            result_formats: rfs, decoders: decoders}
+                               result_formats: rfs, decoders: decoders}
   end
 
   # TODO: Commenting out for now in SQLite. We don't really have a meaningful
@@ -60,12 +60,20 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
 
   def decode(_query, %Sqlite.DbConnection.Result{rows: nil} = res, _opts), do: res
 
-  def decode(%Sqlite.DbConnection.Query{decoders: nil},
+  def decode(%Sqlite.DbConnection.Query{decoders: nil, prepared: %{types: types}},
              %Sqlite.DbConnection.Result{rows: rows} = res,
              opts)
   do
+    # IO.puts """
+    #
+    # decode:69
+    #   types = #{inspect types}
+    #   res = #{inspect res}
+    #   opts = #{inspect opts}
+    #
+    # """
     mapper = opts[:decode_mapper]
-    decoded_rows = Enum.map(rows, &(decode_row(&1, mapper)))
+    decoded_rows = Enum.map(rows, &(decode_row(&1, types, mapper)))
     %{res | rows: decoded_rows}
   end
 
@@ -130,16 +138,74 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   # end
   # defp decode_row([], [], decoded), do: Enum.reverse(decoded)
 
-  defp decode_row(row, nil) do
-    Enum.map(row, &decode_cell/1)
+  defp decode_row(row, types, nil) do
+    row
+    |> Enum.zip(types)
+    |> Enum.map(&translate_value/1)
   end
-  defp decode_row(row, mapper) do
-    mapper.(Enum.map(row, &decode_cell/1))
+  defp decode_row(row, types, mapper) do
+    mapper.(decode_row(row, types, nil))
   end
 
-  defp decode_cell(:undefined), do: nil
-  defp decode_cell({:blob, blob}), do: blob
-  defp decode_cell(x), do: x
+  defp translate_value({:undefined, _type}), do: nil
+  defp translate_value({{:blob, blob}, _type}), do: blob
+
+  defp translate_value({"", "date"}), do: nil
+  defp translate_value({date, "date"}) when is_binary(date), do: to_date(date)
+
+  defp translate_value({"", "time"}), do: nil
+  defp translate_value({time, "time"}) when is_binary(time), do: to_time(time)
+
+  defp translate_value({"", "datetime"}), do: nil
+
+  # datetime format is "YYYY-MM-DD HH:MM:SS.FFFFFF"
+  defp translate_value({datetime, "datetime"}) when is_binary(datetime) do
+    [date, time] = String.split(datetime)
+    {to_date(date), to_time(time)}
+  end
+
+  defp translate_value({0, "boolean"}), do: false
+  defp translate_value({1, "boolean"}), do: true
+
+  defp translate_value({int, type=<<"decimal", _::binary>>}) when is_integer(int) do
+    {result, _} = int |> Integer.to_string |> Float.parse
+    translate_value({result, type})
+  end
+  defp translate_value({float, "decimal"}), do: Decimal.new(float)
+  defp translate_value({float, "decimal(" <> rest}) do
+    [precision, scale] =
+      rest
+      |> String.rstrip(?))
+      |> String.split(",")
+      |> Enum.map(&String.to_integer/1)
+
+    Decimal.with_context(%Decimal.Context{precision: precision, rounding: :down},
+      fn ->
+        float |> Float.round(scale) |> Decimal.new |> Decimal.plus
+      end)
+  end
+
+  defp translate_value({binary, :blob}), do: binary
+  defp translate_value({value, _type}), do: value
+
+  # defp do_rows_mapper(rows, nil), do: rows
+  # defp do_rows_mapper(rows, mapper), do: Enum.map(rows, mapper)
+
+  defp to_date(date) do
+    <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2)>> = date
+    {String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}
+  end
+
+  defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2)>>) do
+    {String.to_integer(hr), String.to_integer(mi), 0, 0}
+  end
+  defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2)>>) do
+    {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), 0}
+  end
+  defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary>>) when byte_size(fr) <= 6 do
+    fr = String.to_integer(fr <> String.duplicate("0", 6 - String.length(fr)))
+    {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), fr}
+  end
 end
 
 defimpl String.Chars, for: Sqlite.DbConnection.Query do

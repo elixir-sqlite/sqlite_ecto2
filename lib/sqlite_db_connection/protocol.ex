@@ -159,10 +159,15 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   defp refined_info(prepared_info) do
+    types =
+      prepared_info.types
+      |> Enum.map(&maybe_atom_to_lc_string/1)
+      |> Enum.to_list
+
     prepared_info
     |> Map.delete(:columns)
     |> Map.put(:column_names, atoms_to_strings(prepared_info.columns))
-    |> Map.put(:types, atoms_to_strings(prepared_info.types))
+    |> Map.put(:types, types)
   end
 
   defp atoms_to_strings(nil), do: nil
@@ -170,6 +175,9 @@ defmodule Sqlite.DbConnection.Protocol do
 
   defp maybe_atom_to_string(nil), do: nil
   defp maybe_atom_to_string(item), do: to_string(item)
+
+  defp maybe_atom_to_lc_string(nil), do: nil
+  defp maybe_atom_to_lc_string(item), do: item |> to_string |> String.downcase
 
   ## execute
 
