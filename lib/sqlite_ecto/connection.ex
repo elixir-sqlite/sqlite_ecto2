@@ -15,9 +15,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defdelegate decode(result_set, mapper), to: Result
 
-    def to_constraints(_) do
-      []  # does this get called?
-    end
+    def to_constraints(_), do: []
 
     ## Query
 
