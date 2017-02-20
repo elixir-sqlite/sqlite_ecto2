@@ -209,30 +209,31 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(alter) == ~s{ALTER TABLE "foo"."posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL; ALTER TABLE "foo"."posts" ADD COLUMN "author_id" CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id")}
   end
 
-  test "alter table query", context do
-    sql = context[:sql]
-    SQL.query(sql, ~s{CREATE TABLE "posts" ("author" TEXT, "price" INTEGER, "summary" TEXT, "body" TEXT)}, [], [])
-    SQL.query(sql, "INSERT INTO posts VALUES ('jazzyb', 2, 'short statement', 'Longer, more detailed statement.')", [], [])
-
-    # alter the table
-    alter = {:alter, table(:posts),
-               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:add, :email, :string, []}]}
-    {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, SQL.execute_ddl(alter), [], [])
-
-    # verify the schema has been updated
-    {:ok, %{num_rows: 1, rows: [[stmt]]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE name = 'posts' AND type = 'table'", [], [])
-    assert stmt == ~s{CREATE TABLE "posts" ("author" TEXT, "price" INTEGER, "summary" TEXT, "body" TEXT, "title" TEXT DEFAULT 'Untitled' NOT NULL, "email" TEXT)}
-
-    # verify the values have been preserved
-    {:ok, [row]} = Sqlitex.Server.query(sql, "SELECT * FROM posts")
-    assert "jazzyb" == Keyword.get(row, :author)
-    assert 2 == Keyword.get(row, :price)
-    assert "Longer, more detailed statement." == Keyword.get(row, :body)
-    assert "Untitled" == Keyword.get(row, :title)
-    assert nil == Keyword.get(row, :email)
-    assert "short statement" == Keyword.get(row, :summary)
-  end
+  # DISABLED: We no longer have a query/4 function.
+  # test "alter table query", context do
+  #   sql = context[:sql]
+  #   SQL.query(sql, ~s{CREATE TABLE "posts" ("author" TEXT, "price" INTEGER, "summary" TEXT, "body" TEXT)}, [], [])
+  #   SQL.query(sql, "INSERT INTO posts VALUES ('jazzyb', 2, 'short statement', 'Longer, more detailed statement.')", [], [])
+  #
+  #   # alter the table
+  #   alter = {:alter, table(:posts),
+  #              [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
+  #               {:add, :email, :string, []}]}
+  #   {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, SQL.execute_ddl(alter), [], [])
+  #
+  #   # verify the schema has been updated
+  #   {:ok, %{num_rows: 1, rows: [[stmt]]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE name = 'posts' AND type = 'table'", [], [])
+  #   assert stmt == ~s{CREATE TABLE "posts" ("author" TEXT, "price" INTEGER, "summary" TEXT, "body" TEXT, "title" TEXT DEFAULT 'Untitled' NOT NULL, "email" TEXT)}
+  #
+  #   # verify the values have been preserved
+  #   {:ok, [row]} = Sqlitex.Server.query(sql, "SELECT * FROM posts")
+  #   assert "jazzyb" == Keyword.get(row, :author)
+  #   assert 2 == Keyword.get(row, :price)
+  #   assert "Longer, more detailed statement." == Keyword.get(row, :body)
+  #   assert "Untitled" == Keyword.get(row, :title)
+  #   assert nil == Keyword.get(row, :email)
+  #   assert "short statement" == Keyword.get(row, :summary)
+  # end
 
   test "alter column errors" do
     alter = {:alter, table(:posts), [{:modify, :price, :numeric, [precision: 8, scale: 2]}]}
