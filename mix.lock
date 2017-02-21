@@ -5,7 +5,7 @@
   "db_connection": {:git, "https://github.com/elixir-ecto/db_connection", "625e42521e2b72f597c388daa6ecf5a90d7bd6e7", [ref: "625e42521e2b72f597c388daa6ecf5a90d7bd6e7"]},
   "decimal": {:hex, :decimal, "1.1.1", "a8ff5b673105e6cdaca96f799aeefc6f07142881b616c65db16e14e556b16e76", [:mix], []},
   "earmark": {:hex, :earmark, "1.0.3", "89bdbaf2aca8bbb5c97d8b3b55c5dd0cff517ecc78d417e87f1d0982e514557b", [:mix], []},
-  "ecto": {:git, "https://github.com/scouten/ecto.git", "0a04003624aca5f2afdf15b0080d387ed36b7b72", [ref: "0a04003624aca5f2afdf15b0080d387ed36b7b72"]},
+  "ecto": {:git, "https://github.com/scouten/ecto.git", "2bdb157c2131335185a29e1d9dc9a079a1afc58e", [ref: "2bdb157c2131335185a29e1d9dc9a079a1afc58e"]},
   "esqlite": {:hex, :esqlite, "0.2.1", "0e2896f177180b33e5a8fe65342b4e81de46e0db59e4cbf6e8b9101e98d423fd", [:make, :rebar], []},
   "ex_doc": {:hex, :ex_doc, "0.14.5", "c0433c8117e948404d93ca69411dd575ec6be39b47802e81ca8d91017a0cf83c", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
   "hackney": {:hex, :hackney, "1.6.5", "8c025ee397ac94a184b0743c73b33b96465e85f90a02e210e86df6cbafaa5065", [:rebar3], [{:certifi, "0.7.0", [hex: :certifi, optional: false]}, {:idna, "1.2.0", [hex: :idna, optional: false]}, {:metrics, "1.0.1", [hex: :metrics, optional: false]}, {:mimerl, "1.0.2", [hex: :mimerl, optional: false]}, {:ssl_verify_fun, "1.1.1", [hex: :ssl_verify_fun, optional: false]}]},
@@ -16,5 +16,7 @@
   "pipe": {:hex, :pipe, "0.0.2", "eff98a868b426745acef103081581093ff5c1b88100f8ff5949b4a30e81d0d9f", [:mix], []},
   "poison": {:hex, :poison, "1.5.2", "560bdfb7449e3ddd23a096929fb9fc2122f709bcc758b2d5d5a5c7d0ea848910", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
-  "sqlitex": {:hex, :sqlitex, "1.1.1", "9edf677476b53b7cf651d668a99429e23e6bf3b80cbca11221043be99d501ebe", [:mix], [{:decimal, "~> 1.1.0", [hex: :decimal, optional: false]}, {:esqlite, "~> 0.2.0", [hex: :esqlite, optional: false]}]},
+  "postgrex": {:git, "https://github.com/ericmj/postgrex.git", "f773f8d4b88565aea435c6651b711ebfce74c9c2", [ref: "f773f8d4b88565aea435c6651b711ebfce74c9c2"]},
+  "sbroker": {:hex, :sbroker, "1.0.0", "28ff1b5e58887c5098539f236307b36fe1d3edaa2acff9d6a3d17c2dcafebbd0", [:rebar3], []},
+  "sqlitex": {:git, "https://github.com/scouten/sqlitex.git", "8f1dcd4107cd99ca0687bf870b914e44a467722d", [ref: "8f1dcd4107cd99ca0687bf870b914e44a467722d"]},
   "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.1", "28a4d65b7f59893bc2c7de786dec1e1555bd742d336043fe644ae956c3497fbe", [:make, :rebar], []}}

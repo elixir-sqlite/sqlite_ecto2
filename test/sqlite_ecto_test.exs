@@ -4,11 +4,6 @@ defmodule Sqlite.Ecto.Test do
   alias Sqlite.Ecto.Connection, as: SQL
   alias Ecto.Migration.Table
 
-  setup do
-    {:ok, sql} = SQL.connect(database: ":memory:")
-    {:ok, sql: sql}
-  end
-
   test "storage up (twice)" do
     tmp = [database: tempfilename()]
     assert Sqlite.Ecto.storage_up(tmp) == :ok
@@ -39,24 +34,6 @@ defmodule Sqlite.Ecto.Test do
     |> Enum.map(fn(_) -> :rand.uniform(10) - 1 end)
     |> Enum.join
     |> (fn(name) -> "/tmp/test_" <> name <> ".db" end).()
-  end
-
-  test "query", context do
-    sql = context[:sql]
-    {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, "CREATE TABLE model (id, x, y, z)", [], [])
-
-    {:ok, %{num_rows: 1, rows: nil}} = SQL.query(sql, "INSERT INTO model VALUES (1, 2, 3, 4)", [], [])
-    query = ~s{UPDATE "model" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "model","x","z"}
-    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [:foo, :bar, 1], [])
-    assert row == ["foo", 4]
-
-    query = ~s{INSERT INTO "model" VALUES (?1, ?2, ?3, ?4) ;--RETURNING ON INSERT "model","id"}
-    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [:a, :b, :c, :d], [])
-    assert row == ["a"]
-
-    query = ~s{DELETE FROM "model" WHERE "id" = ?1 ;--RETURNING ON DELETE "model","id","x","y","z"}
-    {:ok, %{num_rows: 1, rows: [row]}} = SQL.query(sql, query, [1], [])
-    assert row == [1, "foo", "bar", 4]
   end
 
   import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1, references: 2]
@@ -209,31 +186,6 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(alter) == ~s{ALTER TABLE "foo"."posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL; ALTER TABLE "foo"."posts" ADD COLUMN "author_id" CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id")}
   end
 
-  test "alter table query", context do
-    sql = context[:sql]
-    SQL.query(sql, ~s{CREATE TABLE "posts" ("author" TEXT, "price" INTEGER, "summary" TEXT, "body" TEXT)}, [], [])
-    SQL.query(sql, "INSERT INTO posts VALUES ('jazzyb', 2, 'short statement', 'Longer, more detailed statement.')", [], [])
-
-    # alter the table
-    alter = {:alter, table(:posts),
-               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:add, :email, :string, []}]}
-    {:ok, %{num_rows: 0, rows: []}} = SQL.query(sql, SQL.execute_ddl(alter), [], [])
-
-    # verify the schema has been updated
-    {:ok, %{num_rows: 1, rows: [[stmt]]}} = SQL.query(sql, "SELECT sql FROM sqlite_master WHERE name = 'posts' AND type = 'table'", [], [])
-    assert stmt == ~s{CREATE TABLE "posts" ("author" TEXT, "price" INTEGER, "summary" TEXT, "body" TEXT, "title" TEXT DEFAULT 'Untitled' NOT NULL, "email" TEXT)}
-
-    # verify the values have been preserved
-    {:ok, [row]} = Sqlitex.Server.query(sql, "SELECT * FROM posts")
-    assert "jazzyb" == Keyword.get(row, :author)
-    assert 2 == Keyword.get(row, :price)
-    assert "Longer, more detailed statement." == Keyword.get(row, :body)
-    assert "Untitled" == Keyword.get(row, :title)
-    assert nil == Keyword.get(row, :email)
-    assert "short statement" == Keyword.get(row, :summary)
-  end
-
   test "alter column errors" do
     alter = {:alter, table(:posts), [{:modify, :price, :numeric, [precision: 8, scale: 2]}]}
     assert_raise ArgumentError, "ALTER COLUMN not supported by SQLite", fn ->
@@ -317,11 +269,11 @@ defmodule Sqlite.Ecto.Test do
     end
   end
 
-#  test "from with schema source" do
-#    query = "public.posts" |> select([r], r.x) |> normalize
-#    assert SQL.all(query) == ~s{SELECT p0."x" FROM "public"."posts" AS p0}
-#  end
-#
+  # test "from with schema source" do
+  #  query = "public.posts" |> select([r], r.x) |> normalize
+  #  assert SQL.all(query) == ~s{SELECT p0."x" FROM "public"."posts" AS p0}
+  # end
+
   test "select" do
     query = Model |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}

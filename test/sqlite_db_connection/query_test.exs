@@ -207,10 +207,11 @@ defmodule QueryTest do
     assert [[41]] = execute(query, [])
   end
 
-  test "raise when trying to execute unprepared query", context do
-    assert_raise ArgumentError, ~r/has not been prepared/,
-      fn -> execute(%Sqlite.DbConnection.Query{name: "hi", statement: "BEGIN"}, []) end
-  end
+  # SQLite adapter auto-prepares statements, so --by design-- this won't happen.
+  # test "raise when trying to execute unprepared query", context do
+  #   assert_raise ArgumentError, ~r/has not been prepared/,
+  #     fn -> execute(%Sqlite.DbConnection.Query{name: "hi", statement: "BEGIN"}, []) end
+  # end
 
   test "query struct interpolates to statement" do
     assert "#{%Sqlite.DbConnection.Query{statement: "BEGIN"}}" == "BEGIN"

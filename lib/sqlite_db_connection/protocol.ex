@@ -12,9 +12,11 @@ defmodule Sqlite.DbConnection.Protocol do
 
   # @sock_opts [packet: :raw, mode: :binary, active: false]
 
-  defstruct [db: nil, path: nil, checked_out?: false]
+  defstruct [db: nil,
+             path: nil,
+             checked_out?: false]
 
-  @type state :: %__MODULE__{db: Sqlitex.Connection,
+  @type state :: %__MODULE__{db: pid,
                              path: String.t,
                              checked_out?: false}
 
@@ -22,12 +24,11 @@ defmodule Sqlite.DbConnection.Protocol do
     {:ok, state} | {:error, Sqlite.DbConnection.Error.t}
   def connect(opts) do
     {db_path, _opts} = Keyword.pop(opts, :database)
-    with {:ok, db} <- Sqlitex.open(db_path),
-         :ok <- Sqlitex.exec(db, "PRAGMA foreign_keys = ON"),
-         {:ok, [[foreign_keys: 1]]} = Sqlitex.query(db, "PRAGMA foreign_keys")
+    with {:ok, db} <- Sqlitex.Server.start_link(db_path),
+         :ok <- Sqlitex.Server.exec(db, "PRAGMA foreign_keys = ON"),
+         {:ok, [[foreign_keys: 1]]} = Sqlitex.Server.query(db, "PRAGMA foreign_keys")
     do
-      s = %__MODULE__{db: db, path: db_path, checked_out?: false}
-      {:ok, s}
+      {:ok, %__MODULE__{db: db, path: db_path, checked_out?: false}}
     end
   end
 
@@ -122,18 +123,18 @@ defmodule Sqlite.DbConnection.Protocol do
     {:ok, s}
   end
 
-  # def handle_begin(opts, s) do
-  #   handle_transaction(@reserved_prefix <> "BEGIN", :transaction, opts, s)
-  # end
-  #
-  # def handle_commit(opts, s) do
-  #   handle_transaction(@reserved_prefix <> "COMMIT", :idle, opts, s)
-  # end
-  #
-  # def handle_rollback(opts, s) do
-  #   handle_transaction(@reserved_prefix <> "ROLLBACK", :idle, opts, s)
-  # end
-  #
+  def handle_begin(_opts, s) do
+    handle_transaction("BEGIN", s)
+  end
+
+  def handle_commit(_opts, s) do
+    handle_transaction("COMMIT", s)
+  end
+
+  def handle_rollback(_opts, s) do
+    handle_transaction("ROLLBACK", s)
+  end
+
   # @spec handle_simple(String.t, Keyword.t, state) ::
   #   {:ok, Sqlite.DbConnection.Result.t, state} |
   #   {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
@@ -148,69 +149,84 @@ defmodule Sqlite.DbConnection.Protocol do
                       %__MODULE__{checked_out?: true, db: db} = s)
   do
     binary_stmt = :erlang.iolist_to_binary(statement)
-    case Sqlitex.Statement.prepare(db, binary_stmt) do
-      {:ok, prepared_stmt} ->
-        updated_query = %{query | prepared: prepared_stmt}
+    case Sqlitex.Server.prepare(db, binary_stmt) do
+      {:ok, prepared_info} ->
+        updated_query = %{query | prepared: refined_info(prepared_info)}
         {:ok, updated_query, s}
       {:error, {_sqlite_errcode, _message}} = err ->
         sqlite_error(err, s)
     end
   end
 
+  defp refined_info(prepared_info) do
+    types =
+      prepared_info.types
+      |> Enum.map(&maybe_atom_to_lc_string/1)
+      |> Enum.to_list
+
+    prepared_info
+    |> Map.delete(:columns)
+    |> Map.put(:column_names, atoms_to_strings(prepared_info.columns))
+    |> Map.put(:types, types)
+  end
+
+  defp atoms_to_strings(nil), do: nil
+  defp atoms_to_strings(list), do: Enum.map(list, &maybe_atom_to_string/1)
+
+  defp maybe_atom_to_string(nil), do: nil
+  defp maybe_atom_to_string(item), do: to_string(item)
+
+  defp maybe_atom_to_lc_string(nil), do: nil
+  defp maybe_atom_to_lc_string(item), do: item |> to_string |> String.downcase
+
   ## execute
 
-  defp handle_execute(query, params, _sync, _opts, s) do
-    case query do
-      %Query{prepared: nil} ->
-        query_error(s, "query #{inspect query} has not been prepared")
-      %Query{prepared: stmt, statement: sql} ->
-        case run_stmt(stmt, sql, params, s) do
-          {:ok, result} ->
-            {:ok, result, s}
-          other ->
-            other
-        end
+  defp handle_execute(%Query{statement: sql}, params, _sync, _opts, s) do
+    # Note that we rely on Sqlitex.Server to cache the prepared statement,
+    # so we can simply refer to the original SQL statement here.
+    case run_stmt(sql, params, s) do
+      {:ok, result} ->
+        {:ok, result, s}
+      other ->
+        other
     end
   end
 
-  defp query_error(s, msg) do
-    {:error, ArgumentError.exception(msg), s}
-  end
   defp sqlite_error({:error, {sqlite_errcode, message}}, s) do
     {:error, %Sqlite.DbConnection.Error{sqlite: %{code: sqlite_errcode},
                                         message: to_string(message)}, s}
   end
 
-  defp run_stmt(stmt, sql, [], s) do
-    case Sqlitex.Statement.fetch_all(stmt, :raw_list) do
-      {:ok, rows} ->
-        {:ok, result_for_rows_and_stmt(rows, stmt, sql)}
+  defp run_stmt(query, params, s) do
+    opts = [decode: :manual, types: true, bind: params]
+    command = command_from_sql(query)
+    case Sqlitex.Server.query_rows(s.db, to_string(query), opts) do
+      {:ok, %{rows: raw_rows, columns: raw_column_names}} ->
+        {rows, num_rows, column_names} = case {raw_rows, raw_column_names} do
+          {_, []} -> {nil, get_changes_count(s.db, command), nil}
+          _ -> {raw_rows, length(raw_rows), raw_column_names}
+        end
+        {:ok, %Sqlite.DbConnection.Result{rows: rows,
+                                          num_rows: num_rows,
+                                          columns: atoms_to_strings(column_names),
+                                          command: command}}
       {:error, {_sqlite_errcode, _message}} = err ->
         sqlite_error(err, s)
-    end
-  end
-  defp run_stmt(stmt, sql, params, s) when is_list(params) do
-    case Sqlitex.Statement.bind_values(stmt, params) do
-      {:ok, stmt} ->
-        run_stmt(stmt, sql, [], s)
       {:error, :args_wrong_length} ->
-        query_error(s, "parameters must match number of placeholders in query")
+        {:error,
+         %ArgumentError{message: "parameters must match number of placeholders in query"},
+         s}
     end
   end
 
-  defp result_for_rows_and_stmt(rows, %Sqlitex.Statement{} = stmt, sql) do
-    {rows, num_rows, column_names} = rows_and_column_names_from_stmt(rows, stmt)
-    command = command_from_sql(sql)
-    %Sqlite.DbConnection.Result{rows: rows,
-                                num_rows: num_rows,
-                                columns: column_names,
-                                command: command}
+  defp get_changes_count(db, command)
+    when command in [:insert, :update, :delete]
+  do
+    # TODO: This statement should be cached.
+    {:ok, %{rows: [[changes_count]]}} = Sqlitex.Server.query_rows(db, "SELECT changes()")
+    changes_count
   end
-
-  defp rows_and_column_names_from_stmt([], %{column_names: []}), do:
-    {nil, nil, nil}
-  defp rows_and_column_names_from_stmt(rows, %{column_names: column_names}), do:
-    {rows, length(rows), Enum.map(column_names, &Atom.to_string/1)}
+  defp get_changes_count(_db, _command), do: 1
 
   defp command_from_sql(sql) do
     sql
@@ -231,4 +247,15 @@ defmodule Sqlite.DbConnection.Protocol do
   #   err = ArgumentError.exception("query #{inspect query} uses reserved name")
   #   {:error, err, s}
   # end
+
+  ## transaction
+
+  defp handle_transaction(stmt, s) do
+    case Sqlitex.Server.query_rows(s.db, stmt, into: :raw_list) do
+      {:ok, _rows} ->
+        {:ok, s}
+      {:error, {_sqlite_errcode, _message}} = err ->
+        sqlite_error(err, s)
+    end
+  end
 end

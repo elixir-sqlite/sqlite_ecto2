@@ -26,12 +26,6 @@ end
 # Load support files
 Code.require_file "../../deps/ecto/integration_test/support/repo.exs", __DIR__
 
-pool =
-  case System.get_env("ECTO_POOL") || "poolboy" do
-    "poolboy"        -> Ecto.Pools.Poolboy
-    "sojourn_broker" -> Ecto.Pools.SojournBroker
-  end
-
 # Basic test repo
 alias Ecto.Integration.TestRepo
 
@@ -49,7 +43,7 @@ alias Ecto.Integration.PoolRepo
 
 Application.put_env(:ecto, PoolRepo,
   adapter: Sqlite.Ecto,
-  pool: pool,
+  pool: DBConnection.Poolboy,
   database: "/tmp/test_repo.db",
   pool_size: 10)
 
