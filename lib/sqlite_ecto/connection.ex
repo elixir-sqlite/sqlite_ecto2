@@ -3,11 +3,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
   defmodule Sqlite.Ecto.Connection do
     @moduledoc false
 
-    @behaviour Ecto.Adapters.SQL.Query
+    @behaviour Ecto.Adapters.SQL.Connection
 
     ## Module and Options
 
-    def mod_and_opts(opts) do
+    def connection(opts) do
       {Sqlite.DbConnection.Protocol, opts}
     end
 
