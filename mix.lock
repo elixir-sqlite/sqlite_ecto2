@@ -5,7 +5,7 @@
   "db_connection": {:git, "https://github.com/elixir-ecto/db_connection", "625e42521e2b72f597c388daa6ecf5a90d7bd6e7", [ref: "625e42521e2b72f597c388daa6ecf5a90d7bd6e7"]},
   "decimal": {:hex, :decimal, "1.1.1", "a8ff5b673105e6cdaca96f799aeefc6f07142881b616c65db16e14e556b16e76", [:mix], []},
   "earmark": {:hex, :earmark, "1.0.3", "89bdbaf2aca8bbb5c97d8b3b55c5dd0cff517ecc78d417e87f1d0982e514557b", [:mix], []},
-  "ecto": {:git, "https://github.com/scouten/ecto.git", "2bdb157c2131335185a29e1d9dc9a079a1afc58e", [ref: "2bdb157c2131335185a29e1d9dc9a079a1afc58e"]},
+  "ecto": {:git, "https://github.com/scouten/ecto.git", "b738eb1967bac6c0ab1f56925a1ed19a6fb5413f", [ref: "b738eb1967bac6c0ab1f56925a1ed19a6fb5413f"]},
   "esqlite": {:hex, :esqlite, "0.2.1", "0e2896f177180b33e5a8fe65342b4e81de46e0db59e4cbf6e8b9101e98d423fd", [:make, :rebar], []},
   "ex_doc": {:hex, :ex_doc, "0.14.5", "c0433c8117e948404d93ca69411dd575ec6be39b47802e81ca8d91017a0cf83c", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
   "hackney": {:hex, :hackney, "1.6.5", "8c025ee397ac94a184b0743c73b33b96465e85f90a02e210e86df6cbafaa5065", [:rebar3], [{:certifi, "0.7.0", [hex: :certifi, optional: false]}, {:idna, "1.2.0", [hex: :idna, optional: false]}, {:metrics, "1.0.1", [hex: :metrics, optional: false]}, {:mimerl, "1.0.2", [hex: :mimerl, optional: false]}, {:ssl_verify_fun, "1.1.1", [hex: :ssl_verify_fun, optional: false]}]},
