@@ -24,6 +24,7 @@
       database file or `":memory:"` for an in-memory database.  See the
       [SQLite docs](https://sqlite.org/uri.html) for more options such as
       shared memory caches.
+    * `:after_connect` - A `{mod, fun, args}` to be invoked after a connection is established
 
   """
 
