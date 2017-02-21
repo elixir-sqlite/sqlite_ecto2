@@ -16,7 +16,7 @@ For now, consider it inaccurate. Such is life on the bleeding edge.
 
 ## CALL FOR HELP
 
-The test runs for sqlite_ecto2 are failing 20-30% of the time. I believe this is due
+The test runs for sqlite_ecto2 are failing 5-10% of the time. I believe this is due
 to https://github.com/mmzeeman/esqlite/issues/33. If you understand NIFs and can
 propose a fix, that would be deeply appreciated. Thank you!
 
