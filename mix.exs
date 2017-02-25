@@ -33,12 +33,12 @@ defmodule Sqlite.Ecto.Mixfile do
     [{:backoff, git: "https://github.com/scouten/backoff.git", ref: "8f10cb83b5fbc2401e6a06b341417cad4c632f34", override: true},
      {:connection, "~> 1.0.2", override: true},
      {:coverex, "~> 1.4.11", only: :test},
-     {:db_connection, git: "https://github.com/fishcakez/db_connection", ref: "f438a1d66f238cc3d786f7aa7719fc36eaa283f2", override: true}, # version 0.1.7
+     {:db_connection, git: "https://github.com/fishcakez/db_connection", ref: "05f3cc3dbf89f3cc475caaa229b20c30c589a5ef", override: true}, # version 0.1.7
      {:esqlite, git: "https://github.com/mmzeeman/esqlite", ref: "785903ae6d157ebda824e4e841f1f63aa93f9208", override: true},
      {:ex_doc, "~> 0.14.5", only: :dev},
      {:ecto, git: "https://github.com/scouten/ecto.git", ref: "2f753223e26b3cda91acbe2ab130451cafafa3ec"},
      {:poison, "~> 1.0"},
-     {:postgrex, git: "https://github.com/ericmj/postgrex.git", ref: "f773f8d4b88565aea435c6651b711ebfce74c9c2", override: true},
+     {:postgrex, git: "https://github.com/ericmj/postgrex.git", ref: "1dd57fe884d88125fff0661be8af0b5b9b9355fe", override: true},
      {:sbroker, "~> 1.0", override: true},
      {:sqlitex, git: "https://github.com/scouten/sqlitex.git", ref: "8f1dcd4107cd99ca0687bf870b914e44a467722d", override: true}]
   end
