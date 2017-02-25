@@ -14,12 +14,6 @@ The remainder of this README is held over from the 1.x version of this project.
 If this project is ultimately successful, we'll revise the documentation accordingly.
 For now, consider it inaccurate. Such is life on the bleeding edge.
 
-## CALL FOR HELP
-
-The test runs for sqlite_ecto2 are failing 20-30% of the time. I believe this is due
-to https://github.com/mmzeeman/esqlite/issues/33. If you understand NIFs and can
-propose a fix, that would be deeply appreciated. Thank you!
-
 ---
 
 Read [the tutorial](https://github.com/jazzyb/sqlite_ecto/wiki/Basic-Sqlite.Ecto-Tutorial)

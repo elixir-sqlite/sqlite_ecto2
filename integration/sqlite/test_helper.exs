@@ -12,7 +12,8 @@ ExUnit.start exclude: [:array_type,
                        :right_join,
                        :unique_constraint,
                        :uses_usec,
-                       :insert_cell_wise_defaults]
+                       :insert_cell_wise_defaults,
+                       :crash_prone]
 
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :primary_key_type, :id)
