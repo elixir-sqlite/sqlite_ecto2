@@ -19,6 +19,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       params = Enum.map params, fn
         %Ecto.Query.Tagged{type: :binary, value: value} -> {:blob, value}
         %Ecto.Query.Tagged{value: value} -> value
+        %{__struct__: _} = value -> value
+        %{} = value -> json_library().encode!(value)
         value -> value
       end
       query = %Sqlite.DbConnection.Query{name: "", statement: sql}
@@ -28,17 +30,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     def query(sql) do
       %Sqlite.DbConnection.Query{name: "", statement: sql}
     end
-
-    def encode_mapper(%Ecto.Query.Tagged{type: :binary, value: value})
-      when is_binary(value)
-    do
-      {:blob, value}
-    end
-
-    def encode_mapper(%Ecto.Query.Tagged{value: value}), do: value
-    def encode_mapper(%{__struct__: _} = value), do: value
-    def encode_mapper(%{} = value), do: json_library().encode!(value)
-    def encode_mapper(value), do: value
 
     def savepoint(savepoint) do
       "SAVEPOINT " <> savepoint
