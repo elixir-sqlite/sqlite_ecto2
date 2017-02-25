@@ -17,6 +17,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     def query(conn, sql, params, opts) do
       params = Enum.map params, fn
+        %Ecto.Query.Tagged{type: :binary, value: value} -> {:blob, value}
         %Ecto.Query.Tagged{value: value} -> value
         value -> value
       end
