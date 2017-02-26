@@ -260,7 +260,12 @@ defmodule Sqlite.DbConnection.Protocol do
   defp handle_transaction(stmt, s) do
     case Sqlitex.Server.query_rows(s.db, stmt, into: :raw_list) do
       {:ok, _rows} ->
-        {:ok, s}
+        command = command_from_sql(stmt)
+        result = %Sqlite.DbConnection.Result{rows: nil,
+                                             num_rows: nil,
+                                             columns: nil,
+                                             command: command}
+        {:ok, result, s}
       {:error, {_sqlite_errcode, _message}} = err ->
         sqlite_error(err, s)
     end
