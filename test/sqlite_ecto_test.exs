@@ -507,9 +507,6 @@ defmodule Sqlite.Ecto.Test do
     query = from(m in Model, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
     assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
 
-    query = from(e in Model, update: [set: [x: 0, y: "123"]]) |> normalize(:update_all)
-    assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = 0, "y" = 123}
-
     query = from(m in Model, update: [set: [x: ^0]]) |> normalize(:update_all)
     assert SQL.update_all(query) == ~s{UPDATE "model" SET "x" = ?}
 
