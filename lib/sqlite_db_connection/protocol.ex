@@ -110,27 +110,34 @@ defmodule Sqlite.DbConnection.Protocol do
     handle_execute(query, params, :sync_close, opts, s)
   end
 
-  # @spec handle_close(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
-  #   {:ok, state} |
-  #   {:error, ArgumentError.t, state} |
-  #   {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
-  # def handle_close(%Query{name: @reserved_prefix <> _} = query, _, s) do
-  #   reserved_error(query, s)
-  # end
+  @spec handle_close(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
+    {:ok, Sqlite.DbConnection.Result.t, state} |
+    {:error, ArgumentError.t, state} |
+    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
   def handle_close(_query, _opts, s) do
     # no-op: esqlite doesn't expose statement close.
     # Instead it relies on statements getting garbage collected.
-    {:ok, s}
+    res = %Sqlite.DbConnection.Result{command: :close}
+    {:ok, res, s}
   end
 
+  @spec handle_begin(Keyword.t, state) ::
+    {:ok, Sqlite.DbConnection.Result.t, state} |
+    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
   def handle_begin(_opts, s) do
     handle_transaction("BEGIN", s)
   end
 
+  @spec handle_commit(Keyword.t, state) ::
+    {:ok, Sqlite.DbConnection.Result.t, state} |
+    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
   def handle_commit(_opts, s) do
     handle_transaction("COMMIT", s)
   end
 
+  @spec handle_rollback(Keyword.t, state) ::
+    {:ok, Sqlite.DbConnection.Result.t, state} |
+    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
   def handle_rollback(_opts, s) do
     handle_transaction("ROLLBACK", s)
   end
@@ -253,7 +260,12 @@ defmodule Sqlite.DbConnection.Protocol do
   defp handle_transaction(stmt, s) do
     case Sqlitex.Server.query_rows(s.db, stmt, into: :raw_list) do
       {:ok, _rows} ->
-        {:ok, s}
+        command = command_from_sql(stmt)
+        result = %Sqlite.DbConnection.Result{rows: nil,
+                                             num_rows: nil,
+                                             columns: nil,
+                                             command: command}
+        {:ok, result, s}
       {:error, {_sqlite_errcode, _message}} = err ->
         sqlite_error(err, s)
     end

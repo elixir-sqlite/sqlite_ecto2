@@ -76,8 +76,6 @@ defmodule Sqlite.DbConnection.Connection do
     (default: `#{@pool_timeout}`)
     * `:queue` - Whether to wait for connection in a queue (default: `true`);
     * `:timeout` - Query request timeout (default: `#{@timeout}`);
-    * `:encode_mapper` - Fun to map each parameter before encoding, see
-    (default: `fn x -> x end`)
     * `:decode_mapper` - Fun to map each row in the result to a term after
     decoding, (default: `fn x -> x end`);
     * `:pool` - The pool module to use, must match that set on
@@ -173,8 +171,6 @@ defmodule Sqlite.DbConnection.Connection do
     (default: `#{@pool_timeout}`)
     * `:queue` - Whether to wait for connection in a queue (default: `true`);
     * `:timeout` - Execute request timeout (default: `#{@timeout}`);
-    * `:encode_mapper` - Fun to map each parameter before encoding, see
-    (default: `fn x -> x end`)
     * `:decode_mapper` - Fun to map each row in the result to a term after
     decoding, (default: `fn x -> x end`);
     * `:pool` - The pool module to use, must match that set on
@@ -235,10 +231,10 @@ defmodule Sqlite.DbConnection.Connection do
   @spec close(conn, Sqlite.DbConnection.Query.t, Keyword.t) :: :ok | {:error, Sqlite.DbConnection.Error.t}
   def close(conn, query, opts \\ []) do
     case DBConnection.close(conn, query, defaults(opts)) do
+      {:ok, _} ->
+        :ok
       {:error, %ArgumentError{} = err} ->
         raise err
-      other ->
-        other
     end
   end
 
