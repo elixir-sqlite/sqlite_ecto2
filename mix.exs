@@ -33,13 +33,14 @@ defmodule Sqlite.Ecto.Mixfile do
     [{:backoff, git: "https://github.com/scouten/backoff.git", ref: "8f10cb83b5fbc2401e6a06b341417cad4c632f34", override: true},
      {:connection, "~> 1.0.2", override: true},
      {:coverex, "~> 1.4.11", only: :test},
-     {:db_connection, git: "https://github.com/fishcakez/db_connection", ref: "05f3cc3dbf89f3cc475caaa229b20c30c589a5ef", override: true}, # version 0.1.7
+     {:db_connection, git: "https://github.com/fishcakez/db_connection", ref: "d00d45d2175b4ee05621786c866f96ccb74193e2", override: true}, # version 0.1.8, branch: "jv-ownership"
+                                                                         # ^^ guessing on the exact commit since this branch was rebased
      {:decimal, "1.1.1", override: true},
      {:esqlite, git: "https://github.com/mmzeeman/esqlite", ref: "3f1ef40b9011276eb8bdc366c5ef1e25d79befa5", override: true},
      {:ex_doc, "~> 0.14.5", only: :dev},
-     {:ecto, git: "https://github.com/scouten/ecto.git", ref: "6a75ef1bc8c344c26c2e1cd79e3844484c8b747e"},
+     {:ecto, git: "https://github.com/scouten/ecto.git", ref: "19fd301f4c3129955a118af534de1bf70530aacf"},
      {:poison, "~> 1.0"},
-     {:postgrex, git: "https://github.com/ericmj/postgrex.git", ref: "1dd57fe884d88125fff0661be8af0b5b9b9355fe", override: true},
+     {:postgrex, git: "https://github.com/ericmj/postgrex.git", ref: "30f18b01a29b77081562cdc9b1045dc89d313a69", override: true},
      {:sbroker, "~> 1.0", override: true},
      {:sqlitex, git: "https://github.com/scouten/sqlitex.git", ref: "8f1dcd4107cd99ca0687bf870b914e44a467722d", override: true}]
   end
