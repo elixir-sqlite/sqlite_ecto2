@@ -4,6 +4,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     @moduledoc false
 
     @behaviour Ecto.Adapters.SQL.Connection
+    @behaviour Ecto.Adapters.SQL.Sandbox
 
     ## Module and Options
 
@@ -27,16 +28,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       DBConnection.query(conn, query, params, opts)
     end
 
-    def query(sql) do
-      %Sqlite.DbConnection.Query{name: "", statement: sql}
+    def begin_sandbox do
+      %Sqlite.DbConnection.Query{name: "", statement: "BEGIN TRANSACTION"}
     end
 
-    def savepoint(savepoint) do
-      "SAVEPOINT " <> savepoint
-    end
-
-    def rollback_to_savepoint(savepoint) do
-      "ROLLBACK TO SAVEPOINT " <> savepoint
+    def rollback_sandbox do
+      %Sqlite.DbConnection.Query{name: "", statement: "ROLLBACK"}
     end
 
     alias Ecto.Query

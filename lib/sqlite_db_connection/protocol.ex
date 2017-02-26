@@ -124,22 +124,34 @@ defmodule Sqlite.DbConnection.Protocol do
   @spec handle_begin(Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
     {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
-  def handle_begin(_opts, s) do
-    handle_transaction("BEGIN", s)
+  def handle_begin(opts, s) do
+    sql = case Keyword.get(opts, :mode, :transaction) do
+      :transaction -> "BEGIN"
+      :savepoint   -> "SAVEPOINT sqlite_ecto_savepoint"
+    end
+    handle_transaction(sql, s)
   end
 
   @spec handle_commit(Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
     {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
-  def handle_commit(_opts, s) do
-    handle_transaction("COMMIT", s)
+  def handle_commit(opts, s) do
+    sql = case Keyword.get(opts, :mode, :transaction) do
+      :transaction -> "COMMIT"
+      :savepoint   -> "RELEASE SAVEPOINT sqlite_ecto_savepoint"
+    end
+    handle_transaction(sql, s)
   end
 
   @spec handle_rollback(Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
     {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
-  def handle_rollback(_opts, s) do
-    handle_transaction("ROLLBACK", s)
+  def handle_rollback(opts, s) do
+    sql = case Keyword.get(opts, :mode, :transaction) do
+      :transaction -> "ROLLBACK"
+      :savepoint   -> "ROLLBACK TO SAVEPOINT sqlite_ecto_savepoint"
+    end
+    handle_transaction(sql, s)
   end
 
   # @spec handle_simple(String.t, Keyword.t, state) ::
