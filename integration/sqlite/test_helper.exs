@@ -76,6 +76,8 @@ defmodule Ecto.Integration.Case do
   end
 end
 
+{:ok, _} = Application.ensure_all_started(:sqlite_ecto2)
+
 # Load support models and migration
 Code.require_file "../../deps/ecto/integration_test/support/schemas.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/support/migration.exs", __DIR__
