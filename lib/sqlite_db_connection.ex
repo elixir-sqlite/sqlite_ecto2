@@ -1,4 +1,4 @@
-defmodule Sqlite.DbConnection.Connection do
+defmodule Sqlite.DbConnection do
   @moduledoc """
   DBConnection implementation for SQLite.
   """
@@ -80,18 +80,16 @@ defmodule Sqlite.DbConnection.Connection do
     decoding, (default: `fn x -> x end`);
     * `:pool` - The pool module to use, must match that set on
     `start_link/1`, see `DBConnection`
-    * `:proxy` - The proxy module for the request, if any, see
-    `DBConnection.Proxy` (default: `nil`);
 
   ## Examples
 
-      Sqlite.DbConnection.Connection.query(conn, "CREATE TABLE posts (id serial, title text)", [])
+      Sqlite.DbConnection.query(conn, "CREATE TABLE posts (id serial, title text)", [])
 
-      Sqlite.DbConnection.Connection.query(conn, "INSERT INTO posts (title) VALUES ('my title')", [])
+      Sqlite.DbConnection.query(conn, "INSERT INTO posts (title) VALUES ('my title')", [])
 
-      Sqlite.DbConnection.Connection.query(conn, "SELECT title FROM posts", [])
+      Sqlite.DbConnection.query(conn, "SELECT title FROM posts", [])
 
-      Sqlite.DbConnection.Connection.query(conn, "SELECT id FROM posts WHERE title like $1", ["%my%"])
+      Sqlite.DbConnection.query(conn, "SELECT id FROM posts WHERE title like $1", ["%my%"])
 
   """
   @spec query(conn, iodata, list, Keyword.t) :: {:ok, Sqlite.DbConnection.Result.t} | {:error, Sqlite.DbConnection.Error.t}
@@ -130,12 +128,10 @@ defmodule Sqlite.DbConnection.Connection do
     * `:timeout` - Prepare request timeout (default: `#{@timeout}`);
     * `:pool` - The pool module to use, must match that set on
     `start_link/1`, see `DBConnection`
-    * `:proxy` - The proxy module for the request, if any, see
-    `DBConnection.Proxy` (default: `nil`);
 
   ## Examples
 
-      Sqlite.DbConnection.Connection.prepare(conn, "CREATE TABLE posts (id serial, title text)")
+      Sqlite.DbConnection.prepare(conn, "CREATE TABLE posts (id serial, title text)")
   """
   @spec prepare(conn, iodata, iodata, Keyword.t) :: {:ok, Sqlite.DbConnection.Query.t} | {:error, Sqlite.DbConnection.Error.t}
   def prepare(conn, name, statement, opts \\ []) do
@@ -175,16 +171,14 @@ defmodule Sqlite.DbConnection.Connection do
     decoding, (default: `fn x -> x end`);
     * `:pool` - The pool module to use, must match that set on
     `start_link/1`, see `DBConnection`
-    * `:proxy` - The proxy module for the request, if any, see
-    `DBConnection.Proxy` (default: `nil`);
 
   ## Examples
 
-      query = Sqlite.DbConnection.Connection.prepare!(conn, "CREATE TABLE posts (id serial, title text)")
-      Sqlite.DbConnection.Connection.execute(conn, query, [])
+      query = Sqlite.DbConnection.prepare!(conn, "CREATE TABLE posts (id serial, title text)")
+      Sqlite.DbConnection.execute(conn, query, [])
 
-      query = Sqlite.DbConnection.Connection.prepare!(conn, "SELECT id FROM posts WHERE title like $1")
-      Sqlite.DbConnection.Connection.execute(conn, query, ["%my%"])
+      query = Sqlite.DbConnection.prepare!(conn, "SELECT id FROM posts WHERE title like $1")
+      Sqlite.DbConnection.execute(conn, query, ["%my%"])
   """
   @spec execute(conn, Sqlite.DbConnection.Query.t, list, Keyword.t) ::
     {:ok, Sqlite.DbConnection.Result.t} | {:error, Sqlite.DbConnection.Error.t}
@@ -220,13 +214,11 @@ defmodule Sqlite.DbConnection.Connection do
     * `:timeout` - Close request timeout (default: `#{@timeout}`);
     * `:pool` - The pool module to use, must match that set on
     `start_link/1`, see `DBConnection`
-    * `:proxy` - The proxy module for the request, if any, see
-    `DBConnection.Proxy` (default: `nil`);
 
   ## Examples
 
-      query = Sqlite.DbConnection.Connection.prepare!(conn, "CREATE TABLE posts (id serial, title text)")
-      Sqlite.DbConnection.Connection.close(conn, query)
+      query = Sqlite.DbConnection.prepare!(conn, "CREATE TABLE posts (id serial, title text)")
+      Sqlite.DbConnection.close(conn, query)
   """
   @spec close(conn, Sqlite.DbConnection.Query.t, Keyword.t) :: :ok | {:error, Sqlite.DbConnection.Error.t}
   def close(conn, query, opts \\ []) do
@@ -272,18 +264,18 @@ defmodule Sqlite.DbConnection.Connection do
     * `:timeout` - Transaction timeout (default: `#{@timeout}`);
     * `:pool` - The pool module to use, must match that set on
     `start_link/1`, see `DBConnection`
-    * `:proxy` - The proxy module for the request, if any, see
-    `DBConnection.Proxy` (default: `nil`);
+    * `:mode` - Set to `:savepoint` to use savepoints instead of an SQL
+    transaction, otherwise set to `:transaction` (default: `:transaction`);
 
   The `:timeout` is for the duration of the transaction and all nested
   transactions and requests. This timeout overrides timeouts set by internal
-  transactions and requests. The `:pool` and `:proxy` will be used
-  for all requests inside the transaction function.
+  transactions and requests. The `:pool` and `:mode` will be used for all
+  requests inside the transaction function.
 
   ## Example
 
-      {:ok, res} = Sqlite.DbConnection.Connection.transaction(pid, fn(conn) ->
-        Sqlite.DbConnection.Connection.query!(conn, "SELECT title FROM posts", [])
+      {:ok, res} = Sqlite.DbConnection.transaction(pid, fn(conn) ->
+        Sqlite.DbConnection.query!(conn, "SELECT title FROM posts", [])
       end)
   """
   @spec transaction(conn, ((DBConnection.t) -> result), Keyword.t) ::
@@ -300,7 +292,7 @@ defmodule Sqlite.DbConnection.Connection do
 
   ## Example
 
-      {:error, :oops} = Sqlite.DbConnection.Connection.transaction(pid, fn(conn) ->
+      {:error, :oops} = Sqlite.DbConnection.transaction(pid, fn(conn) ->
         DBConnection.rollback(conn, :bar)
         IO.puts "never reaches here!"
       end)

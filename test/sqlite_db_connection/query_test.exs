@@ -4,12 +4,12 @@ defmodule QueryTest do
 
   use ExUnit.Case, async: true
   import Sqlite.DbConnection.TestHelper
-  alias Sqlite.DbConnection.Connection, as: P
+  alias Sqlite.DbConnection, as: P
 
   setup do
     opts = [database: ":memory:", backoff_type: :stop]
     {:ok, pid} = P.start_link(opts)
-    {:ok, _} = Sqlite.DbConnection.Connection.query(pid, "CREATE TABLE uniques (a int UNIQUE)", [])
+    {:ok, _} = Sqlite.DbConnection.query(pid, "CREATE TABLE uniques (a int UNIQUE)", [])
     {:ok, [pid: pid]}
   end
 
@@ -76,7 +76,7 @@ defmodule QueryTest do
   end
 
   test "query! result struct", context do
-    res = Sqlite.DbConnection.Connection.query!(context[:pid], "SELECT 123 AS a, 456 AS b", [])
+    res = Sqlite.DbConnection.query!(context[:pid], "SELECT 123 AS a, 456 AS b", [])
     assert %Sqlite.DbConnection.Result{} = res
     assert res.command == :select
     assert res.columns == ["a", "b"]
@@ -140,7 +140,7 @@ defmodule QueryTest do
 
   test "query! raises error on bad query", context do
     assert_raise Sqlite.DbConnection.Error, fn ->
-      Sqlite.DbConnection.Connection.query!(context.pid, "wat", [])
+      Sqlite.DbConnection.query!(context.pid, "wat", [])
     end
   end
 

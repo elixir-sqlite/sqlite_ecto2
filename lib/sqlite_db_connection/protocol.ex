@@ -73,13 +73,24 @@ defmodule Sqlite.DbConnection.Protocol do
   # def handle_prepare(%Query{name: @reserved_prefix <> _} = query, _, s) do
   #   reserved_error(query, s)
   # end
-  def handle_prepare(query, opts, s) do
-    handle_prepare(query, :parse_describe, opts, s)
+  def handle_prepare(%Query{statement: statement, types: nil} = query, _opts,
+                     %__MODULE__{checked_out?: true, db: db} = s)
+  do
+    binary_stmt = :erlang.iolist_to_binary(statement)
+    case Sqlitex.Server.prepare(db, binary_stmt) do
+      {:ok, prepared_info} ->
+        updated_query = %{query | prepared: refined_info(prepared_info)}
+        {:ok, updated_query, s}
+      {:error, {_sqlite_errcode, _message}} = err ->
+        sqlite_error(err, s)
+    end
+  end
+  def handle_prepare(query, _opts, s) do
+    query_error(s, "query #{inspect query} has already been prepared")
   end
 
   @spec handle_execute(Sqlite.DbConnection.Query.t, list, Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
-    {:prepare, state} |
     {:error, ArgumentError.t, state} |
     {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
   def handle_execute(%Query{} = query, params, opts, s) do
@@ -100,7 +111,6 @@ defmodule Sqlite.DbConnection.Protocol do
 
   @spec handle_execute_close(Sqlite.DbConnection.Query.t, list, Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
-    {:prepare, state} |
     {:error, ArgumentError.t, state} |
     {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
   # def handle_execute_close(%Query{name: @reserved_prefix <> _} = query, _, _, s) do
@@ -164,19 +174,6 @@ defmodule Sqlite.DbConnection.Protocol do
 
   ## prepare
 
-  defp handle_prepare(%Query{statement: statement} = query, :parse_describe, _opts,
-                      %__MODULE__{checked_out?: true, db: db} = s)
-  do
-    binary_stmt = :erlang.iolist_to_binary(statement)
-    case Sqlitex.Server.prepare(db, binary_stmt) do
-      {:ok, prepared_info} ->
-        updated_query = %{query | prepared: refined_info(prepared_info)}
-        {:ok, updated_query, s}
-      {:error, {_sqlite_errcode, _message}} = err ->
-        sqlite_error(err, s)
-    end
-  end
-
   defp refined_info(prepared_info) do
     types =
       prepared_info.types
@@ -209,6 +206,10 @@ defmodule Sqlite.DbConnection.Protocol do
       other ->
         other
     end
+  end
+
+  defp query_error(s, msg) do
+    {:error, ArgumentError.exception(msg), s}
   end
 
   defp sqlite_error({:error, {sqlite_errcode, message}}, s) do

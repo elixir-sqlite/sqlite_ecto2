@@ -22,6 +22,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     def prepare_execute(conn, name, sql, params, opts) do
+      query = %Sqlite.DbConnection.Query{name: name, statement: sql}
+      DBConnection.prepare_execute(conn, query, map_params(params), opts)
+    end
+
+    def execute(conn, query, params, opts) do
       DBConnection.execute(conn, query, map_params(params), opts)
     end
 
