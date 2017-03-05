@@ -23,6 +23,12 @@ case System.version() do
   _ -> :ok
 end
 
+pool =
+  case System.get_env("ECTO_POOL") || "poolboy" do
+    "poolboy"        -> DBConnection.Poolboy
+    "sojourn_broker" -> DBConnection.Sojourn
+  end
+
 # Load support files
 Code.require_file "../../deps/ecto/integration_test/support/repo.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/support/schemas.exs", __DIR__
@@ -34,7 +40,8 @@ alias Ecto.Integration.TestRepo
 Application.put_env(:ecto, TestRepo,
   adapter: Sqlite.Ecto,
   database: "/tmp/test_repo.db",
-  pool: Ecto.Adapters.SQL.Sandbox)
+  pool: Ecto.Adapters.SQL.Sandbox,
+  ownership_pool: pool)
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
