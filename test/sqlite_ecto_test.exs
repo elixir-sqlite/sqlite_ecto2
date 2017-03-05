@@ -1,6 +1,9 @@
 defmodule Sqlite.Ecto.Test do
   use ExUnit.Case, async: true
 
+  # IMPORTANT: This is closely modeled on Ecto's postgres_test.exs file.
+  # We strive to avoid structural differences between that file and this one.
+
   alias Sqlite.Ecto.Connection, as: SQL
   alias Ecto.Migration.Table
 
@@ -89,7 +92,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
   end
 
-  test "from without model" do
+  test "from without schema" do
     query = "posts" |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
 
@@ -97,11 +100,6 @@ defmodule Sqlite.Ecto.Test do
       SQL.all from(p in "posts", select: p) |> normalize()
     end
   end
-
-  # test "from with schema source" do
-  #  query = "public.posts" |> select([r], r.x) |> normalize
-  #  assert SQL.all(query) == ~s{SELECT p0."x" FROM "public"."posts" AS p0}
-  # end
 
   test "select" do
     query = Model |> select([r], {r.x, r.y}) |> normalize
