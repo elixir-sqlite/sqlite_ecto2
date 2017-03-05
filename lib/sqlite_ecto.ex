@@ -62,6 +62,8 @@
     else
       database |> Path.dirname |> File.mkdir_p!
       {:ok, db} = Sqlitex.open(database)
+      :ok = Sqlitex.exec(db, "PRAGMA journal_mode = WAL")
+      {:ok, [[journal_mode: "wal"]]} = Sqlitex.query(db, "PRAGMA journal_mode")
       Sqlitex.close(db)
       :ok
     end
@@ -71,8 +73,12 @@
   def storage_down(opts) do
     database = Keyword.get(opts, :database)
     case File.rm(database) do
-      {:error, :enoent} -> {:error, :already_down}
-      result -> result
+      {:error, :enoent} ->
+        {:error, :already_down}
+      result ->
+        File.rm(database <> "-shm") # ignore results for these files
+        File.rm(database <> "-wal")
+        result
     end
   end
 
