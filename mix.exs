@@ -5,7 +5,7 @@ defmodule Sqlite.Ecto.Mixfile do
     [app: :sqlite_ecto2,
      version: "2.0.0-dev.1",
      name: "Sqlite.Ecto2",
-     elixir: "~> 1.2",
+     elixir: "~> 1.3",
      elixirc_options: [warnings_as_errors: true],
      deps: deps(),
      elixirc_paths: elixirc_paths(Mix.env),
@@ -33,13 +33,13 @@ defmodule Sqlite.Ecto.Mixfile do
     [{:backoff, git: "https://github.com/scouten/backoff.git", ref: "8f10cb83b5fbc2401e6a06b341417cad4c632f34", override: true},
      {:connection, "~> 1.0.2", override: true},
      {:coverex, "~> 1.4.11", only: :test},
-     {:db_connection, git: "https://github.com/fishcakez/db_connection", ref: "5932ed0358c02c8a2ee66ff7ee2ac8abc25db08a", override: true}, # version 0.1.8
+     {:db_connection, "0.2.0", override: true},
      {:decimal, "1.1.1", override: true},
      {:esqlite, git: "https://github.com/mmzeeman/esqlite", ref: "c1ba116de470aadc23e7ae582c961b2ced13d306", override: true},
      {:ex_doc, "~> 0.14.5", only: :dev},
-     {:ecto, git: "https://github.com/scouten/ecto.git", ref: "5975281d9a205f9bfd4a8621077a06cb6f46e864"},
-     {:poison, "~> 1.0"},
-     {:postgrex, git: "https://github.com/ericmj/postgrex.git", ref: "30f18b01a29b77081562cdc9b1045dc89d313a69", override: true},
+     {:ecto, git: "https://github.com/scouten/ecto.git", ref: "10d63bffa8471ec64503f1f1a956e29d7b2c0b48"},
+     {:poison, "1.5.2", override: true, optional: true},
+     {:postgrex, git: "https://github.com/ericmj/postgrex.git", ref: "e4bd1d01ff623fb84846f2440275a366605c8c96", override: true},
      {:sbroker, "~> 1.0", override: true},
      {:sqlitex, git: "https://github.com/scouten/sqlitex.git", ref: "8f1dcd4107cd99ca0687bf870b914e44a467722d", override: true}]
   end

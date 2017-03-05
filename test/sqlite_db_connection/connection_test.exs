@@ -1,11 +1,11 @@
 defmodule ConnectionTest do
   use ExUnit.Case, async: true
-  alias Sqlite.DbConnection.Connection, as: P
+  alias Sqlite.DbConnection, as: P
 
   setup do
     opts = [database: ":memory:", backoff_type: :stop]
     {:ok, pid} = P.start_link(opts)
-    {:ok, _} = Sqlite.DbConnection.Connection.query(pid, "CREATE TABLE uniques (a int UNIQUE)", [])
+    {:ok, _} = Sqlite.DbConnection.query(pid, "CREATE TABLE uniques (a int UNIQUE)", [])
     {:ok, [pid: pid]}
   end
 

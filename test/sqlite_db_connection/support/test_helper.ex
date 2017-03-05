@@ -5,7 +5,7 @@
 defmodule Sqlite.DbConnection.TestHelper do
   defmacro query(stat, params, opts \\ []) do
     quote do
-      case Sqlite.DbConnection.Connection.query(var!(context)[:pid], unquote(stat),
+      case Sqlite.DbConnection.query(var!(context)[:pid], unquote(stat),
                                                 unquote(params), unquote(opts)) do
         {:ok, %Sqlite.DbConnection.Result{rows: nil}} -> :ok
         {:ok, %Sqlite.DbConnection.Result{rows: rows}} -> rows
@@ -16,7 +16,7 @@ defmodule Sqlite.DbConnection.TestHelper do
 
   defmacro prepare(name, stat, opts \\ []) do
     quote do
-      case Sqlite.DbConnection.Connection.prepare(var!(context)[:pid], unquote(name),
+      case Sqlite.DbConnection.prepare(var!(context)[:pid], unquote(name),
                                                   unquote(stat), unquote(opts)) do
         {:ok, %Sqlite.DbConnection.Query{} = query} -> query
         {:error, %Sqlite.DbConnection.Error{} = err} -> err
@@ -26,7 +26,7 @@ defmodule Sqlite.DbConnection.TestHelper do
 
   defmacro execute(query, params, opts \\ []) do
     quote do
-      case Sqlite.DbConnection.Connection.execute(var!(context)[:pid], unquote(query),
+      case Sqlite.DbConnection.execute(var!(context)[:pid], unquote(query),
                                                   unquote(params), unquote(opts)) do
         {:ok, %Sqlite.DbConnection.Result{rows: nil}} -> :ok
         {:ok, %Sqlite.DbConnection.Result{rows: rows}} -> rows
@@ -37,7 +37,7 @@ defmodule Sqlite.DbConnection.TestHelper do
 
   defmacro close(query, opts \\ []) do
     quote do
-      case Sqlite.DbConnection.Connection.close(var!(context)[:pid], unquote(query),
+      case Sqlite.DbConnection.close(var!(context)[:pid], unquote(query),
                                                 unquote(opts)) do
         :ok -> :ok
         {:error, %Sqlite.DbConnection.Error{} = err} -> err
