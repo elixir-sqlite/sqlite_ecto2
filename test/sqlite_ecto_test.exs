@@ -39,8 +39,6 @@ defmodule Sqlite.Ecto.Test do
     |> (fn(name) -> "/tmp/test_" <> name <> ".db" end).()
   end
 
-  ## Tests stolen from PostgreSQL adapter:
-
   import Ecto.Query
 
   alias Ecto.Queryable
@@ -536,7 +534,7 @@ defmodule Sqlite.Ecto.Test do
 
     assert SQL.execute_ddl(create) == """
     CREATE TABLE "foo"."posts"
-    ("category_0" CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"))
+    ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"))
     """ |> remove_newlines
   end
 
@@ -551,11 +549,11 @@ defmodule Sqlite.Ecto.Test do
 
     assert SQL.execute_ddl(create) == """
     CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "category_0" CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"),
-    "category_1" CONSTRAINT "foo_bar" REFERENCES "categories"("id"),
-    "category_2" CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"),
-    "category_3" NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "categories"("id") ON DELETE CASCADE,
-    "category_4" CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL)
+    "category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"),
+    "category_1" INTEGER CONSTRAINT "foo_bar" REFERENCES "categories"("id"),
+    "category_2" INTEGER CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"),
+    "category_3" INTEGER NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "categories"("id") ON DELETE CASCADE,
+    "category_4" INTEGER CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL)
     """ |> remove_newlines
   end
 
@@ -568,7 +566,14 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :category_3, references(:categories, on_delete: :delete_all, prefix: :foo), [null: false]},
                 {:add, :category_4, references(:categories, on_delete: :nilify_all, prefix: :foo), []}]}
 
-    assert SQL.execute_ddl(create) == ~s{CREATE TABLE "foo"."posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_0" CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"), "category_1" CONSTRAINT "foo_bar" REFERENCES "foo"."categories"("id"), "category_2" CONSTRAINT "posts_category_2_fkey" REFERENCES "foo"."categories"("id"), "category_3" NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "foo"."categories"("id") ON DELETE CASCADE, "category_4" CONSTRAINT "posts_category_4_fkey" REFERENCES "foo"."categories"("id") ON DELETE SET NULL)}
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE "foo"."posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"),
+    "category_1" INTEGER CONSTRAINT "foo_bar" REFERENCES "foo"."categories"("id"),
+    "category_2" INTEGER CONSTRAINT "posts_category_2_fkey" REFERENCES "foo"."categories"("id"),
+    "category_3" INTEGER NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "foo"."categories"("id") ON DELETE CASCADE,
+    "category_4" INTEGER CONSTRAINT "posts_category_4_fkey" REFERENCES "foo"."categories"("id") ON DELETE SET NULL)
+    """ |> remove_newlines
   end
 
   test "create table with options" do
@@ -611,7 +616,7 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :author_id, references(:author), []}]}
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL;
-    ALTER TABLE "posts" ADD COLUMN "author_id" CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")
+    ALTER TABLE "posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")
     """ |> remove_newlines
   end
 
@@ -622,7 +627,7 @@ defmodule Sqlite.Ecto.Test do
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE "foo"."posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL;
-    ALTER TABLE "foo"."posts" ADD COLUMN "author_id" CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id")
+    ALTER TABLE "foo"."posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id")
     """ |> remove_newlines
   end
 
