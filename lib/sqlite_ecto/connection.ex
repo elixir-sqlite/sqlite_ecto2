@@ -17,16 +17,25 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     ## Query
 
     def query(conn, sql, params, opts) do
-      params = Enum.map params, fn
+      query = %Sqlite.DbConnection.Query{name: "", statement: sql}
+      DBConnection.query(conn, query, map_params(params), opts)
+    end
+
+    def prepare_execute(conn, name, sql, params, opts) do
+      DBConnection.execute(conn, query, map_params(params), opts)
+    end
+
+    defp map_params(params) do
+      Enum.map params, fn
         %Ecto.Query.Tagged{type: :binary, value: value} -> {:blob, value}
         %Ecto.Query.Tagged{value: value} -> value
         %{__struct__: _} = value -> value
         %{} = value -> json_library().encode!(value)
         value -> value
       end
-      query = %Sqlite.DbConnection.Query{name: "", statement: sql}
-      DBConnection.query(conn, query, params, opts)
     end
+
+    ## Sandbox
 
     def begin_sandbox do
       %Sqlite.DbConnection.Query{name: "", statement: "BEGIN TRANSACTION"}
