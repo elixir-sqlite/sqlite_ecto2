@@ -16,14 +16,19 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     ## Query
 
-    def query(conn, sql, params, opts) do
-      query = %Sqlite.DbConnection.Query{name: "", statement: sql}
-      DBConnection.query(conn, query, map_params(params), opts)
-    end
-
     def prepare_execute(conn, name, sql, params, opts) do
       query = %Sqlite.DbConnection.Query{name: name, statement: sql}
       DBConnection.prepare_execute(conn, query, map_params(params), opts)
+    end
+
+    def execute(conn, sql, params, opts) when is_binary(sql) do
+      query = %Sqlite.DbConnection.Query{name: "", statement: sql}
+      case DBConnection.prepare_execute(conn, query, map_params(params), opts) do
+        {:ok, %Sqlite.DbConnection.Query{}, result} ->
+          {:ok, result}
+        other ->
+          other
+      end
     end
 
     def execute(conn, query, params, opts) do
