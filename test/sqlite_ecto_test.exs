@@ -94,6 +94,9 @@ defmodule Sqlite.Ecto.Test do
     query = "posts" |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
 
+    query = "posts" |> select([:x]) |> normalize
+    assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
+
     assert_raise Ecto.QueryError, ~r"SQLite requires a schema module", fn ->
       SQL.all from(p in "posts", select: p) |> normalize()
     end
@@ -301,7 +304,7 @@ defmodule Sqlite.Ecto.Test do
 
   test "interpolated values" do
     query = "model"
-            |> select([], ^0)
+            |> select([m], {m.id, ^true})
             |> join(:inner, [], Model2, ^true)
             |> join(:inner, [], Model2, ^false)
             |> where([], fragment("?", ^true))
@@ -317,7 +320,7 @@ defmodule Sqlite.Ecto.Test do
             |> normalize
 
     result =
-      "SELECT ? FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON ? " <>
+      "SELECT m0.\"id\", ? FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON ? " <>
       "INNER JOIN \"model2\" AS m2 ON ? WHERE (?) AND (?) " <>
       "GROUP BY ?, ? HAVING (?) AND (?) " <>
       "ORDER BY ?, m0.\"x\" LIMIT ? OFFSET ?"
