@@ -525,7 +525,12 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :price, :decimal, [precision: 10, scale: 2]},
                 {:add, :created_at, :datetime, []}]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE IF NOT EXISTS "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "price" DECIMAL(10,2), "created_at" DATETIME)}
+    assert query == """
+    CREATE TABLE IF NOT EXISTS "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "title" TEXT,
+    "price" DECIMAL(10,2),
+    "created_at" DATETIME)
+    """ |> remove_newlines
   end
 
   test "create table with prefix" do
@@ -602,7 +607,7 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "drop table if exists" do
-    assert SQL.execute_ddl({:drop_if_exists, %Table{name: "posts"}}) == ~s{DROP TABLE IF EXISTS "posts"}
+    assert SQL.execute_ddl({:drop_if_exists, %Table{name: "posts"}}) == ~s|DROP TABLE IF EXISTS "posts"|
   end
 
   test "drop table with prefix" do
@@ -652,7 +657,7 @@ defmodule Sqlite.Ecto.Test do
   test "create index if not exists" do
     create = {:create_if_not_exists, index(:posts, [:category_id, :permalink])}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE INDEX IF NOT EXISTS "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")}
+    assert query == ~s|CREATE INDEX IF NOT EXISTS "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|
   end
 
   test "create index with prefix" do
@@ -675,7 +680,7 @@ defmodule Sqlite.Ecto.Test do
   test "create unique index if not exists" do
     create = {:create_if_not_exists, index(:posts, [:permalink], unique: true)}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE UNIQUE INDEX IF NOT EXISTS "posts_permalink_index" ON "posts" ("permalink")}
+    assert query == ~s|CREATE UNIQUE INDEX IF NOT EXISTS "posts_permalink_index" ON "posts" ("permalink")|
   end
 
   # test "create unique index with condition" do  # restore in subsequent commit
