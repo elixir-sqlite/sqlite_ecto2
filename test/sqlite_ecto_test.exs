@@ -647,10 +647,9 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(create) ==
            ~s|CREATE INDEX "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|
 
-    # Incorrect results in current build, but I think this will be fixed soon.
-    # create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main")}
-    # assert SQL.execute_ddl(create) ==
-    #        ~s|CREATE INDEX "posts$main" ON "posts" (lower(permalink))|
+    create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main")}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts$main" ON "posts" (lower(permalink))|
   end
 
   test "create index if not exists" do
@@ -664,10 +663,9 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(create) ==
            ~s|CREATE INDEX "posts_category_id_permalink_index" ON "foo"."posts" ("category_id", "permalink")|
 
-    # Incorrect results in current build, but I think this will be fixed soon.
-    # create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main", prefix: :foo)}
-    # assert SQL.execute_ddl(create) ==
-    #        ~s|CREATE INDEX "posts$main" ON "foo"."posts" (lower(permalink))|
+    create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main", prefix: :foo)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts$main" ON "foo"."posts" (lower(permalink))|
   end
 
   test "create unique index" do

@@ -573,11 +573,27 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
     end
 
-    # Alter a table.
     def execute_ddl({:alter, %Table{} = table, changes}) do
       Enum.map_join(changes, "; ", fn (change) ->
         "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_change(table, change)}"
       end)
+    end
+
+    # NOTE Ignores concurrently and using values.
+    def execute_ddl({command, %Index{}=index})
+      when command in [:create, :create_if_not_exists]
+    do
+      fields = Enum.map_join(index.columns, ", ", &index_expr/1)
+      if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
+
+      assemble(["CREATE",
+                if_do(index.unique, "UNIQUE"),
+                "INDEX" <> if_not_exists,
+                quote_name(index.name),
+                "ON",
+                quote_table(index.prefix, index.table),
+                "(#{fields})",
+                if_do(index.where, "WHERE #{index.where}")])
     end
 
     # Rename a table.
@@ -588,16 +604,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # Rename a table column.
     def execute_ddl({:rename, %Table{}, _old_col, _new_col}) do
       raise ArgumentError, "RENAME COLUMN not supported by SQLite"
-    end
-
-    # Create an index.
-    # NOTE Ignores concurrently and using values.
-    def execute_ddl({command, %Index{}=index})
-    when command in [:create, :create_if_not_exists] do
-      create_index = create_index(command, index.unique)
-      table = quote_table(index.prefix, index.table)
-      fields = map_intersperse(index.columns, ",", &quote_id/1)
-      assemble [create_index, quote_id(index.name), "ON", table, "(", fields, ")"]
     end
 
     # Drop an index.
@@ -719,7 +725,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp default_expr(:error, _),
       do: []
 
-    # Foreign keys:
+    defp index_expr(literal) when is_binary(literal),
+      do: literal
+    defp index_expr(literal),
+      do: quote_name(literal)
+
+        # Foreign keys:
     defp reference_expr(%Reference{} = ref, %Table{} = table, col) do
       ["CONSTRAINT", reference_name(ref, table, col),
        "REFERENCES #{quote_table(table.prefix, ref.table)}(#{quote_id(ref.column)})",
@@ -765,15 +776,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp reference_on_delete(:nilify_all), do: "ON DELETE SET NULL"
     defp reference_on_delete(:delete_all), do: "ON DELETE CASCADE"
     defp reference_on_delete(_), do: []
-
-    # Returns a create index prefix.
-    defp create_index(:create, unique?), do: create_unique_index(unique?)
-    defp create_index(:create_if_not_exists, unique?) do
-      [create_unique_index(unique?), "IF NOT EXISTS"]
-    end
-
-    defp create_unique_index(true), do: "CREATE UNIQUE INDEX"
-    defp create_unique_index(false), do: "CREATE INDEX"
 
     # Returns a drop index prefix.
     defp drop_index(:drop), do: "DROP INDEX"
@@ -833,20 +835,17 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
     def assemble(literal), do: literal
 
+    defp if_do(condition, value) do
+      if condition, do: value, else: []
+    end
+
     # Not sure if this will be valid in SQLite.
     defp escape_string(value) when is_binary(value) do
       :binary.replace(value, "'", "''", [:global])
     end
 
-    # Take a list of items, apply a map, then intersperse the result with
-    # another item. Most often used for generating comma-separated fields to
-    # assemble.
-    defp map_intersperse(list, item, func) when is_function(func, 1) do
-      list |> Enum.map(&func.(&1)) |> Enum.intersperse(item)
-    end
-
     defp error!(nil, message) do
-      raise ArgumentError, message: message
+      raise ArgumentError, message
     end
     defp error!(query, message) do
       raise Ecto.QueryError, query: query, message: message
