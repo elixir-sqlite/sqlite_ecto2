@@ -546,7 +546,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     # DDL
 
-    alias Ecto.Migration.{Table, Index, Reference} #, Constraint}
+    alias Ecto.Migration.{Table, Index, Reference, Constraint}
 
     @drops [:drop, :drop_if_exists]
 
@@ -602,6 +602,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     def execute_ddl({:rename, %Table{}, _old_col, _new_col}) do
       raise ArgumentError, "RENAME COLUMN not supported by SQLite"
+    end
+
+    def execute_ddl({command, %Constraint{}})
+      when command in [:create, :drop]
+    do
+      raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite"
     end
 
     # Drop an index.

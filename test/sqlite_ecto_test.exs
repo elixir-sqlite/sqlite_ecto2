@@ -497,7 +497,7 @@ defmodule Sqlite.Ecto.Test do
   # DDL
 
   import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1,
-                                references: 2] #, constraint: 2, constraint: 3]
+                                references: 2, constraint: 2, constraint: 3]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -733,36 +733,36 @@ defmodule Sqlite.Ecto.Test do
   #   end
   # end
 
-  # test "create check constraint" do   # restore in subsequent commit
-  #   create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0")}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  #
-  #   create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo")}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  # end
+  test "create check constraint" do
+    create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0")}
+    assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
+      SQL.execute_ddl(create)
+    end
 
-  # test "create exclusion constraint" do  #Q restore in subsequent commit
-  #   create = {:create, constraint(:products, "price_must_be_positive", exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  # end
+    create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo")}
+    assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
+      SQL.execute_ddl(create)
+    end
+  end
 
-  # test "drop constraint" do   # restore in subsequent commit
-  #   drop = {:drop, constraint(:products, "price_must_be_positive")}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(drop)
-  #   end
-  #
-  #   drop = {:drop, constraint(:products, "price_must_be_positive", prefix: "foo")}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(drop)
-  #   end
-  # end
+  test "create exclusion constraint" do
+    create = {:create, constraint(:products, "price_must_be_positive", exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)}
+    assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
+      SQL.execute_ddl(create)
+    end
+  end
+
+  test "drop constraint" do
+    drop = {:drop, constraint(:products, "price_must_be_positive")}
+    assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
+      SQL.execute_ddl(drop)
+    end
+
+    drop = {:drop, constraint(:products, "price_must_be_positive", prefix: "foo")}
+    assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
+      SQL.execute_ddl(drop)
+    end
+  end
 
   test "rename table" do
     rename = {:rename, table(:posts), table(:new_posts)}
