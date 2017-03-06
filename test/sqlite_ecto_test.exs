@@ -680,36 +680,36 @@ defmodule Sqlite.Ecto.Test do
     assert query == ~s|CREATE UNIQUE INDEX IF NOT EXISTS "posts_permalink_index" ON "posts" ("permalink")|
   end
 
-  # test "create unique index with condition" do  # restore in subsequent commit
-  #   create = {:create, index(:posts, [:permalink], unique: true, where: "public IS 1")}
-  #   assert SQL.execute_ddl(create) ==
-  #          ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public IS 1|
-  #
-  #   create = {:create, index(:posts, [:permalink], unique: true, where: :public)}
-  #   assert SQL.execute_ddl(create) ==
-  #          ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public|
-  # end
+  test "create unique index with condition" do
+    create = {:create, index(:posts, [:permalink], unique: true, where: "public IS 1")}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public IS 1|
 
-  # test "create index concurrently" do  # restore in subsequent commit
-  #   create = {:create, index(:posts, [:permalink], concurrently: true)}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  # end
+    create = {:create, index(:posts, [:permalink], unique: true, where: :public)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public|
+  end
 
-  # test "create unique index concurrently" do  # restore in subsequent commit
-  #   create = {:create, index(:posts, [:permalink], concurrently: true, unique: true)}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  # end
+  test "create index concurrently" do
+    # NOTE: SQLite doesn't support CONCURRENTLY, so this isn't included in generated SQL.
+    create = {:create, index(:posts, [:permalink], concurrently: true)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts_permalink_index" ON "posts" ("permalink")|
+  end
 
-  # test "create an index using a different type" do  # restore in subsequent commit
-  #   create = {:create, index(:posts, [:permalink], using: :hash)}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  # end
+  test "create unique index concurrently" do
+    # NOTE: SQLite doesn't support CONCURRENTLY, so this isn't included in generated SQL.
+    create = {:create, index(:posts, [:permalink], concurrently: true, unique: true)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")|
+  end
+
+  test "create an index using a different type" do
+    # NOTE: SQLite doesn't support USING, so this isn't included in generated SQL.
+    create = {:create, index(:posts, [:permalink], using: :hash)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts_permalink_index" ON "posts" ("permalink")|
+  end
 
   test "drop index" do
     drop = {:drop, index(:posts, [:id], name: "posts$main")}
