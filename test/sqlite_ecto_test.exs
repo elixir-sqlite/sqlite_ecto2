@@ -499,7 +499,7 @@ defmodule Sqlite.Ecto.Test do
   # DDL
 
   import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1,
-                                references: 2, constraint: 2, constraint: 3]
+                                references: 2] #, constraint: 2, constraint: 3]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -673,36 +673,36 @@ defmodule Sqlite.Ecto.Test do
     assert query == ~s{CREATE UNIQUE INDEX IF NOT EXISTS "posts_permalink_index" ON "posts" ("permalink")}
   end
 
-  test "create unique index with condition" do
-    create = {:create, index(:posts, [:permalink], unique: true, where: "public IS 1")}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public IS 1|
+  # test "create unique index with condition" do  # restore in subsequent commit
+  #   create = {:create, index(:posts, [:permalink], unique: true, where: "public IS 1")}
+  #   assert SQL.execute_ddl(create) ==
+  #          ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public IS 1|
+  #
+  #   create = {:create, index(:posts, [:permalink], unique: true, where: :public)}
+  #   assert SQL.execute_ddl(create) ==
+  #          ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public|
+  # end
 
-    create = {:create, index(:posts, [:permalink], unique: true, where: :public)}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public|
-  end
+  # test "create index concurrently" do  # restore in subsequent commit
+  #   create = {:create, index(:posts, [:permalink], concurrently: true)}
+  #   assert_raise ArgumentError, "mumble", fn ->
+  #     SQL.execute_ddl(create)
+  #   end
+  # end
 
-  test "create index concurrently" do
-    create = {:create, index(:posts, [:permalink], concurrently: true)}
-    assert_raise ArgumentError, "mumble", fn ->
-      SQL.execute_ddl(create)
-    end
-  end
+  # test "create unique index concurrently" do  # restore in subsequent commit
+  #   create = {:create, index(:posts, [:permalink], concurrently: true, unique: true)}
+  #   assert_raise ArgumentError, "mumble", fn ->
+  #     SQL.execute_ddl(create)
+  #   end
+  # end
 
-  test "create unique index concurrently" do
-    create = {:create, index(:posts, [:permalink], concurrently: true, unique: true)}
-    assert_raise ArgumentError, "mumble", fn ->
-      SQL.execute_ddl(create)
-    end
-  end
-
-  test "create an index using a different type" do
-    create = {:create, index(:posts, [:permalink], using: :hash)}
-    assert_raise ArgumentError, "mumble", fn ->
-      SQL.execute_ddl(create)
-    end
-  end
+  # test "create an index using a different type" do  # restore in subsequent commit
+  #   create = {:create, index(:posts, [:permalink], using: :hash)}
+  #   assert_raise ArgumentError, "mumble", fn ->
+  #     SQL.execute_ddl(create)
+  #   end
+  # end
 
   test "drop index" do
     drop = {:drop, index(:posts, [:id], name: "posts$main")}
@@ -716,50 +716,48 @@ defmodule Sqlite.Ecto.Test do
 
   test "drop index if exists" do
     drop = {:drop_if_exists, index(:posts, [:id], name: "posts$main")}
-    assert_raise ArgumentError, "mumble", fn ->
-      SQL.execute_ddl(drop)
-    end
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX IF EXISTS "posts$main"|
   end
 
-  test "drop index concurrently" do
-    drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
-    assert_raise ArgumentError, "mumble", fn ->
-      SQL.execute_ddl(drop)
-    end
-  end
+  # test "drop index concurrently" do   # restore in subsequent commit
+  #   drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
+  #   assert_raise ArgumentError, "mumble", fn ->
+  #     SQL.execute_ddl(drop)
+  #   end
+  # end
 
-  test "create check constraint" do
-    create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0")}
-    assert_raise ArgumentError, "mumble", fn ->
-      SQL.execute_ddl(create)
-    end
+  # test "create check constraint" do   # restore in subsequent commit
+  #   create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0")}
+  #   assert_raise ArgumentError, "mumble", fn ->
+  #     SQL.execute_ddl(create)
+  #   end
+  #
+  #   create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo")}
+  #   assert_raise ArgumentError, "mumble", fn ->
+  #     SQL.execute_ddl(create)
+  #   end
+  # end
 
-    create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo")}
-    assert_raise ArgumentError, "mumble", fn ->
-      SQL.execute_ddl(create)
-    end
-  end
+  # test "create exclusion constraint" do  #Q restore in subsequent commit
+  #   create = {:create, constraint(:products, "price_must_be_positive", exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)}
+  #   assert_raise ArgumentError, "mumble", fn ->
+  #     SQL.execute_ddl(create)
+  #   end
+  # end
 
-  test "create exclusion constraint" do
-    create = {:create, constraint(:products, "price_must_be_positive", exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)}
-    assert_raise ArgumentError, "mumble", fn ->
-      SQL.execute_ddl(create)
-    end
-  end
+  # test "drop constraint" do   # restore in subsequent commit
+  #   drop = {:drop, constraint(:products, "price_must_be_positive")}
+  #   assert_raise ArgumentError, "mumble", fn ->
+  #     SQL.execute_ddl(drop)
+  #   end
+  #
+  #   drop = {:drop, constraint(:products, "price_must_be_positive", prefix: "foo")}
+  #   assert_raise ArgumentError, "mumble", fn ->
+  #     SQL.execute_ddl(drop)
+  #   end
+  # end
 
-  test "drop constraint" do
-    drop = {:drop, constraint(:products, "price_must_be_positive")}
-    assert_raise ArgumentError, "mumble", fn ->
-      SQL.execute_ddl(drop)
-    end
-
-    drop = {:drop, constraint(:products, "price_must_be_positive", prefix: "foo")}
-    assert_raise ArgumentError, "mumble", fn ->
-      SQL.execute_ddl(drop)
-    end
-  end
-
-    test "rename table" do
+  test "rename table" do
     rename = {:rename, table(:posts), table(:new_posts)}
     assert SQL.execute_ddl(rename) == ~s|ALTER TABLE "posts" RENAME TO "new_posts"|
   end
