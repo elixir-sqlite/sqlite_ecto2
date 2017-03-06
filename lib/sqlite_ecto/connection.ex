@@ -620,13 +620,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite"
     end
 
-    # Raise error on NoSQL arguments.
-    def execute_ddl(keyword) when is_list(keyword) do
-      raise ArgumentError, "SQLite adapter does not support keyword lists in execute"
-    end
+    def execute_ddl(string) when is_binary(string), do: string
 
-    # Default:
-    def execute_ddl(default) when is_binary(default), do: default
+    def execute_ddl(keyword) when is_list(keyword),
+      do: error!(nil, "SQLite adapter does not support keyword lists in execute")
 
     defp column_definitions(table, columns) do
       Enum.map_join(columns, ", ", &column_definition(table, &1))
@@ -738,18 +735,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp index_expr(literal),
       do: quote_name(literal)
 
-        # Foreign keys:
-    defp reference_expr(%Reference{} = ref, %Table{} = table, col) do
-      ["CONSTRAINT", reference_name(ref, table, col),
-       "REFERENCES #{quote_table(table.prefix, ref.table)}(#{quote_id(ref.column)})",
-       reference_on_delete(ref.on_delete)]
-    end
-
-    defp reference_name(%Reference{name: nil}, %Table{name: table}, col) do
-      [table, col, "fkey"] |> Enum.join("_") |> quote_id
-    end
-    defp reference_name(%Reference{name: name}, _table, _col), do: quote_id(name)
-
     defp options_expr(nil),
       do: ""
     defp options_expr(keyword) when is_list(keyword),
@@ -779,14 +764,25 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       "DECIMAL(#{precision},#{scale})"
     defp decimal_column_type(_precision, _scale), do: "DECIMAL"
 
-    # Define how to handle deletion of foreign keys on parent table.
-    # See: https://www.sqlite.org/foreignkeys.html#fk_actions
-    defp reference_on_delete(:nilify_all), do: "ON DELETE SET NULL"
-    defp reference_on_delete(:delete_all), do: "ON DELETE CASCADE"
-    defp reference_on_delete(_), do: []
+    defp reference_expr(%Reference{} = ref, table, name),
+      do: "CONSTRAINT #{reference_name(ref, table, name)} REFERENCES " <>
+          "#{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
+          reference_on_delete(ref.on_delete)
+
+    # A reference pointing to a serial column becomes integer in SQLite
+    defp reference_name(%Reference{name: nil}, table, column),
+      do: quote_name("#{table.name}_#{column}_fkey")
+    defp reference_name(%Reference{name: name}, _table, _column),
+      do: quote_name(name)
 
     defp reference_column_type(:serial, _opts), do: "INTEGER"
     defp reference_column_type(type, opts), do: column_type(type, opts)
+
+    # Define how to handle deletion of foreign keys on parent table.
+    # See: https://www.sqlite.org/foreignkeys.html#fk_actions
+    defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
+    defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
+    defp reference_on_delete(_), do: ""
 
         ## Helpers
 
