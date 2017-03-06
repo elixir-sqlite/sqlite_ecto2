@@ -39,8 +39,6 @@ defmodule Sqlite.Ecto.Test do
     |> (fn(name) -> "/tmp/test_" <> name <> ".db" end).()
   end
 
-  ## Tests stolen from PostgreSQL adapter:
-
   import Ecto.Query
 
   alias Ecto.Queryable
@@ -499,7 +497,7 @@ defmodule Sqlite.Ecto.Test do
   # DDL
 
   import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1,
-                                references: 2] #, constraint: 2, constraint: 3]
+                                references: 2, constraint: 2, constraint: 3]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -527,7 +525,12 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :price, :decimal, [precision: 10, scale: 2]},
                 {:add, :created_at, :datetime, []}]}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE TABLE IF NOT EXISTS "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "title" TEXT, "price" DECIMAL(10,2), "created_at" DATETIME)}
+    assert query == """
+    CREATE TABLE IF NOT EXISTS "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "title" TEXT,
+    "price" DECIMAL(10,2),
+    "created_at" DATETIME)
+    """ |> remove_newlines
   end
 
   test "create table with prefix" do
@@ -536,7 +539,7 @@ defmodule Sqlite.Ecto.Test do
 
     assert SQL.execute_ddl(create) == """
     CREATE TABLE "foo"."posts"
-    ("category_0" CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"))
+    ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"))
     """ |> remove_newlines
   end
 
@@ -551,11 +554,11 @@ defmodule Sqlite.Ecto.Test do
 
     assert SQL.execute_ddl(create) == """
     CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "category_0" CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"),
-    "category_1" CONSTRAINT "foo_bar" REFERENCES "categories"("id"),
-    "category_2" CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"),
-    "category_3" NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "categories"("id") ON DELETE CASCADE,
-    "category_4" CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL)
+    "category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"),
+    "category_1" INTEGER CONSTRAINT "foo_bar" REFERENCES "categories"("id"),
+    "category_2" INTEGER CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"),
+    "category_3" INTEGER NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "categories"("id") ON DELETE CASCADE,
+    "category_4" INTEGER CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL)
     """ |> remove_newlines
   end
 
@@ -568,7 +571,14 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :category_3, references(:categories, on_delete: :delete_all, prefix: :foo), [null: false]},
                 {:add, :category_4, references(:categories, on_delete: :nilify_all, prefix: :foo), []}]}
 
-    assert SQL.execute_ddl(create) == ~s{CREATE TABLE "foo"."posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "category_0" CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"), "category_1" CONSTRAINT "foo_bar" REFERENCES "foo"."categories"("id"), "category_2" CONSTRAINT "posts_category_2_fkey" REFERENCES "foo"."categories"("id"), "category_3" NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "foo"."categories"("id") ON DELETE CASCADE, "category_4" CONSTRAINT "posts_category_4_fkey" REFERENCES "foo"."categories"("id") ON DELETE SET NULL)}
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE "foo"."posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"),
+    "category_1" INTEGER CONSTRAINT "foo_bar" REFERENCES "foo"."categories"("id"),
+    "category_2" INTEGER CONSTRAINT "posts_category_2_fkey" REFERENCES "foo"."categories"("id"),
+    "category_3" INTEGER NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "foo"."categories"("id") ON DELETE CASCADE,
+    "category_4" INTEGER CONSTRAINT "posts_category_4_fkey" REFERENCES "foo"."categories"("id") ON DELETE SET NULL)
+    """ |> remove_newlines
   end
 
   test "create table with options" do
@@ -579,17 +589,16 @@ defmodule Sqlite.Ecto.Test do
            ~s|CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "created_at" DATETIME) WITHOUT ROWID|
   end
 
-  # Generates incorrect results with current build, but will be fixed shortly, I think.
-  # test "create table with composite key" do
-  #   create = {:create, table(:posts),
-  #              [{:add, :a, :integer, [primary_key: true]},
-  #               {:add, :b, :integer, [primary_key: true]},
-  #               {:add, :name, :string, []}]}
-  #
-  #   assert SQL.execute_ddl(create) == """
-  #   CREATE TABLE "posts" ("a" integer, "b" integer, "name" varchar(255), PRIMARY KEY ("a", "b"))
-  #   """ |> remove_newlines
-  # end
+  test "create table with composite key" do
+    create = {:create, table(:posts),
+               [{:add, :a, :integer, [primary_key: true]},
+                {:add, :b, :integer, [primary_key: true]},
+                {:add, :name, :string, []}]}
+
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE "posts" ("a" INTEGER, "b" INTEGER, "name" TEXT, PRIMARY KEY ("a", "b"))
+    """ |> remove_newlines
+  end
 
   test "drop table" do
     drop = {:drop, table(:posts)}
@@ -597,7 +606,7 @@ defmodule Sqlite.Ecto.Test do
   end
 
   test "drop table if exists" do
-    assert SQL.execute_ddl({:drop_if_exists, %Table{name: "posts"}}) == ~s{DROP TABLE IF EXISTS "posts"}
+    assert SQL.execute_ddl({:drop_if_exists, %Table{name: "posts"}}) == ~s|DROP TABLE IF EXISTS "posts"|
   end
 
   test "drop table with prefix" do
@@ -611,7 +620,7 @@ defmodule Sqlite.Ecto.Test do
                 {:add, :author_id, references(:author), []}]}
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL;
-    ALTER TABLE "posts" ADD COLUMN "author_id" CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")
+    ALTER TABLE "posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")
     """ |> remove_newlines
   end
 
@@ -622,7 +631,7 @@ defmodule Sqlite.Ecto.Test do
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE "foo"."posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL;
-    ALTER TABLE "foo"."posts" ADD COLUMN "author_id" CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id")
+    ALTER TABLE "foo"."posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id")
     """ |> remove_newlines
   end
 
@@ -638,16 +647,15 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(create) ==
            ~s|CREATE INDEX "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|
 
-    # Incorrect results in current build, but I think this will be fixed soon.
-    # create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main")}
-    # assert SQL.execute_ddl(create) ==
-    #        ~s|CREATE INDEX "posts$main" ON "posts" (lower(permalink))|
+    create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main")}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts$main" ON "posts" (lower(permalink))|
   end
 
   test "create index if not exists" do
     create = {:create_if_not_exists, index(:posts, [:category_id, :permalink])}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE INDEX IF NOT EXISTS "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")}
+    assert query == ~s|CREATE INDEX IF NOT EXISTS "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|
   end
 
   test "create index with prefix" do
@@ -655,10 +663,9 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(create) ==
            ~s|CREATE INDEX "posts_category_id_permalink_index" ON "foo"."posts" ("category_id", "permalink")|
 
-    # Incorrect results in current build, but I think this will be fixed soon.
-    # create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main", prefix: :foo)}
-    # assert SQL.execute_ddl(create) ==
-    #        ~s|CREATE INDEX "posts$main" ON "foo"."posts" (lower(permalink))|
+    create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main", prefix: :foo)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts$main" ON "foo"."posts" (lower(permalink))|
   end
 
   test "create unique index" do
@@ -670,39 +677,39 @@ defmodule Sqlite.Ecto.Test do
   test "create unique index if not exists" do
     create = {:create_if_not_exists, index(:posts, [:permalink], unique: true)}
     query = SQL.execute_ddl(create)
-    assert query == ~s{CREATE UNIQUE INDEX IF NOT EXISTS "posts_permalink_index" ON "posts" ("permalink")}
+    assert query == ~s|CREATE UNIQUE INDEX IF NOT EXISTS "posts_permalink_index" ON "posts" ("permalink")|
   end
 
-  # test "create unique index with condition" do  # restore in subsequent commit
-  #   create = {:create, index(:posts, [:permalink], unique: true, where: "public IS 1")}
-  #   assert SQL.execute_ddl(create) ==
-  #          ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public IS 1|
-  #
-  #   create = {:create, index(:posts, [:permalink], unique: true, where: :public)}
-  #   assert SQL.execute_ddl(create) ==
-  #          ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public|
-  # end
+  test "create unique index with condition" do
+    create = {:create, index(:posts, [:permalink], unique: true, where: "public IS 1")}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public IS 1|
 
-  # test "create index concurrently" do  # restore in subsequent commit
-  #   create = {:create, index(:posts, [:permalink], concurrently: true)}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  # end
+    create = {:create, index(:posts, [:permalink], unique: true, where: :public)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public|
+  end
 
-  # test "create unique index concurrently" do  # restore in subsequent commit
-  #   create = {:create, index(:posts, [:permalink], concurrently: true, unique: true)}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  # end
+  test "create index concurrently" do
+    # NOTE: SQLite doesn't support CONCURRENTLY, so this isn't included in generated SQL.
+    create = {:create, index(:posts, [:permalink], concurrently: true)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts_permalink_index" ON "posts" ("permalink")|
+  end
 
-  # test "create an index using a different type" do  # restore in subsequent commit
-  #   create = {:create, index(:posts, [:permalink], using: :hash)}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  # end
+  test "create unique index concurrently" do
+    # NOTE: SQLite doesn't support CONCURRENTLY, so this isn't included in generated SQL.
+    create = {:create, index(:posts, [:permalink], concurrently: true, unique: true)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")|
+  end
+
+  test "create an index using a different type" do
+    # NOTE: SQLite doesn't support USING, so this isn't included in generated SQL.
+    create = {:create, index(:posts, [:permalink], using: :hash)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts_permalink_index" ON "posts" ("permalink")|
+  end
 
   test "drop index" do
     drop = {:drop, index(:posts, [:id], name: "posts$main")}
@@ -711,7 +718,7 @@ defmodule Sqlite.Ecto.Test do
 
   test "drop index with prefix" do
     drop = {:drop, index(:posts, [:id], name: "posts$main", prefix: :foo)}
-    assert SQL.execute_ddl(drop) == ~s|DROP INDEX "posts$main"|
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX "foo"."posts$main"|
   end
 
   test "drop index if exists" do
@@ -719,43 +726,42 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX IF EXISTS "posts$main"|
   end
 
-  # test "drop index concurrently" do   # restore in subsequent commit
-  #   drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(drop)
-  #   end
-  # end
+  test "drop index concurrently" do
+    # NOTE: SQLite doesn't support CONCURRENTLY, so this isn't included in generated SQL.
+    drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX "posts$main"|
+  end
 
-  # test "create check constraint" do   # restore in subsequent commit
-  #   create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0")}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  #
-  #   create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo")}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  # end
+  test "create check constraint" do
+    create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0")}
+    assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
+      SQL.execute_ddl(create)
+    end
 
-  # test "create exclusion constraint" do  #Q restore in subsequent commit
-  #   create = {:create, constraint(:products, "price_must_be_positive", exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(create)
-  #   end
-  # end
+    create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo")}
+    assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
+      SQL.execute_ddl(create)
+    end
+  end
 
-  # test "drop constraint" do   # restore in subsequent commit
-  #   drop = {:drop, constraint(:products, "price_must_be_positive")}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(drop)
-  #   end
-  #
-  #   drop = {:drop, constraint(:products, "price_must_be_positive", prefix: "foo")}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(drop)
-  #   end
-  # end
+  test "create exclusion constraint" do
+    create = {:create, constraint(:products, "price_must_be_positive", exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)}
+    assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
+      SQL.execute_ddl(create)
+    end
+  end
+
+  test "drop constraint" do
+    drop = {:drop, constraint(:products, "price_must_be_positive")}
+    assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
+      SQL.execute_ddl(drop)
+    end
+
+    drop = {:drop, constraint(:products, "price_must_be_positive", prefix: "foo")}
+    assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
+      SQL.execute_ddl(drop)
+    end
+  end
 
   test "rename table" do
     rename = {:rename, table(:posts), table(:new_posts)}

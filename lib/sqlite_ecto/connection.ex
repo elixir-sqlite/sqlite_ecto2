@@ -546,163 +546,106 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     # DDL
 
-    alias Ecto.Migration.Table
-    alias Ecto.Migration.Index
-    alias Ecto.Migration.Reference
+    alias Ecto.Migration.{Table, Index, Reference, Constraint}
+
+    @drops [:drop, :drop_if_exists]
 
     # Raise error on NoSQL arguments.
     def execute_ddl({_command, %Table{options: keyword}, _}) when is_list(keyword) do
       raise ArgumentError, "SQLite adapter does not support keyword lists in :options"
     end
 
-    # Create a table.
     def execute_ddl({command, %Table{} = table, columns})
-    when command in [:create, :create_if_not_exists] do
-      assemble [create_table(command), quote_table(table), column_definitions(table, columns), table.options]
+      when command in [:create, :create_if_not_exists]
+    do
+      options       = options_expr(table.options)
+      if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
+      # if more than one has primary_key: true then we alte table with %{table | primary_key: :composite}
+      {table, composite_pk_def} = composite_pk_definition(table, columns)
+
+      "CREATE TABLE" <> if_not_exists <>
+        " #{quote_table(table.prefix, table.name)} (#{column_definitions(table, columns)}#{composite_pk_def})" <> options
     end
 
-    # Drop a table.
-    def execute_ddl({command, %Table{} = table})
-    when command in [:drop, :drop_if_exists] do
-      assemble [drop_table(command), quote_table(table)]
+    def execute_ddl({command, %Table{}=table}) when command in @drops do
+      if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
+
+      "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
     end
 
-    # Alter a table.
     def execute_ddl({:alter, %Table{} = table, changes}) do
       Enum.map_join(changes, "; ", fn (change) ->
-        assemble ["ALTER TABLE", quote_table(table), alter_table_suffix(table, change)]
+        "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_change(table, change)}"
       end)
     end
 
-    # Rename a table.
-    def execute_ddl({:rename, %Table{} = old, %Table{} = new}) do
-      "ALTER TABLE #{quote_table(old)} RENAME TO #{quote_table(new)}"
+    # NOTE Ignores concurrently and using values.
+    def execute_ddl({command, %Index{}=index})
+      when command in [:create, :create_if_not_exists]
+    do
+      fields = Enum.map_join(index.columns, ", ", &index_expr/1)
+      if_not_exists = if command == :create_if_not_exists, do: "IF NOT EXISTS", else: []
+
+      assemble(["CREATE",
+                if_do(index.unique, "UNIQUE"),
+                "INDEX",
+                if_not_exists,
+                quote_name(index.name),
+                "ON",
+                quote_table(index.prefix, index.table),
+                "(#{fields})",
+                if_do(index.where, "WHERE #{index.where}")])
     end
 
-    # Rename a table column.
+    def execute_ddl({command, %Index{}=index}) when command in @drops do
+      if_exists = if command == :drop_if_exists, do: "IF EXISTS", else: []
+
+      assemble(["DROP",
+                "INDEX",
+                if_exists,
+                quote_table(index.prefix, index.name)])
+    end
+
+    def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do
+      "ALTER TABLE #{quote_table(current_table.prefix, current_table.name)} RENAME TO #{quote_table(new_table.prefix, new_table.name)}"
+    end
+
     def execute_ddl({:rename, %Table{}, _old_col, _new_col}) do
       raise ArgumentError, "RENAME COLUMN not supported by SQLite"
     end
 
-    # Create an index.
-    # NOTE Ignores concurrently and using values.
-    def execute_ddl({command, %Index{}=index})
-    when command in [:create, :create_if_not_exists] do
-      create_index = create_index(command, index.unique)
-      table = quote_table(index.prefix, index.table)
-      fields = map_intersperse(index.columns, ",", &quote_id/1)
-      assemble [create_index, quote_id(index.name), "ON", table, "(", fields, ")"]
+    def execute_ddl({command, %Constraint{}})
+      when command in [:create, :drop]
+    do
+      raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite"
     end
 
-    # Drop an index.
-    def execute_ddl({command, %Index{name: name}})
-    when command in [:drop, :drop_if_exists] do
-      assemble [drop_index(command), quote_id(name)]
+    def execute_ddl(string) when is_binary(string), do: string
+
+    def execute_ddl(keyword) when is_list(keyword),
+      do: error!(nil, "SQLite adapter does not support keyword lists in execute")
+
+    defp column_definitions(table, columns) do
+      Enum.map_join(columns, ", ", &column_definition(table, &1))
     end
 
-    # Raise error on NoSQL arguments.
-    def execute_ddl(keyword) when is_list(keyword) do
-      raise ArgumentError, "SQLite adapter does not support keyword lists in execute"
+    defp column_definition(table, {:add, name, %Reference{} = ref, opts}) do
+      assemble([
+        quote_name(name), reference_column_type(ref.type, opts),
+        column_options(table, ref.type, opts), reference_expr(ref, table, name)
+      ])
     end
 
-    # Default:
-    def execute_ddl(default) when is_binary(default), do: default
-
-    defp column_definitions(table, cols) do
-      ["(", map_intersperse(cols, ",", &column_definition(table, &1)), ")"]
+    defp column_definition(table, {:add, name, type, opts}) do
+      assemble([quote_name(name), column_type(type, opts), column_options(table, type, opts)])
     end
 
-    defp column_definition(table, {_action, name, ref = %Reference{}, opts}) do
-      opts = Enum.into(opts, %{})
-      [quote_id(name), column_constraints(opts), reference_expr(ref, table, name)]
+    defp column_change(table, {:add, name, %Reference{} = ref, opts}) do
+      assemble([
+        "ADD COLUMN", quote_name(name), reference_column_type(ref.type, opts),
+        column_options(table, ref.type, opts), reference_expr(ref, table, name)
+      ])
     end
-    defp column_definition(_table, action), do: column_definition(action)
-    defp column_definition({_action, name, type, opts}) do
-      opts = Enum.into(opts, %{})
-      [quote_id(name), column_type(type, opts), column_constraints(type, opts)]
-    end
-
-    # Returns a create table prefix.
-    defp create_table(:create), do: "CREATE TABLE"
-    defp create_table(:create_if_not_exists), do: "CREATE TABLE IF NOT EXISTS"
-
-    # Returns a drop table prefix.
-    defp drop_table(:drop), do: "DROP TABLE"
-    defp drop_table(:drop_if_exists), do: "DROP TABLE IF EXISTS"
-
-    # Foreign keys:
-    defp reference_expr(%Reference{} = ref, %Table{} = table, col) do
-      ["CONSTRAINT", reference_name(ref, table, col),
-       "REFERENCES #{quote_table(table.prefix, ref.table)}(#{quote_id(ref.column)})",
-       reference_on_delete(ref.on_delete)]
-    end
-
-    defp reference_name(%Reference{name: nil}, %Table{name: table}, col) do
-      [table, col, "fkey"] |> Enum.join("_") |> quote_id
-    end
-    defp reference_name(%Reference{name: name}, _table, _col), do: quote_id(name)
-
-    # Decimals are the only type for which we care about the options:
-    defp column_type(:decimal, opts=%{precision: precision}) do
-      scale = Map.get(opts, :scale, 0)
-      "DECIMAL(#{precision},#{scale})"
-    end
-    # Simple column types.  Note that we ignore options like :size, :precision,
-    # etc. because columns do not have types, and SQLite will not coerce any
-    # stored value.  Thus, "strings" are all text and "numerics" have arbitrary
-    # precision regardless of the declared column type.  Decimals above are the
-    # only exception.
-    defp column_type(:serial, _opts), do: "INTEGER"
-    defp column_type(:string, _opts), do: "TEXT"
-    defp column_type(:map, _opts), do: "TEXT"
-    defp column_type({:array, _}, _opts), do: raise(ArgumentError, "Array type is not supported by SQLite")
-    defp column_type(type, _opts), do: type |> Atom.to_string |> String.upcase
-
-    # NOTE SQLite requires autoincrement integers to be primary keys
-    defp column_constraints(:serial, _), do: "PRIMARY KEY AUTOINCREMENT"
-    # Return a string of constraints for the column.
-    # NOTE The order of these constraints does not matter to SQLite, but
-    # rearranging them may cause tests that rely on their order to fail.
-    defp column_constraints(_type, opts), do: column_constraints(opts)
-    defp column_constraints(opts=%{primary_key: true}) do
-      other_constraints = opts |> Map.delete(:primary_key) |> column_constraints
-      ["PRIMARY KEY" | other_constraints]
-    end
-    defp column_constraints(opts=%{default: default}) do
-      val = case default do
-        true -> 1
-        false -> 0
-        {:fragment, expr} -> "(#{expr})"
-        string when is_binary(string) -> "'#{string}'"
-        other -> other
-      end
-      other_constraints = opts |> Map.delete(:default) |> column_constraints
-      ["DEFAULT", val, other_constraints]
-    end
-    defp column_constraints(opts=%{null: false}) do
-      other_constraints = opts |> Map.delete(:null) |> column_constraints
-      ["NOT NULL", other_constraints]
-    end
-    defp column_constraints(_), do: []
-
-    # Define how to handle deletion of foreign keys on parent table.
-    # See: https://www.sqlite.org/foreignkeys.html#fk_actions
-    defp reference_on_delete(:nilify_all), do: "ON DELETE SET NULL"
-    defp reference_on_delete(:delete_all), do: "ON DELETE CASCADE"
-    defp reference_on_delete(_), do: []
-
-    # Returns a create index prefix.
-    defp create_index(:create, unique?), do: create_unique_index(unique?)
-    defp create_index(:create_if_not_exists, unique?) do
-      [create_unique_index(unique?), "IF NOT EXISTS"]
-    end
-
-    defp create_unique_index(true), do: "CREATE UNIQUE INDEX"
-    defp create_unique_index(false), do: "CREATE INDEX"
-
-    # Returns a drop index prefix.
-    defp drop_index(:drop), do: "DROP INDEX"
-    defp drop_index(:drop_if_exists), do: "DROP INDEX IF EXISTS"
 
     # If we are adding a DATETIME column with the NOT NULL constraint, SQLite
     # will force us to give it a DEFAULT value.  The only default value
@@ -711,25 +654,137 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     #
     # Therefore the best option is just to remove the NOT NULL constraint when
     # we add new datetime columns.
-    defp alter_table_suffix(_table, {:add, column, :datetime, opts}) do
+    defp column_change(table, {:add, name, :datetime, opts}) do
       opts = opts |> Enum.into(%{}) |> Map.delete(:null)
-      change = {:add, column, :datetime, opts}
-      ["ADD COLUMN", column_definition(change)]
+      assemble(["ADD COLUMN", quote_name(name), column_type(:datetime, opts), column_options(table, :datetime, opts)])
     end
 
-    defp alter_table_suffix(table, change={:add, _column, _type, _opts}) do
-      ["ADD COLUMN", column_definition(table, change)]
+    defp column_change(table, {:add, name, type, opts}) do
+      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(table, type, opts)])
     end
 
-    defp alter_table_suffix(_table, {:modify, _column, _type, _opts}) do
+    defp column_change(_table, {:modify, _name, _type, _opts}) do
       raise ArgumentError, "ALTER COLUMN not supported by SQLite"
     end
 
-    defp alter_table_suffix(_table, {:remove, _column}) do
+    defp column_change(_table, {:remove, _name, _type, _opts}) do
+      raise ArgumentError, "ALTER COLUMN not supported by SQLite"
+    end
+
+    defp column_change(_table, {:remove, :summary}) do
       raise ArgumentError, "DROP COLUMN not supported by SQLite"
     end
 
-    ## Helpers
+    defp column_options(table, type, opts) do
+      default = Keyword.fetch(opts, :default)
+      null    = Keyword.get(opts, :null)
+      pk      = (table.primary_key != :composite) and Keyword.get(opts, :primary_key, false)
+
+      column_options(default, type, null, pk)
+    end
+
+    defp column_options(_default, :serial, _, true) do
+      "PRIMARY KEY AUTOINCREMENT"
+    end
+    defp column_options(default, type, null, pk) do
+      [default_expr(default, type), null_expr(null), pk_expr(pk)]
+    end
+
+    defp pk_expr(true), do: "PRIMARY KEY"
+    defp pk_expr(_), do: []
+
+    defp composite_pk_definition(%Table{}=table, columns) do
+      pks = Enum.reduce(columns, [], fn({_, name, _, opts}, pk_acc) ->
+        case Keyword.get(opts, :primary_key, false) do
+          true -> [name|pk_acc]
+          false -> pk_acc
+        end
+      end)
+      if length(pks)>1 do
+        composite_pk_expr = pks |> Enum.reverse |> Enum.map_join(", ", &quote_name/1)
+        {%{table | primary_key: :composite}, ", PRIMARY KEY (" <> composite_pk_expr <> ")"}
+      else
+        {table, ""}
+      end
+    end
+
+    defp null_expr(false), do: "NOT NULL"
+    # defp null_expr(true), do: "NULL"  # SQLite does not allow this syntax.
+    defp null_expr(_), do: []
+
+    defp default_expr({:ok, nil}, _type),
+      do: "DEFAULT NULL"
+    defp default_expr({:ok, true}, _type),
+      do: "DEFAULT 1"
+    defp default_expr({:ok, false}, _type),
+      do: "DEFAULT 0"
+    defp default_expr({:ok, literal}, _type) when is_binary(literal),
+      do: "DEFAULT '#{escape_string(literal)}'"
+    defp default_expr({:ok, literal}, _type) when is_number(literal) or is_boolean(literal),
+      do: "DEFAULT #{literal}"
+    defp default_expr({:ok, {:fragment, expr}}, _type),
+      do: "DEFAULT (#{expr})"
+    defp default_expr({:ok, expr}, type),
+      do: raise(ArgumentError, "unknown default `#{inspect expr}` for type `#{inspect type}`. " <>
+                               ":default may be a string, number, boolean, empty list or a fragment(...)")
+    defp default_expr(:error, _),
+      do: []
+
+    defp index_expr(literal) when is_binary(literal),
+      do: literal
+    defp index_expr(literal),
+      do: quote_name(literal)
+
+    defp options_expr(nil),
+      do: ""
+    defp options_expr(keyword) when is_list(keyword),
+      do: error!(nil, "PostgreSQL adapter does not support keyword lists in :options")
+    defp options_expr(options),
+      do: " #{options}"
+
+    # Simple column types. Note that we ignore options like :size, :precision,
+    # etc. because columns do not have types, and SQLite will not coerce any
+    # stored value. Thus, "strings" are all text and "numerics" have arbitrary
+    # precision regardless of the declared column type. Decimals are the
+    # only exception.
+    defp column_type(:serial, _opts), do: "INTEGER"
+    defp column_type(:string, _opts), do: "TEXT"
+    defp column_type(:map, _opts), do: "TEXT"
+    defp column_type({:array, _}, _opts), do: raise(ArgumentError, "Array type is not supported by SQLite")
+    defp column_type(:decimal, opts) do
+      # We only store precision and scale for DECIMAL.
+      precision = Keyword.get(opts, :precision)
+      scale = Keyword.get(opts, :scale, 0)
+
+      decimal_column_type(precision, scale)
+    end
+    defp column_type(type, _opts), do: type |> Atom.to_string |> String.upcase
+
+    defp decimal_column_type(precision, scale) when is_integer(precision), do:
+      "DECIMAL(#{precision},#{scale})"
+    defp decimal_column_type(_precision, _scale), do: "DECIMAL"
+
+    defp reference_expr(%Reference{} = ref, table, name),
+      do: "CONSTRAINT #{reference_name(ref, table, name)} REFERENCES " <>
+          "#{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
+          reference_on_delete(ref.on_delete)
+
+    # A reference pointing to a serial column becomes integer in SQLite
+    defp reference_name(%Reference{name: nil}, table, column),
+      do: quote_name("#{table.name}_#{column}_fkey")
+    defp reference_name(%Reference{name: name}, _table, _column),
+      do: quote_name(name)
+
+    defp reference_column_type(:serial, _opts), do: "INTEGER"
+    defp reference_column_type(type, opts), do: column_type(type, opts)
+
+    # Define how to handle deletion of foreign keys on parent table.
+    # See: https://www.sqlite.org/foreignkeys.html#fk_actions
+    defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
+    defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
+    defp reference_on_delete(_), do: ""
+
+        ## Helpers
 
     defp quote_name(name)
     defp quote_name(name) when is_atom(name),
@@ -780,15 +835,17 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
     def assemble(literal), do: literal
 
-    # Take a list of items, apply a map, then intersperse the result with
-    # another item. Most often used for generating comma-separated fields to
-    # assemble.
-    defp map_intersperse(list, item, func) when is_function(func, 1) do
-      list |> Enum.map(&func.(&1)) |> Enum.intersperse(item)
+    defp if_do(condition, value) do
+      if condition, do: value, else: []
+    end
+
+    # Not sure if this will be valid in SQLite.
+    defp escape_string(value) when is_binary(value) do
+      :binary.replace(value, "'", "''", [:global])
     end
 
     defp error!(nil, message) do
-      raise ArgumentError, message: message
+      raise ArgumentError, message
     end
     defp error!(query, message) do
       raise Ecto.QueryError, query: query, message: message
