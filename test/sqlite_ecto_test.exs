@@ -718,7 +718,7 @@ defmodule Sqlite.Ecto.Test do
 
   test "drop index with prefix" do
     drop = {:drop, index(:posts, [:id], name: "posts$main", prefix: :foo)}
-    assert SQL.execute_ddl(drop) == ~s|DROP INDEX "posts$main"|
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX "foo"."posts$main"|
   end
 
   test "drop index if exists" do
@@ -726,12 +726,11 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX IF EXISTS "posts$main"|
   end
 
-  # test "drop index concurrently" do   # restore in subsequent commit
-  #   drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
-  #   assert_raise ArgumentError, "mumble", fn ->
-  #     SQL.execute_ddl(drop)
-  #   end
-  # end
+  test "drop index concurrently" do
+    # NOTE: SQLite doesn't support CONCURRENTLY, so this isn't included in generated SQL.
+    drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX "posts$main"|
+  end
 
   test "create check constraint" do
     create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0")}

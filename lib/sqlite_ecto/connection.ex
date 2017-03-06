@@ -584,16 +584,26 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       when command in [:create, :create_if_not_exists]
     do
       fields = Enum.map_join(index.columns, ", ", &index_expr/1)
-      if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
+      if_not_exists = if command == :create_if_not_exists, do: "IF NOT EXISTS", else: []
 
       assemble(["CREATE",
                 if_do(index.unique, "UNIQUE"),
-                "INDEX" <> if_not_exists,
+                "INDEX",
+                if_not_exists,
                 quote_name(index.name),
                 "ON",
                 quote_table(index.prefix, index.table),
                 "(#{fields})",
                 if_do(index.where, "WHERE #{index.where}")])
+    end
+
+    def execute_ddl({command, %Index{}=index}) when command in @drops do
+      if_exists = if command == :drop_if_exists, do: "IF EXISTS", else: []
+
+      assemble(["DROP",
+                "INDEX",
+                if_exists,
+                quote_table(index.prefix, index.name)])
     end
 
     def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do
@@ -608,12 +618,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       when command in [:create, :drop]
     do
       raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite"
-    end
-
-    # Drop an index.
-    def execute_ddl({command, %Index{name: name}})
-    when command in [:drop, :drop_if_exists] do
-      assemble [drop_index(command), quote_id(name)]
     end
 
     # Raise error on NoSQL arguments.
@@ -780,10 +784,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp reference_on_delete(:nilify_all), do: "ON DELETE SET NULL"
     defp reference_on_delete(:delete_all), do: "ON DELETE CASCADE"
     defp reference_on_delete(_), do: []
-
-    # Returns a drop index prefix.
-    defp drop_index(:drop), do: "DROP INDEX"
-    defp drop_index(:drop_if_exists), do: "DROP INDEX IF EXISTS"
 
     defp reference_column_type(:serial, _opts), do: "INTEGER"
     defp reference_column_type(type, opts), do: column_type(type, opts)
