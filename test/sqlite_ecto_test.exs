@@ -589,17 +589,16 @@ defmodule Sqlite.Ecto.Test do
            ~s|CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "created_at" DATETIME) WITHOUT ROWID|
   end
 
-  # Generates incorrect results with current build, but will be fixed shortly, I think.
-  # test "create table with composite key" do
-  #   create = {:create, table(:posts),
-  #              [{:add, :a, :integer, [primary_key: true]},
-  #               {:add, :b, :integer, [primary_key: true]},
-  #               {:add, :name, :string, []}]}
-  #
-  #   assert SQL.execute_ddl(create) == """
-  #   CREATE TABLE "posts" ("a" integer, "b" integer, "name" varchar(255), PRIMARY KEY ("a", "b"))
-  #   """ |> remove_newlines
-  # end
+  test "create table with composite key" do
+    create = {:create, table(:posts),
+               [{:add, :a, :integer, [primary_key: true]},
+                {:add, :b, :integer, [primary_key: true]},
+                {:add, :name, :string, []}]}
+
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE "posts" ("a" INTEGER, "b" INTEGER, "name" TEXT, PRIMARY KEY ("a", "b"))
+    """ |> remove_newlines
+  end
 
   test "drop table" do
     drop = {:drop, table(:posts)}
