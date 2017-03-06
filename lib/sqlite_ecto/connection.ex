@@ -546,9 +546,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     # DDL
 
-    alias Ecto.Migration.Table
-    alias Ecto.Migration.Index
-    alias Ecto.Migration.Reference
+    alias Ecto.Migration.{Table, Index, Reference} #, Constraint}
+
+    @drops [:drop, :drop_if_exists]
 
     # Raise error on NoSQL arguments.
     def execute_ddl({_command, %Table{options: keyword}, _}) when is_list(keyword) do
@@ -567,10 +567,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         " #{quote_table(table.prefix, table.name)} (#{column_definitions(table, columns)}#{composite_pk_def})" <> options
     end
 
-    # Drop a table.
-    def execute_ddl({command, %Table{} = table})
-    when command in [:drop, :drop_if_exists] do
-      assemble [drop_table(command), quote_table(table)]
+    def execute_ddl({command, %Table{}=table}) when command in @drops do
+      if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
+
+      "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
     end
 
     # Alter a table.
@@ -718,10 +718,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
                                ":default may be a string, number, boolean, empty list or a fragment(...)")
     defp default_expr(:error, _),
       do: []
-
-    # Returns a drop table prefix.
-    defp drop_table(:drop), do: "DROP TABLE"
-    defp drop_table(:drop_if_exists), do: "DROP TABLE IF EXISTS"
 
     # Foreign keys:
     defp reference_expr(%Reference{} = ref, %Table{} = table, col) do
