@@ -373,8 +373,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp expr({:&, _, [idx, fields]}, sources, query) do
-      {table, name, model} = elem(sources, idx)
-      unless model do
+      {table, name, schema} = elem(sources, idx)
+      if is_nil(schema) and is_nil(fields) do
         error!(query, "SQLite requires a schema module when using selector " <>
           "#{inspect name} but only the table #{inspect table} was given. " <>
           "Please specify a model or specify exactly which fields from " <>
@@ -625,7 +625,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     def execute_ddl(keyword) when is_list(keyword),
       do: error!(nil, "SQLite adapter does not support keyword lists in execute")
 
-    defp column_definitions(table, columns) do
+        defp column_definitions(table, columns) do
       Enum.map_join(columns, ", ", &column_definition(table, &1))
     end
 
