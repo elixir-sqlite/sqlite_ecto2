@@ -50,9 +50,6 @@
   defp bool_decode(1), do: {:ok, true}
   defp bool_decode(x), do: {:ok, x}
 
-  @date_only_pattern ~r{^(\d\d\d\d)-(\d\d)-(\d\d)$}
-  @date_time_pattern ~r{^(\d\d\d\d)-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)\.(\d\d\d\d\d\d)$}
-
   defp date_decode(<<year :: binary-size(4), "-",
                      month :: binary-size(2), "-",
                      day :: binary-size(2)>>)
