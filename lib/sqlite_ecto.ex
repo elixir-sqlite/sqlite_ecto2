@@ -31,6 +31,8 @@
   # Inherit all behaviour from Ecto.Adapters.SQL
   use Ecto.Adapters.SQL, :sqlitex
 
+  import String, only: [to_integer: 1]
+
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
 
@@ -39,6 +41,7 @@
   def loaders(:map, type), do: [&json_decode/1, type]
   def loaders(:boolean, type), do: [&bool_decode/1, type]
   def loaders(:binary_id, type), do: [Ecto.UUID, type]
+  def loaders(:datetime, type), do: [&date_decode/1, type]
   def loaders({:embed, _} = type, _),
     do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
   def loaders(_primitive, type), do: [type]
@@ -46,6 +49,25 @@
   defp bool_decode(0), do: {:ok, false}
   defp bool_decode(1), do: {:ok, true}
   defp bool_decode(x), do: {:ok, x}
+
+  defp date_decode(<<year :: binary-size(4), "-",
+                     month :: binary-size(2), "-",
+                     day :: binary-size(2)>>)
+  do
+    {:ok, {to_integer(year), to_integer(month), to_integer(day)}}
+  end
+  defp date_decode(<<year :: binary-size(4), "-",
+                     month :: binary-size(2), "-",
+                     day :: binary-size(2), " ",
+                     hour :: binary-size(2), ":",
+                     minute :: binary-size(2), ":",
+                     second :: binary-size(2), ".",
+                     microsecond :: binary-size(6)>>)
+  do
+    {:ok, {{to_integer(year), to_integer(month), to_integer(day)},
+           {to_integer(hour), to_integer(minute), to_integer(second), to_integer(microsecond)}}}
+  end
+  defp date_decode(x), do: {:ok, x}
 
   defp json_decode(x) when is_binary(x),
     do: {:ok, Application.get_env(:ecto, :json_library).decode!(x)}
