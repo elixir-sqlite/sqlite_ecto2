@@ -4,7 +4,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     @moduledoc false
 
     @behaviour Ecto.Adapters.SQL.Connection
-    @behaviour Ecto.Adapters.SQL.Sandbox
 
     ## Module and Options
 
@@ -43,16 +42,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         %{} = value -> json_library().encode!(value)
         value -> value
       end
-    end
-
-    ## Sandbox
-
-    def begin_sandbox do
-      %Sqlite.DbConnection.Query{name: "", statement: "BEGIN TRANSACTION"}
-    end
-
-    def rollback_sandbox do
-      %Sqlite.DbConnection.Query{name: "", statement: "ROLLBACK"}
     end
 
     alias Ecto.Query
