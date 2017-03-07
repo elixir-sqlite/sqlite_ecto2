@@ -11,9 +11,15 @@ sed -i "" '/test "insert all/ i\
   @tag :insert_cell_wise_defaults
 ' deps/ecto/integration_test/cases/repo.exs
 
+sed -i "" '/test "Repo.insert_all escape/ i\ 
+  @tag :insert_cell_wise_defaults
+' deps/ecto/integration_test/sql/sql.exs
+
 else
 
 sed -i '/test "insert all/ i @tag :insert_cell_wise_defaults' deps/ecto/integration_test/cases/repo.exs
+
+sed -i '/test "Repo.insert_all escape/ i @tag :insert_cell_wise_defaults' deps/ecto/integration_test/sql/sql.exs
 
 fi
 
