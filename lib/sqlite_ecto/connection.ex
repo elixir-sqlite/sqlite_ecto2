@@ -74,13 +74,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
     def update_all(%{from: from} = query) do
       sources = create_names(query, :update)
-      {from, name} = get_source(query, sources, 0, from)
+      {from, _name} = get_source(query, sources, 0, from)
 
       fields = update_fields(query, sources)
       {join, wheres} = update_join(query, sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      assemble(["UPDATE #{from} AS #{name} SET", fields, join, where])
+      assemble(["UPDATE #{from} SET", fields, join, where])
     end
 
     def delete_all(%Ecto.Query{joins: [_ | _]}) do
@@ -88,12 +88,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
     def delete_all(%{from: from} = query) do
       sources = create_names(query, :delete)
-      {from, name} = get_source(query, sources, 0, from)
+      {from, _name} = get_source(query, sources, 0, from)
 
       join  = using(query, sources)
       where = delete_all_where(query.joins, query, sources)
 
-      assemble(["DELETE FROM #{from} AS #{name}", join, where])
+      assemble(["DELETE FROM #{from}", join, where])
     end
 
     def insert(prefix, table, header, rows, returning) do
@@ -124,7 +124,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp insert_each([], counter, "," <> acc),
       do: {counter, acc}
 
-    def update(prefix, table, fields, filters, returning) do
+      def update(prefix, table, fields, filters, returning) do
       {vals, count} = Enum.map_reduce(fields, 1, fn (i, acc) ->
         {"#{quote_id(i)} = ?#{acc}", acc + 1}
       end)
@@ -512,7 +512,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp create_names(%{prefix: prefix, sources: sources}, stmt) do
-      create_names(prefix, sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
+      create_names(prefix, sources, 0, tuple_size(sources), stmt)
+      |> prohibit_subquery_if_necessary(stmt)
+      |> List.to_tuple
     end
 
     defp create_names(prefix, sources, pos, limit, stmt) when pos < limit do
@@ -533,10 +535,28 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       []
     end
 
-    # defp table_identifier(:select, table, pos) do
-    #   String.first(table) <> Integer.to_string(pos)
-    # end
-    # defp table_identifier(_stmt, table, _pos), do: quote_id(table)
+    defp prohibit_subquery_if_necessary([first | rest], stmt)
+      when stmt in [:update, :delete]
+    do
+      [rewrite_main_table(first) | prohibit_subquery_tables(rest)]
+    end
+
+    defp prohibit_subquery_if_necessary(sources, _stmt), do: sources
+
+    defp rewrite_main_table({table, _name, schema}) do
+      {table, table, schema}
+    end
+
+    defp prohibit_subquery_tables(other_sources) do
+      if Enum.any?(other_sources, &is_subquery_table?/1) do
+        raise ArgumentError, "SQLite adapter does not support subqueries"
+      else
+        other_sources
+      end
+    end
+
+    defp is_subquery_table?({nil, _, _}), do: false
+    defp is_subquery_table?(_), do: true
 
     # DDL
 
