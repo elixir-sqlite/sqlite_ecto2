@@ -56,7 +56,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       sources = create_names(query, :select)
       distinct_exprs = distinct_exprs(query, sources)
 
-      from = from(sources)
+      from = from(query, sources)
       select = select(query, distinct_exprs, sources)
       join = join(query, sources)
       where = where(query, sources)
@@ -72,28 +72,28 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     def update_all(%Ecto.Query{joins: [_ | _]}) do
       raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite"
     end
-    def update_all(query) do
+    def update_all(%{from: from} = query) do
       sources = create_names(query, :update)
-      {table, _name, _model} = elem(sources, 0)
+      {from, _name} = get_source(query, sources, 0, from)
 
       fields = update_fields(query, sources)
       {join, wheres} = update_join(query, sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      assemble(["UPDATE #{table} SET", fields, join, where])
+      assemble(["UPDATE #{from} SET", fields, join, where])
     end
 
     def delete_all(%Ecto.Query{joins: [_ | _]}) do
       raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite"
     end
-    def delete_all(query) do
+    def delete_all(%{from: from} = query) do
       sources = create_names(query, :delete)
-      {table, _name, _model} = elem(sources, 0)
+      {from, _name} = get_source(query, sources, 0, from)
 
       join  = using(query, sources)
       where = delete_all_where(query.joins, query, sources)
 
-      assemble(["DELETE FROM #{table}", join, where])
+      assemble(["DELETE FROM #{from}", join, where])
     end
 
     def insert(prefix, table, header, rows, returning) do
@@ -124,7 +124,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp insert_each([], counter, "," <> acc),
       do: {counter, acc}
 
-    def update(prefix, table, fields, filters, returning) do
+      def update(prefix, table, fields, filters, returning) do
       {vals, count} = Enum.map_reduce(fields, 1, fn (i, acc) ->
         {"#{quote_id(i)} = ?#{acc}", acc + 1}
       end)
@@ -195,18 +195,18 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite"
     end
 
-    defp from(sources) do
-      {table, name, _model} = elem(sources, 0)
-      "FROM #{table} AS #{name}"
+    defp from(%{from: from} = query, sources) do
+      {from, name} = get_source(query, sources, 0, from)
+      "FROM #{from} AS #{name}"
     end
 
     defp using(%Query{joins: []}, _sources), do: []
     defp using(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
-        %JoinExpr{qual: :inner, on: %QueryExpr{expr: expr}, ix: ix} ->
-          {table, name, _model} = elem(sources, ix)
+        %JoinExpr{qual: :inner, on: %QueryExpr{expr: expr}, ix: ix, source: source} ->
+          {join, name} = get_source(query, sources, ix, source)
           where = expr(expr, sources, query)
-          "USING #{table} AS #{name} WHERE " <> where
+          "USING #{join} AS #{name} WHERE " <> where
         %JoinExpr{qual: qual} ->
             error!(query, "SQLite supports only inner joins on delete_all, got: `#{qual}`")
       end)
@@ -237,8 +237,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       froms =
         "FROM " <> Enum.map_join(joins, ", ", fn
           %JoinExpr{qual: :inner, ix: ix, source: source} ->
-            {join, name, _model} = elem(sources, ix)
-            join = join || "(" <> expr(source, sources, query) <> ")"
+            {join, name} = get_source(query, sources, ix, source)
             join <> " AS " <> name
           %JoinExpr{qual: qual} ->
             error!(query, "SQLite supports only inner joins on update_all, got: `#{qual}`")
@@ -256,9 +255,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp join(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
-          {join, name, _model} = elem(sources, ix)
+          {join, name} = get_source(query, sources, ix, source)
           qual = join_qual(qual)
-          join = join || "(" <> expr(source, sources, query) <> ")"
           "#{qual} JOIN " <> join <> " AS " <> name <> " ON " <> expr(expr, sources, query)
       end)
     end
@@ -361,12 +359,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       "#{name}.#{quote_name(field)}"
     end
 
-    defp expr({:&, _, [idx, fields]}, sources, query) do
+    defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
       {table, name, schema} = elem(sources, idx)
       if is_nil(schema) and is_nil(fields) do
         error!(query, "SQLite requires a schema module when using selector " <>
           "#{inspect name} but only the table #{inspect table} was given. " <>
-          "Please specify a model or specify exactly which fields from " <>
+          "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
       Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
@@ -392,6 +390,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp expr({:not, _, [expr]}, sources, query) do
       "NOT (" <> expr(expr, sources, query) <> ")"
+    end
+
+    defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
+      all(query)
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
@@ -510,16 +512,21 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp create_names(%{prefix: prefix, sources: sources}, stmt) do
-      create_names(prefix, sources, 0, tuple_size(sources), stmt) |> List.to_tuple()
+      create_names(prefix, sources, 0, tuple_size(sources), stmt)
+      |> prohibit_subquery_if_necessary(stmt)
+      |> List.to_tuple
     end
 
     defp create_names(prefix, sources, pos, limit, stmt) when pos < limit do
       current =
         case elem(sources, pos) do
-          {table, model} ->
-            {quote_table(prefix, table), table_identifier(stmt, table, pos), model}
+          {table, schema} ->
+            name = String.first(table) <> Integer.to_string(pos)
+            {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->
             {nil, "f" <> Integer.to_string(pos), nil}
+          %Ecto.SubQuery{} ->
+            {nil, "s" <> Integer.to_string(pos), nil}
         end
       [current|create_names(prefix, sources, pos + 1, limit, stmt)]
     end
@@ -528,10 +535,28 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       []
     end
 
-    defp table_identifier(:select, table, pos) do
-      String.first(table) <> Integer.to_string(pos)
+    defp prohibit_subquery_if_necessary([first | rest], stmt)
+      when stmt in [:update, :delete]
+    do
+      [rewrite_main_table(first) | prohibit_subquery_tables(rest)]
     end
-    defp table_identifier(_stmt, table, _pos), do: quote_id(table)
+
+    defp prohibit_subquery_if_necessary(sources, _stmt), do: sources
+
+    defp rewrite_main_table({table, _name, schema}) do
+      {table, table, schema}
+    end
+
+    defp prohibit_subquery_tables(other_sources) do
+      if Enum.any?(other_sources, &is_subquery_table?/1) do
+        raise ArgumentError, "SQLite adapter does not support subqueries"
+      else
+        other_sources
+      end
+    end
+
+    defp is_subquery_table?({nil, _, _}), do: false
+    defp is_subquery_table?(_), do: true
 
     # DDL
 
@@ -774,6 +799,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp reference_on_delete(_), do: ""
 
         ## Helpers
+
+    defp get_source(query, sources, ix, source) do
+      {expr, name, _schema} = elem(sources, ix)
+      {expr || "(" <> expr(source, sources, query) <> ")", name}
+    end
 
     defp quote_name(name)
     defp quote_name(name) when is_atom(name),
