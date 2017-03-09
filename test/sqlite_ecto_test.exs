@@ -411,13 +411,14 @@ defmodule Sqlite.Ecto.Test do
     query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p.x) |> normalize
     assert SQL.all(query) ==
            ~s{SELECT s1."x" FROM "comments" AS c0 } <>
-           ~s{INNER JOIN (SELECT p0."x", p0."y" FROM "posts" AS p0 WHERE (p0."title" = $1)) AS s1 ON TRUE}
+           ~s{INNER JOIN (SELECT p0."x", p0."y" FROM "posts" AS p0 WHERE (p0."title" = ?)) AS s1 ON 1}
 
     query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p) |> normalize
     assert SQL.all(query) ==
            ~s{SELECT s1."x", s1."y" FROM "comments" AS c0 } <>
-           ~s{INNER JOIN (SELECT p0."x", p0."y" FROM "posts" AS p0 WHERE (p0."title" = $1)) AS s1 ON TRUE}
+           ~s{INNER JOIN (SELECT p0."x", p0."y" FROM "posts" AS p0 WHERE (p0."title" = ?)) AS s1 ON 1}
   end
+
   test "join with prefix" do
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], true) |> normalize
     assert SQL.all(%{query | prefix: "prefix"}) ==
