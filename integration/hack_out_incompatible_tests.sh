@@ -34,3 +34,14 @@ else
 sed -i '62s/TestRepo/PoolRepo/' deps/ecto/integration_test/sql/transaction.exs
 
 fi
+
+# Fix duplicate test name.
+if [ `uname` == "Darwin" ] ; then
+
+sed -i '' '72s/parameters/parameters 2/' deps/ecto/integration_test/sql/transaction.exs
+
+else
+
+sed -i '72s/parameters/parameters 2/' deps/ecto/integration_test/sql/transaction.exs
+
+fi
