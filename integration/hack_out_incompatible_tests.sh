@@ -39,10 +39,10 @@ fi
 # https://github.com/elixir-ecto/ecto/commit/235c099a7856eb4451ccfbaede249a59d20b0c66#diff-3079a35f77dacc7bdd7cc2e69c39a886
 if [ `uname` == "Darwin" ] ; then
 
-sed -i '' '466s/assert %Decimal{} = TestRepo.aggregate(Post, :avg, :visits)/assert "12.5" <> _ = to_string(TestRepo.aggregate(Post, :avg, :visits))/' deps/ecto/integration_test/cases/repo.exs
+sed -i '' '468s/assert %Decimal{} = TestRepo.aggregate(Post, :avg, :visits)/assert "12.5" <> _ = to_string(TestRepo.aggregate(Post, :avg, :visits))/' deps/ecto/integration_test/cases/repo.exs
 
 else
 
-sed -i '466s/assert %Decimal{} = TestRepo.aggregate(Post, :avg, :visits)/assert "12.5" <> _ = to_string(TestRepo.aggregate(Post, :avg, :visits))/' deps/ecto/integration_test/cases/repo.exs
+sed -i '468s/assert %Decimal{} = TestRepo.aggregate(Post, :avg, :visits)/assert "12.5" <> _ = to_string(TestRepo.aggregate(Post, :avg, :visits))/' deps/ecto/integration_test/cases/repo.exs
 
 fi
