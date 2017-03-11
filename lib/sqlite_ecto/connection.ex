@@ -45,7 +45,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     alias Ecto.Query
-    alias Ecto.Query.SelectExpr
     alias Ecto.Query.QueryExpr
     alias Ecto.Query.JoinExpr
 
@@ -80,7 +79,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       {join, wheres} = update_join(query, sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      assemble(["UPDATE #{from} SET", fields, join, where])
+      assemble(["UPDATE #{from} SET", fields, join, where, returning(query, sources, :update)])
     end
 
     def delete_all(%Ecto.Query{joins: [_ | _]}) do
@@ -93,7 +92,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       join  = using(query, sources)
       where = delete_all_where(query.joins, query, sources)
 
-      assemble(["DELETE FROM #{from}", join, where])
+      assemble(["DELETE FROM #{from}", join, where, returning(query, sources, :delete)])
     end
 
     def insert(prefix, table, header, rows, returning) do
@@ -105,8 +104,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           "VALUES " <> insert_all(rows, 1, "")
         end
 
-      return = String.rstrip(" " <> assemble(returning_clause(prefix, table, returning, "INSERT")))
-      "INSERT INTO #{quote_table(prefix, table)} #{values}#{return}"
+      returning = String.strip(" " <> assemble(returning_clause(prefix, table, returning, "INSERT")))
+      assemble(["INSERT INTO #{quote_table(prefix, table)}", values, returning])
     end
 
     defp insert_all([row|rows], counter, acc) do
@@ -124,35 +123,29 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp insert_each([], counter, "," <> acc),
       do: {counter, acc}
 
-      def update(prefix, table, fields, filters, returning) do
-      {vals, count} = Enum.map_reduce(fields, 1, fn (i, acc) ->
-        {"#{quote_id(i)} = ?#{acc}", acc + 1}
-      end)
-      vals = Enum.intersperse(vals, ",")
-      where = where_filter(filters, count)
+    def update(prefix, table, fields, filters, returning) do
+      {fields, count} = Enum.map_reduce fields, 1, fn field, acc ->
+        {"#{quote_name(field)} = ?#{acc}", acc + 1}
+      end
+
+      {filters, _count} = Enum.map_reduce filters, count, fn field, acc ->
+        {"#{quote_name(field)} = ?#{acc}", acc + 1}
+      end
+
       return = returning_clause(prefix, table, returning, "UPDATE")
-      assemble ["UPDATE", quote_id({prefix, table}), "SET", vals, where, return]
+
+      assemble(["UPDATE #{quote_table(prefix, table)} SET " <> Enum.join(fields, ", "),
+                "WHERE " <> Enum.join(filters, " AND "),
+                return])
     end
 
     def delete(prefix, table, filters, returning) do
-      where = where_filter(filters)
-      return = returning_clause(prefix, table, returning, "DELETE")
-      assemble ["DELETE FROM", quote_id({prefix, table}), where, return]
-    end
+      {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
+        {"#{quote_name(field)} = ?#{acc}", acc + 1}
+      end
 
-    ## Returning Clause Helpers
-
-    @pseudo_returning_statement " ;--RETURNING ON "
-
-    # SQLite does not have a returning clause, but we append a pseudo one so
-    # that query() can parse the string later and emulate it with a
-    # transaction and trigger. See corresponding code in Sqlitex.
-
-    defp returning_clause(_prefix, _table, [], _cmd), do: []
-    defp returning_clause(prefix, table, returning, cmd) do
-      return = String.strip(@pseudo_returning_statement)
-      fields = Enum.map_join([{prefix, table} | returning], ",", &quote_id/1)
-      [return, cmd, fields]
+      assemble(["DELETE FROM #{quote_table(prefix, table)} WHERE " <> Enum.join(filters, " AND "),
+                returning_clause(prefix, table, returning, "DELETE")])
     end
 
     ## Query generation
@@ -170,7 +163,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%Query{select: %SelectExpr{fields: fields}, distinct: distinct} = query,
+    defp select(%Query{select: %{fields: fields}, distinct: distinct} = query,
                 distinct_exprs, sources) do
       "SELECT " <>
         distinct(distinct, distinct_exprs) <>
@@ -279,16 +272,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       boolean("WHERE", wheres, sources, query)
     end
 
-    # Generate a where clause from the given filters.
-    defp where_filter(filters), do: where_filter(filters, 1)
-    defp where_filter([], _start), do: []
-    defp where_filter(filters, start) do
-      {filters, _} = Enum.map_reduce filters, start, fn (filter, count) ->
-        {"#{quote_id(filter)} = ?#{count}", count + 1}
-      end
-      ["WHERE" | Enum.intersperse(filters, "AND")]
-    end
-
     defp having(%Query{havings: havings} = query, sources) do
       boolean("HAVING", havings, sources, query)
     end
@@ -363,7 +346,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       {table, name, schema} = elem(sources, idx)
       if is_nil(schema) and is_nil(fields) do
         error!(query, "SQLite requires a schema module when using selector " <>
-          "#{inspect name} but only the table #{inspect table} was given. " <>
+          "#{inspect name} but only the table #{table} was given. " <>
           "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
@@ -493,6 +476,33 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp op_to_binary(expr, sources, query) do
       expr(expr, sources, query)
+    end
+
+    ## Returning Clause Helpers
+
+    @pseudo_returning_statement ";--RETURNING ON"
+
+    # SQLite does not have a returning clause, but we append a pseudo one so
+    # that query() can parse the string later and emulate it with a
+    # transaction and trigger. See corresponding code in Sqlitex.
+
+    defp returning(%Query{select: nil}, _sources, _cmd), do: []
+    defp returning(%Query{select: %{fields: [{:&, [], [_, fields, _]}]}}, sources, cmd) do
+      cmd = cmd |> Atom.to_string |> String.upcase
+      table = table_from_first_source(sources)
+      fields = Enum.map_join([table | fields], ",", &quote_id/1)
+      [@pseudo_returning_statement, cmd, fields]
+    end
+
+    defp table_from_first_source(sources) do
+      {_, table, _} = elem(sources, 0)
+      String.trim(table, "\"")
+    end
+
+    defp returning_clause(_prefix, _table, [], _cmd), do: []
+    defp returning_clause(prefix, table, returning, cmd) do
+      fields = Enum.map_join([{prefix, table} | returning], ",", &quote_id/1)
+      [@pseudo_returning_statement, cmd, fields]
     end
 
     defp ecto_to_sqlite_type(type) do
@@ -843,7 +853,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     def assemble([]), do: ""
     def assemble(list) when is_list(list) do
-      list = for x <- List.flatten(list), x != nil, do: x
+      list = for x <- List.flatten(list), x != nil && x != "", do: x
       Enum.reduce list, fn word, result ->
           if word == "," || word == ")" || String.ends_with?(result, "(") do
             Enum.join([result, word])
