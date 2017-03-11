@@ -145,7 +145,7 @@ defmodule Sqlite.DbConnection do
   end
 
   @doc """
-  Prepared an (extended) query and returns the prepared query or raises
+  Prepares an (extended) query and returns the prepared query or raises
   `Sqlite.DbConnection.Error` if there was an error. See `prepare/4`.
   """
   @spec prepare!(conn, iodata, iodata, Keyword.t) :: Sqlite.DbConnection.Query.t
@@ -242,7 +242,7 @@ defmodule Sqlite.DbConnection do
   @doc """
   Acquire a lock on a connection and run a series of requests inside a
   transaction. The result of the transaction fun is return inside an `:ok`
-  tuple: `{:ok result}`.
+  tuple: `{:ok, result}`.
 
   To use the locked connection call the request with the connection
   reference passed as the single argument to the `fun`. If the
@@ -315,6 +315,14 @@ defmodule Sqlite.DbConnection do
   # def parameters(conn, opts \\ []) do
   #   DBConnection.execute!(conn, %Sqlite.DbConnection.Parameters{}, nil, defaults(opts))
   # end
+
+  @doc """
+  Returns a supervisor child specification for a DBConnection pool.
+  """
+  @spec child_spec(Keyword.t) :: Supervisor.Spec.spec
+  def child_spec(opts) do
+    DBConnection.child_spec(Sqlite.DbConnection.Protocol, defaults(opts))
+  end
 
   ## Helpers
 
