@@ -38,7 +38,7 @@ defmodule Sqlite.Ecto.Mixfile do
      {:decimal, "1.1.1", override: true},
      {:esqlite, git: "https://github.com/mmzeeman/esqlite", ref: "c1ba116de470aadc23e7ae582c961b2ced13d306", override: true},
      {:ex_doc, "~> 0.14.5", only: :dev},
-     {:ecto, git: "https://github.com/scouten/ecto.git", ref: "7cb88fb4ad0c741b006197c627068398da6d13ca"},
+     {:ecto, git: "https://github.com/scouten/ecto.git", ref: "a48be6a61043e2c5352b516b0116e984cd70280a"},
      {:poison, "1.5.2", override: true, optional: true},
      {:postgrex, "~> 0.11.1", optional: true},
      {:sbroker, "~> 1.0", override: true},
