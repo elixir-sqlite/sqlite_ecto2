@@ -36,11 +36,17 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp map_params(params) do
       Enum.map params, fn
-        %Ecto.Query.Tagged{type: :binary, value: value} -> {:blob, value}
-        %Ecto.Query.Tagged{value: value} -> value
-        %{__struct__: _} = value -> value
-        %{} = value -> json_library().encode!(value)
-        value -> value
+        %Ecto.Query.Tagged{type: :binary, value: value} ->
+          {:blob, value}
+        %Ecto.Query.Tagged{value: value} ->
+          value
+        %{__struct__: _} = data_type ->
+          {:ok, value} = Ecto.DataType.dump(data_type)
+          value
+        %{} = value ->
+          json_library().encode!(value)
+        value ->
+          value
       end
     end
 
