@@ -2,7 +2,7 @@
   "certifi": {:hex, :certifi, "1.0.0", "1c787a85b1855ba354f0b8920392c19aa1d06b0ee1362f9141279620a5be2039", [:rebar3], []},
   "connection": {:hex, :connection, "1.0.4", "a1cae72211f0eef17705aaededacac3eb30e6625b04a6117c1b2db6ace7d5976", [:mix], []},
   "coverex": {:hex, :coverex, "1.4.12", "b18d737734edeac578a854cfaa5aa48c5d05e649c77ce02efb7f723a316b6a3b", [:mix], [{:hackney, "~> 1.5", [hex: :hackney, optional: false]}, {:poison, "~> 1.5 or ~> 2.0", [hex: :poison, optional: false]}]},
-  "db_connection": {:hex, :db_connection, "0.2.3", "9718deeb713ceb5213950a0de4f29b98133f4cb73cc9aca65648b5a8a1414c59", [:mix], [{:connection, "~> 1.0.2", [hex: :connection, optional: false]}, {:poolboy, "~> 1.5", [hex: :poolboy, optional: true]}, {:sbroker, "~> 0.7", [hex: :sbroker, optional: true]}]},
+  "db_connection": {:hex, :db_connection, "0.2.4", "b49451dacf03005cd4163f85d77b6666b14378369a6d432810b854ede0e594fe", [:mix], [{:connection, "~> 1.0.2", [hex: :connection, optional: false]}, {:poolboy, "~> 1.5", [hex: :poolboy, optional: true]}, {:sbroker, "~> 0.7", [hex: :sbroker, optional: true]}]},
   "decimal": {:hex, :decimal, "1.1.1", "a8ff5b673105e6cdaca96f799aeefc6f07142881b616c65db16e14e556b16e76", [:mix], []},
   "earmark": {:hex, :earmark, "1.2.0", "bf1ce17aea43ab62f6943b97bd6e3dc032ce45d4f787504e3adf738e54b42f3a", [:mix], []},
   "ecto": {:git, "https://github.com/scouten/ecto.git", "a48be6a61043e2c5352b516b0116e984cd70280a", [ref: "a48be6a61043e2c5352b516b0116e984cd70280a"]},
