@@ -131,6 +131,10 @@ defmodule Sqlite.DbConnection.Protocol do
     {:ok, res, s}
   end
 
+  @spec ping(state :: any) ::
+    {:ok, new_state :: any} | {:disconnect, Exception.t, new_state :: any}
+  def ping(state), do: {:ok, state}
+
   @spec handle_begin(Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
     {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
