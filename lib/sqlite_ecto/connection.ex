@@ -7,8 +7,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     ## Module and Options
 
-    def connection(opts) do
-      {Sqlite.DbConnection.Protocol, opts}
+    def child_spec(opts) do
+      DBConnection.child_spec(Sqlite.DbConnection.Protocol, opts)
     end
 
     def to_constraints(_), do: []
