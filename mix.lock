@@ -14,7 +14,7 @@
   "mimerl": {:hex, :mimerl, "1.0.2", "993f9b0e084083405ed8252b99460c4f0563e41729ab42d9074fd5e52439be88", [:rebar3], []},
   "poison": {:hex, :poison, "1.5.2", "560bdfb7449e3ddd23a096929fb9fc2122f709bcc758b2d5d5a5c7d0ea848910", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
-  "postgrex": {:hex, :postgrex, "0.11.0", "ffc900db99742a57f26da3e56c15a6f38bb419f0d627452da82036b6809b6042", [:mix], [{:connection, "~> 1.0", [hex: :connection, optional: false]}, {:db_connection, "~> 0.2", [hex: :db_connection, optional: false]}, {:decimal, "~> 1.0", [hex: :decimal, optional: false]}]},
+  "postgrex": {:git, "https://github.com/ericmj/postgrex.git", "3372a4a1d5358762c1dc4b1c62125aa3d5a32dba", [ref: "3372a4a1d5358762c1dc4b1c62125aa3d5a32dba"]},
   "sbroker": {:hex, :sbroker, "1.0.0", "28ff1b5e58887c5098539f236307b36fe1d3edaa2acff9d6a3d17c2dcafebbd0", [:rebar3], []},
   "sqlitex": {:git, "https://github.com/scouten/sqlitex.git", "8f1dcd4107cd99ca0687bf870b914e44a467722d", [ref: "8f1dcd4107cd99ca0687bf870b914e44a467722d"]},
   "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.1", "28a4d65b7f59893bc2c7de786dec1e1555bd742d336043fe644ae956c3497fbe", [:make, :rebar], []}}
