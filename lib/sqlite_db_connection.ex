@@ -95,22 +95,14 @@ defmodule Sqlite.DbConnection do
   @spec query(conn, iodata, list, Keyword.t) :: {:ok, Sqlite.DbConnection.Result.t} | {:error, Sqlite.DbConnection.Error.t}
   def query(conn, statement, params, opts \\ []) do
     query = %Query{name: "", statement: statement}
-    case DBConnection.query(conn, query, params, defaults(opts)) do
+    case DBConnection.prepare_execute(conn, query, params, defaults(opts)) do
+      {:ok, _, result} ->
+        {:ok, result}
       {:error, %ArgumentError{} = err} ->
         raise err
-      other ->
-        other
+      {:error, _} = error ->
+        error
     end
-  end
-
-  @doc """
-  Runs an (extended) query and returns the result or raises `Sqlite.DbConnection.Error` if
-  there was an error. See `query/3`.
-  """
-  @spec query!(conn, iodata, list, Keyword.t) :: Sqlite.DbConnection.Result.t
-  def query!(conn, statement, params, opts \\ []) do
-    query = %Query{name: "", statement: statement}
-    DBConnection.query!(conn, query, params, defaults(opts))
   end
 
   @doc """
