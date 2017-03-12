@@ -5,7 +5,7 @@
   "db_connection": {:git, "https://github.com/fishcakez/db_connection", "940a20ab1a34da13f778636aa2dc8baeba64c0f9", [ref: "940a20ab1a34da13f778636aa2dc8baeba64c0f9"]},
   "decimal": {:hex, :decimal, "1.1.2", "79a769d4657b2d537b51ef3c02d29ab7141d2b486b516c109642d453ee08e00c", [:mix], []},
   "earmark": {:hex, :earmark, "1.2.0", "bf1ce17aea43ab62f6943b97bd6e3dc032ce45d4f787504e3adf738e54b42f3a", [:mix], []},
-  "ecto": {:git, "https://github.com/scouten/ecto.git", "3b9c747ee91ae2b05c84cf6b397f31843785d62a", [ref: "3b9c747ee91ae2b05c84cf6b397f31843785d62a"]},
+  "ecto": {:git, "https://github.com/elixir-ecto/ecto.git", "1244f768ef4fb466349705bb62a8a92a5ddf4822", [ref: "1244f768ef4fb466349705bb62a8a92a5ddf4822"]},
   "esqlite": {:git, "https://github.com/mmzeeman/esqlite", "c1ba116de470aadc23e7ae582c961b2ced13d306", [ref: "c1ba116de470aadc23e7ae582c961b2ced13d306"]},
   "ex_doc": {:hex, :ex_doc, "0.14.5", "c0433c8117e948404d93ca69411dd575ec6be39b47802e81ca8d91017a0cf83c", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
   "hackney": {:hex, :hackney, "1.6.6", "5564b4695d48fd87859e9df77a7fa4b4d284d24519f0cd7cc898f09e8fbdc8a3", [:rebar3], [{:certifi, "1.0.0", [hex: :certifi, optional: false]}, {:idna, "4.0.0", [hex: :idna, optional: false]}, {:metrics, "1.0.1", [hex: :metrics, optional: false]}, {:mimerl, "1.0.2", [hex: :mimerl, optional: false]}, {:ssl_verify_fun, "1.1.1", [hex: :ssl_verify_fun, optional: false]}]},
