@@ -96,10 +96,12 @@ defmodule Sqlite.DbConnection do
   def query(conn, statement, params, opts \\ []) do
     query = %Query{name: "", statement: statement}
     case DBConnection.query(conn, query, params, defaults(opts)) do
+      {:ok, _, result} ->
+        {:ok, result}
       {:error, %ArgumentError{} = err} ->
         raise err
-      other ->
-        other
+      {:error, _} = error ->
+        error
     end
   end
 
@@ -110,7 +112,8 @@ defmodule Sqlite.DbConnection do
   @spec query!(conn, iodata, list, Keyword.t) :: Sqlite.DbConnection.Result.t
   def query!(conn, statement, params, opts \\ []) do
     query = %Query{name: "", statement: statement}
-    DBConnection.query!(conn, query, params, defaults(opts))
+    {_, result} = DBConnection.query!(conn, query, params, defaults(opts))
+    result
   end
 
   @doc """

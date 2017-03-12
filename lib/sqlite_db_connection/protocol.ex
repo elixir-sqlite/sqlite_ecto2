@@ -6,6 +6,7 @@ defmodule Sqlite.DbConnection.Protocol do
   # import Sqlite.DbConnection.Messages
   # import Sqlite.DbConnection.BinaryUtils
   require Logger
+  @behaviour DBConnection
 
   # IMPORTANT: This is closely modeled on Postgrex's protocol.ex file.
   # We strive to avoid structural differences between that file and this one.

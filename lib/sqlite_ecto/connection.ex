@@ -25,8 +25,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       case DBConnection.prepare_execute(conn, query, map_params(params), opts) do
         {:ok, %Sqlite.DbConnection.Query{}, result} ->
           {:ok, result}
-        other ->
-          other
+        {:error, _} = err ->
+          err
       end
     end
 
