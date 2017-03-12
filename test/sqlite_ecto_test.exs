@@ -282,7 +282,7 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT 1 IN () FROM "model" AS m0}
 
     query = Model |> select([e], 1 in ^[1, 2, 3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN ($1,$2,$3) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN (?1,?2,?3) FROM "model" AS m0}
 
     query = Model |> select([e], 1 in [1, ^2, 3]) |> normalize
     assert SQL.all(query) == ~s{SELECT 1 IN (1,?,3) FROM "model" AS m0}
