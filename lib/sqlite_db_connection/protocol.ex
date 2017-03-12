@@ -33,25 +33,18 @@ defmodule Sqlite.DbConnection.Protocol do
     end
   end
 
-  # @spec disconnect(Exception.t, state) :: :ok
-  # def disconnect(err, %{types: ref}) when is_reference(ref) do
-  #   # Don't handle the case where connection failure occurs during bootstrap
-  #   # (hard to test and "unlikely" given auth just succeeded)
-  #   raise err
-  # end
-  # def disconnect(_, s) do
-  #   sock_close(s)
-  #   _ = recv_buffer(s)
-  #   delete_parameters(s)
-  #   :ok
-  # end
-  #
-  # @spec ping(state) ::
-  #   {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
-  # def ping(%{buffer: buffer} = s) do
-  #   status = %{notify: notify([]), sync: :sync}
-  #   sync(%{s | buffer: nil}, status, buffer)
-  # end
+  @spec disconnect(Exception.t, state) :: :ok
+  def disconnect(_, _state) do
+    # No such thing with SQLite, so this is an intentional no-op.
+    :ok
+  end
+
+  @spec ping(state :: any) ::
+    {:ok, new_state :: any} | {:disconnect, Exception.t, new_state :: any}
+  def ping(state) do
+    # No such thing with SQLite, so this is an intentional no-op.
+    {:ok, state}
+  end
 
   @spec checkout(state) ::
     {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
@@ -132,10 +125,6 @@ defmodule Sqlite.DbConnection.Protocol do
     {:ok, res, s}
   end
 
-  @spec ping(state :: any) ::
-    {:ok, new_state :: any} | {:disconnect, Exception.t, new_state :: any}
-  def ping(state), do: {:ok, state}
-
   @spec handle_begin(Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
     {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
@@ -176,6 +165,17 @@ defmodule Sqlite.DbConnection.Protocol do
   #   status = %{notify: notify(opts), sync: :sync}
   #   simple_send(%{s | buffer: nil}, status, statement, buffer)
   # end
+
+  @spec handle_info(any, state) ::
+    {:ok, state} | {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
+  def handle_info(msg, s) do
+    # Not expecting any messages, but DbConnection behavior interface requires
+    # that we handle this.
+    Logger.info(fn() -> [inspect(__MODULE__), ?\s, inspect(self()),
+      " received unexpected message: " | inspect(msg)]
+    end)
+    {:ok, s}
+  end
 
   ## prepare
 
