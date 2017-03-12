@@ -364,8 +364,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       expr(left, sources, query) <> " IN (" <> args <> ")"
     end
 
+    defp expr({:in, _, [left, {:^, _, [_ix, 0]}]}, sources, query) do
+      expr(left, sources, query) <> " IN ()"
+    end
+
     defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources, query) do
-      args = Enum.map_join ix+1..ix+length, ",", &"$#{&1}"
+      args = Enum.map_join ix+1..ix+length, ",", &"?#{&1}"
       expr(left, sources, query) <> " IN (" <> args <> ")"
     end
 
