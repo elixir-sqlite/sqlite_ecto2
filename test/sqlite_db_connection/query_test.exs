@@ -75,14 +75,6 @@ defmodule QueryTest do
     assert res.num_rows == 1
   end
 
-  test "query! result struct", context do
-    res = Sqlite.DbConnection.query!(context[:pid], "SELECT 123 AS a, 456 AS b", [])
-    assert %Sqlite.DbConnection.Result{} = res
-    assert res.command == :select
-    assert res.columns == ["a", "b"]
-    assert res.num_rows == 1
-  end
-
   # Disabled: I don't know of a way to trigger a runtime error in Sqlite.
   # test "error struct", context do
   #   assert {:error, %Sqlite.DbConnection.Error{}} = P.query(context[:pid], "SELECT 123 + 'a'", [])
@@ -121,13 +113,6 @@ defmodule QueryTest do
     assert [[42]] = execute(query, [42])
   end
 
-  # test "execute with encode mapper", context do
-  #   assert (%Sqlite.DbConnection.Query{} = query) = prepare("mapper", "SELECT cast($1 as int)")
-  #   assert [[84]] = execute(query, [42], [encode_mapper: fn(n) -> n * 2 end])
-  #   assert :ok = close(query)
-  #   assert [[42]] = query("SELECT 42", [])
-  # end
-
   test "closing prepared query that does not exist succeeds", context do
     assert (%Sqlite.DbConnection.Query{} = query) = prepare("42", "SELECT 42")
     assert :ok = close(query)
@@ -136,12 +121,6 @@ defmodule QueryTest do
 
   test "error codes are translated", context do
     assert %Sqlite.DbConnection.Error{sqlite: %{code: :sqlite_error}} = query("wat", [])
-  end
-
-  test "query! raises error on bad query", context do
-    assert_raise Sqlite.DbConnection.Error, fn ->
-      Sqlite.DbConnection.query!(context.pid, "wat", [])
-    end
   end
 
   test "connection works after failure in parsing state", context do
