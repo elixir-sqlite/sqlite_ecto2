@@ -85,8 +85,8 @@ Code.require_file "../../deps/ecto/integration_test/support/schemas.exs", __DIR_
 Code.require_file "../../deps/ecto/integration_test/support/migration.exs", __DIR__
 
 # Load up the repository, start it, and run migrations
-_   = Ecto.Storage.down(TestRepo)
-:ok = Ecto.Storage.up(TestRepo)
+_   = Sqlite.Ecto.storage_down(TestRepo.config)
+:ok = Sqlite.Ecto.storage_up(TestRepo.config)
 
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link
