@@ -12,6 +12,7 @@ ExUnit.start exclude: [:array_type,
                        :right_join,
                        :unique_constraint,
                        :uses_usec,
+                       :transaction_isolation,
                        :insert_cell_wise_defaults,
                        :modify_foreign_key_on_delete,
                        :modify_foreign_key_on_update]
