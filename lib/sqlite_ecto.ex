@@ -1,4 +1,4 @@
-  defmodule Sqlite.Ecto do
+defmodule Sqlite.Ecto do
   @moduledoc ~S"""
   Ecto Adapter module for SQLite.
 

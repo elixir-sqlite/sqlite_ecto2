@@ -78,7 +78,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       {from, _name} = get_source(query, sources, 0, from)
 
       fields = update_fields(query, sources)
-      {join, wheres} = update_join(query, sources)
+      {join, wheres} = using_join(query, :update_all, "FROM", sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
       assemble(["UPDATE #{from} SET", fields, join, where, returning(query, sources, :update)])
@@ -91,8 +91,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       sources = create_names(query, :delete)
       {from, _name} = get_source(query, sources, 0, from)
 
-      join  = using(query, sources)
-      where = delete_all_where(query.joins, query, sources)
+      {join, wheres} = using_join(query, :delete_all, "USING", sources)
+      where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
       assemble(["DELETE FROM #{from}", join, where, returning(query, sources, :delete)])
     end
@@ -195,18 +195,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       "FROM #{from} AS #{name}"
     end
 
-    defp using(%Query{joins: []}, _sources), do: []
-    defp using(%Query{joins: joins} = query, sources) do
-      Enum.map_join(joins, " ", fn
-        %JoinExpr{qual: :inner, on: %QueryExpr{expr: expr}, ix: ix, source: source} ->
-          {join, name} = get_source(query, sources, ix, source)
-          where = expr(expr, sources, query)
-          "USING #{join} AS #{name} WHERE " <> where
-        %JoinExpr{qual: qual} ->
-            error!(query, "SQLite supports only inner joins on delete_all, got: `#{qual}`")
-      end)
-    end
-
     defp update_fields(%Query{updates: updates} = query, sources) do
       for(%{expr: expr} <- updates,
           {op, kw} <- expr,
@@ -227,15 +215,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       error!(query, "Unknown update operation #{inspect command} for SQLite")
     end
 
-    defp update_join(%Query{joins: []}, _sources), do: {[], []}
-    defp update_join(%Query{joins: joins} = query, sources) do
+    defp using_join(%Query{joins: []}, _kind, _prefix, _sources), do: {[], []}
+    defp using_join(%Query{joins: joins} = query, kind, prefix, sources) do
       froms =
-        "FROM " <> Enum.map_join(joins, ", ", fn
+        Enum.map_join(joins, ", ", fn
           %JoinExpr{qual: :inner, ix: ix, source: source} ->
             {join, name} = get_source(query, sources, ix, source)
             join <> " AS " <> name
           %JoinExpr{qual: qual} ->
-            error!(query, "SQLite supports only inner joins on update_all, got: `#{qual}`")
+            error!(query, "SQLite supports only inner joins on #{kind}, got: `#{qual}`")
         end)
 
       wheres =
@@ -243,7 +231,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
             value != true,
             do: expr
 
-      {froms, wheres}
+      {prefix <> " " <> froms, wheres}
     end
 
     defp join(%Query{joins: []}, _sources), do: []
@@ -252,22 +240,23 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
           {join, name} = get_source(query, sources, ix, source)
           qual = join_qual(qual)
-          "#{qual} JOIN " <> join <> " AS " <> name <> " ON " <> expr(expr, sources, query)
+          qual <> " " <> join <> " AS " <> name <> " ON " <> expr(expr, sources, query)
       end)
     end
 
-    defp join_qual(:inner), do: "INNER"
-    defp join_qual(:left),  do: "LEFT"
+    defp join_qual(:inner), do: "INNER JOIN"
+    defp join_qual(:left),  do: "LEFT JOIN"
+    defp join_qual(:inner_lateral) do
+      raise ArgumentError, "INNER JOIN LATERAL not supported by SQLite"
+    end
+    defp join_qual(:left_lateral) do
+      raise ArgumentError, "LEFT JOIN LATERAL not supported by SQLite"
+    end
     defp join_qual(:right) do
       raise ArgumentError, "RIGHT OUTER JOIN not supported by SQLite"
     end
     defp join_qual(:full) do
       raise ArgumentError, "FULL OUTER JOIN not supported by SQLite"
-    end
-
-    defp delete_all_where([], query, sources), do: where(query, sources)
-    defp delete_all_where(_joins, %Query{wheres: wheres} = query, sources) do
-      boolean("AND", wheres, sources, query)
     end
 
     defp where(%Query{wheres: wheres} = query, sources) do
