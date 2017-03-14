@@ -34,13 +34,13 @@ defmodule Sqlite.Ecto.Mixfile do
     [{:backoff, git: "https://github.com/scouten/backoff.git", ref: "8f10cb83b5fbc2401e6a06b341417cad4c632f34", override: true},
      {:connection, "1.0.3", override: true},
      {:coverex, "~> 1.4.11", only: :test},
-     {:db_connection, "1.0.0-rc.2", optional: true, override: true},
+     {:db_connection, "1.0.0-rc.4", optional: true, override: true},
      {:decimal, "1.1.2", override: true},
      {:esqlite, git: "https://github.com/mmzeeman/esqlite", ref: "c1ba116de470aadc23e7ae582c961b2ced13d306", override: true},
      {:ex_doc, "~> 0.14.5", only: :dev},
      {:ecto, git: "https://github.com/elixir-ecto/ecto.git", ref: "ad9b38f940d409565f0b4d8f7e537edc8e7cc948"},
      {:poison, "1.5.2", override: true, optional: true},
-     {:postgrex, git: "https://github.com/ericmj/postgrex", ref: "93bfef47b418162b9804c5ad952606214ec4b00e", override: true},
+     {:postgrex, "0.12.0", optional: true, override: true},
      {:sbroker, "~> 1.0", override: true},
      {:sqlitex, git: "https://github.com/scouten/sqlitex.git", ref: "8f1dcd4107cd99ca0687bf870b914e44a467722d", override: true}]
   end
