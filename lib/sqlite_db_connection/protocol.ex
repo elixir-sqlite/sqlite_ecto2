@@ -34,10 +34,11 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   @spec disconnect(Exception.t, state) :: :ok
-  def disconnect(_, _state) do
-    # No such thing with SQLite, so this is an intentional no-op.
+  def disconnect(_exc, %__MODULE__{db: db} = _state) when db != nil do
+    GenServer.stop(db)
     :ok
   end
+  def disconnect(_exception, _state), do: :ok
 
   @spec ping(state :: any) ::
     {:ok, new_state :: any} | {:disconnect, Exception.t, new_state :: any}
@@ -225,7 +226,7 @@ defmodule Sqlite.DbConnection.Protocol do
   defp run_stmt(query, params, s) do
     opts = [decode: :manual, types: true, bind: params]
     command = command_from_sql(query)
-    case Sqlitex.Server.query_rows(s.db, to_string(query), opts) do
+    case query_rows(s.db, to_string(query), opts) do
       {:ok, %{rows: raw_rows, columns: raw_column_names}} ->
         {rows, num_rows, column_names} = case {raw_rows, raw_column_names} do
           {_, []} -> {nil, get_changes_count(s.db, command), nil}
@@ -276,7 +277,7 @@ defmodule Sqlite.DbConnection.Protocol do
   ## transaction
 
   defp handle_transaction(stmt, s) do
-    case Sqlitex.Server.query_rows(s.db, stmt, into: :raw_list) do
+    case query_rows(s.db, stmt, into: :raw_list) do
       {:ok, _rows} ->
         command = command_from_sql(stmt)
         result = %Sqlite.DbConnection.Result{rows: nil,
@@ -286,6 +287,15 @@ defmodule Sqlite.DbConnection.Protocol do
         {:ok, result, s}
       {:error, {_sqlite_errcode, _message}} = err ->
         sqlite_error(err, s)
+    end
+  end
+
+  defp query_rows(db, stmt, opts) do
+    try do
+      Sqlitex.Server.query_rows(db, stmt, opts)
+    catch
+      :exit, _ ->
+        {:raise, %Sqlite.DbConnection.Error{message: "Disconnected"}}
     end
   end
 
