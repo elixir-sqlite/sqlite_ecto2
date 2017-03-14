@@ -148,6 +148,13 @@ defmodule Sqlite.Ecto.Test do
     assert SQL.all(query) == ~s{SELECT s0."x", s0."y" FROM "schema" AS s0}
   end
 
+  test "distinct with order by" do
+    assert_raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite", fn ->
+      query = Schema |> order_by([r], [r.y]) |> distinct([r], desc: r.x) |> select([r], r.x) |> normalize
+      SQL.all(query)
+    end
+  end
+
   test "where" do
     query = Schema |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 WHERE (s0."x" = 42) AND (s0."y" != 43)}

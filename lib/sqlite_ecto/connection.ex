@@ -72,15 +72,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
     def all(query) do
       sources = create_names(query, :select)
-      distinct_exprs = distinct_exprs(query, sources)
+      {select_distinct, order_by_distinct} = distinct(query.distinct, sources, query)
 
       from = from(query, sources)
-      select = select(query, distinct_exprs, sources)
+      select   = select(query, select_distinct, sources)
       join = join(query, sources)
       where = where(query, sources)
       group_by = group_by(query, sources)
       having = having(query, sources)
-      order_by = order_by(query, distinct_exprs, sources)
+      order_by = order_by(query, order_by_distinct, sources)
       limit = limit(query, sources)
       offset = offset(query, sources)
 
@@ -182,11 +182,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%Query{select: %{fields: fields}, distinct: distinct} = query,
-                distinct_exprs, sources) do
-      "SELECT " <>
-        distinct(distinct, distinct_exprs) <>
-        select_fields(fields, sources, query)
+    defp select(%Query{select: %{fields: fields}} = query, select_distinct, sources) do
+      "SELECT " <> select_distinct <> select_fields(fields, sources, query)
     end
 
     defp select_fields([], _sources, _query),
@@ -200,16 +197,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end)
     end
 
-    defp distinct_exprs(%Query{distinct: %QueryExpr{expr: exprs}} = query, sources)
-        when is_list(exprs) do
-      Enum.map_join(exprs, ", ", &expr(&1, sources, query))
-    end
-    defp distinct_exprs(_, _), do: ""
-
-    defp distinct(nil, _sources), do: ""
-    defp distinct(%QueryExpr{expr: true}, _exprs),  do: "DISTINCT "
-    defp distinct(%QueryExpr{expr: false}, _exprs), do: ""
-    defp distinct(_query, _exprs) do
+    defp distinct(nil, _, _), do: {"", []}
+    defp distinct(%QueryExpr{expr: []}, _, _), do: {"", []}
+    defp distinct(%QueryExpr{expr: true}, _, _), do: {"DISTINCT ", []}
+    defp distinct(%QueryExpr{expr: false}, _, _), do: {"", []}
+    defp distinct(_query, _, _) do
       raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite"
     end
 
@@ -303,21 +295,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end
     end
 
-    defp order_by(%Query{order_bys: order_bys} = query, distinct_exprs, sources) do
-      exprs =
-        Enum.map_join(order_bys, ", ", fn
-          %QueryExpr{expr: expr} ->
-            Enum.map_join(expr, ", ", &order_by_expr(&1, sources, query))
-        end)
-
-      case {distinct_exprs, exprs} do
-        {_, ""} ->
-          []
-        {"", _} ->
-          "ORDER BY " <> exprs
-        {_, _}  ->
-          "ORDER BY " <> distinct_exprs <> ", " <> exprs
-      end
+    defp order_by(%Query{order_bys: []}, _distinct, _sources) do
+      []
+    end
+    defp order_by(%Query{order_bys: order_bys} = query, distinct, sources) do
+      order_bys = Enum.flat_map(order_bys, & &1.expr)
+      exprs = Enum.map_join(distinct ++ order_bys, ", ", &order_by_expr(&1, sources, query))
+      "ORDER BY " <> exprs
     end
 
     defp order_by_expr({dir, expr}, sources, query) do
@@ -429,8 +413,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do
       {modifier, args} =
         case args do
-         [rest, :distinct] -> {"DISTINCT ", [rest]}
-         _ -> {"", args}
+          [rest, :distinct] -> {"DISTINCT ", [rest]}
+          _ -> {"", args}
        end
 
       case handle_call(fun, length(args)) do
