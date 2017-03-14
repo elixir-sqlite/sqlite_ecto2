@@ -51,7 +51,7 @@ defmodule Sqlite.Ecto.Test do
       field :y, :integer
       field :z, :integer
 
-      has_many :comments, Ecto.Adapters.PostgresTest.Schema2,
+      has_many :comments, Sqlite.Ecto.Test.Schema2,
         references: :x,
         foreign_key: :z
       has_one :permalink, Sqlite.Ecto.Test.Schema3,
