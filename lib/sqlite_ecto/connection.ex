@@ -65,8 +65,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     alias Ecto.Query
-    alias Ecto.Query.QueryExpr
-    alias Ecto.Query.JoinExpr
+    alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
 
     def all(%Ecto.Query{lock: lock}) when lock != nil do
       raise ArgumentError, "locks are not supported by SQLite"
@@ -253,7 +252,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       wheres =
         for %JoinExpr{on: %QueryExpr{expr: value} = expr} <- joins,
             value != true,
-            do: expr
+            do: expr |> Map.put(:__struct__, BooleanExpr) |> Map.put(:op, :and)
 
       {prefix <> " " <> froms, wheres}
     end
@@ -340,12 +339,18 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp boolean(_name, [], _sources, _query), do: []
-    defp boolean(name, query_exprs, sources, query) do
+    defp boolean(name, [%{expr: expr} | query_exprs], sources, query) do
       name <> " " <>
-        Enum.map_join(query_exprs, " AND ", fn
-          %QueryExpr{expr: expr} ->
-            "(" <> expr(expr, sources, query) <> ")"
+        Enum.reduce(query_exprs, paren_expr(expr, sources, query), fn
+          %BooleanExpr{expr: expr, op: :and}, acc ->
+            acc <> " AND " <> paren_expr(expr, sources, query)
+          %BooleanExpr{expr: expr, op: :or}, acc ->
+            acc <> " OR " <> paren_expr(expr, sources, query)
         end)
+    end
+
+    defp paren_expr(expr, sources, query) do
+      "(" <> expr(expr, sources, query) <> ")"
     end
 
     defp expr({:^, [], [_ix]}, _sources, _query) do
@@ -490,7 +495,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp op_to_binary({op, _, [_, _]} = expr, sources, query) when op in @binary_ops do
-      "(" <> expr(expr, sources, query) <> ")"
+      paren_expr(expr, sources, query)
     end
 
     defp op_to_binary(expr, sources, query) do
@@ -834,7 +839,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp get_source(query, sources, ix, source) do
       {expr, name, _schema} = elem(sources, ix)
-      {expr || "(" <> expr(source, sources, query) <> ")", name}
+      {expr || paren_expr(source, sources, query), name}
     end
 
     defp quote_name(name)
