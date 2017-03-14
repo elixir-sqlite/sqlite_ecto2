@@ -19,6 +19,10 @@ sed -i "" '/test "Repo.insert_all escape/ i\
   @tag :insert_cell_wise_defaults
 ' deps/ecto/integration_test/sql/sql.exs
 
+sed -i "" '/subqueries with select expression/ i\ 
+  @tag :map_boolean_in_subquery
+' deps/ecto/integration_test/sql/subquery.exs
+
 else
 
 sed -i '/test "insert all/ i @tag :insert_cell_wise_defaults' deps/ecto/integration_test/cases/repo.exs
@@ -26,5 +30,7 @@ sed -i '/test "insert all/ i @tag :insert_cell_wise_defaults' deps/ecto/integrat
 sed -i '/failing child foreign key/ i @tag :foreign_key_constraint' deps/ecto/integration_test/cases/repo.exs
 
 sed -i '/test "Repo.insert_all escape/ i @tag :insert_cell_wise_defaults' deps/ecto/integration_test/sql/sql.exs
+
+sed -i '/subqueries with select expression/ i @tag :map_boolean_in_subquery' deps/ecto/integration_test/sql/subquery.exs
 
 fi
