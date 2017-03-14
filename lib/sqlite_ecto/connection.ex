@@ -17,7 +17,14 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     def prepare_execute(conn, name, sql, params, opts) do
       query = %Sqlite.DbConnection.Query{name: name, statement: sql}
-      DBConnection.prepare_execute(conn, query, map_params(params), opts)
+      case DBConnection.prepare_execute(conn, query, map_params(params), opts) do
+        {:ok, _, _} = ok ->
+          ok
+        {:error, %Sqlite.DbConnection.Error{}} = error ->
+          error
+        {:error, err} ->
+          raise err
+      end
     end
 
     def execute(conn, sql, params, opts) when is_binary(sql) do
@@ -25,13 +32,24 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       case DBConnection.prepare_execute(conn, query, map_params(params), opts) do
         {:ok, %Sqlite.DbConnection.Query{}, result} ->
           {:ok, result}
-        {:error, _} = err ->
-          err
+        {:error, %Sqlite.DbConnection.Error{}} = error ->
+          error
+        {:error, err} ->
+          raise err
       end
     end
 
     def execute(conn, query, params, opts) do
-      DBConnection.execute(conn, query, map_params(params), opts)
+      case DBConnection.execute(conn, query, map_params(params), opts) do
+        {:ok, _} = ok ->
+          ok
+        {:error, %ArgumentError{} = err} ->
+          {:reset, err}
+        {:error, %Sqlite.DbConnection.Error{}} = error ->
+          error
+        {:error, err} ->
+          raise err
+      end
     end
 
     defp map_params(params) do
