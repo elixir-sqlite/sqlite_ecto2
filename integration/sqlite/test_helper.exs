@@ -16,7 +16,8 @@ ExUnit.start exclude: [:array_type,
                        :insert_cell_wise_defaults,
                        :modify_foreign_key_on_delete,
                        :modify_foreign_key_on_update,
-                       :alter_primary_key]
+                       :alter_primary_key,
+                       :map_boolean_in_subquery]
 
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :primary_key_type, :id)
