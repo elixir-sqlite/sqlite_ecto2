@@ -15,7 +15,8 @@ ExUnit.start exclude: [:array_type,
                        :transaction_isolation,
                        :insert_cell_wise_defaults,
                        :modify_foreign_key_on_delete,
-                       :modify_foreign_key_on_update]
+                       :modify_foreign_key_on_update,
+                       :alter_primary_key]
 
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :primary_key_type, :id)
