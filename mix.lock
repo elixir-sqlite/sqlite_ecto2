@@ -3,7 +3,7 @@
   "connection": {:hex, :connection, "1.0.3", "3145f7416be3df248a4935f24e3221dc467c1e3a158d62015b35bd54da365786", [:mix], []},
   "coverex": {:hex, :coverex, "1.4.12", "b18d737734edeac578a854cfaa5aa48c5d05e649c77ce02efb7f723a316b6a3b", [:mix], [{:hackney, "~> 1.5", [hex: :hackney, optional: false]}, {:poison, "~> 1.5 or ~> 2.0", [hex: :poison, optional: false]}]},
   "db_connection": {:hex, :db_connection, "1.0.0", "63c03e520d54886a66104d34e32397ba960db6e74b596ce221592c07d6a40d8d", [:mix], [{:connection, "~> 1.0.2", [hex: :connection, optional: false]}, {:poolboy, "~> 1.5", [hex: :poolboy, optional: true]}, {:sbroker, "~> 1.0", [hex: :sbroker, optional: true]}]},
-  "decimal": {:hex, :decimal, "1.1.2", "79a769d4657b2d537b51ef3c02d29ab7141d2b486b516c109642d453ee08e00c", [:mix], []},
+  "decimal": {:hex, :decimal, "1.2.0", "462960fd71af282e570f7b477f6be56bf8968e68277d4d0b641a635269bf4b0d", [:mix], []},
   "earmark": {:hex, :earmark, "1.2.0", "bf1ce17aea43ab62f6943b97bd6e3dc032ce45d4f787504e3adf738e54b42f3a", [:mix], []},
   "ecto": {:git, "https://github.com/elixir-ecto/ecto.git", "fc0b24912b44f52aec0525f399e3f8c2ad7cf682", [ref: "fc0b24912b44f52aec0525f399e3f8c2ad7cf682"]},
   "esqlite": {:git, "https://github.com/mmzeeman/esqlite", "c1ba116de470aadc23e7ae582c961b2ced13d306", [ref: "c1ba116de470aadc23e7ae582c961b2ced13d306"]},
