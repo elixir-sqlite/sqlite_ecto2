@@ -40,7 +40,8 @@ defmodule Sqlite.Ecto do
 
   def loaders(:boolean, type), do: [&bool_decode/1, type]
   def loaders(:binary_id, type), do: [Ecto.UUID, type]
-  def loaders(:datetime, type), do: [&date_decode/1, type]
+  def loaders(:utc_datetime, type), do: [&date_decode/1, type]
+  def loaders(:naive_datetime, type), do: [&date_decode/1, type]
   def loaders({:embed, _} = type, _),
     do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
   def loaders(:map, type), do: [&json_decode/1, type]
