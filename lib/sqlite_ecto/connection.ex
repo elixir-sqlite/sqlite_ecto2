@@ -90,7 +90,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     def update_all(%Ecto.Query{joins: [_ | _]}) do
       raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite"
     end
-    def update_all(%{from: from} = query) do
+    def update_all(%{from: from} = query, prefix \\ nil) do
       sources = create_names(query, :update)
       {from, _name} = get_source(query, sources, 0, from)
 
@@ -98,7 +98,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       {join, wheres} = using_join(query, :update_all, "FROM", sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      assemble(["UPDATE #{from} SET", fields, join, where, returning(query, sources, :update)])
+      assemble([prefix || "UPDATE #{from} SET", fields, join,
+                where, returning(query, sources, :update)])
     end
 
     def delete_all(%Ecto.Query{joins: [_ | _]}) do
@@ -114,11 +115,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       assemble(["DELETE FROM #{from}", join, where, returning(query, sources, :delete)])
     end
 
-    def insert(prefix, table, header, rows, returning) do
-      insert(prefix, table, header, rows, returning, false)
-    end
-
-    defp insert(prefix, table, header, rows, returning, on_conflict) do
+    def insert(prefix, table, header, rows, on_conflict, returning) do
       values =
         if header == [] do
           "DEFAULT VALUES"
@@ -128,8 +125,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         end
 
       on_conflict = case on_conflict do
-        false -> ""
-        :nothing -> " OR IGNORE"
+        {:raise, [], []} -> ""
+        {:nothing, [], []} -> " OR IGNORE"
         _ -> raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing"
       end
       returning = String.strip(" " <> assemble(returning_clause(prefix, table, returning, "INSERT")))

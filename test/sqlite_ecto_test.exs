@@ -80,9 +80,9 @@ defmodule Sqlite.Ecto.Test do
     end
   end
 
-  defp normalize(query, operation \\ :all) do
-    {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Sqlite.Ecto)
-    Ecto.Query.Planner.normalize(query, operation, Sqlite.Ecto)
+  defp normalize(query, operation \\ :all, counter \\ 0) do
+    {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Sqlite.Ecto, counter)
+    Ecto.Query.Planner.normalize(query, operation, Sqlite.Ecto, counter)
   end
 
   test "from" do
@@ -491,36 +491,42 @@ defmodule Sqlite.Ecto.Test do
   # Schema based
 
   test "insert" do
-    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], [:id])
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {:raise, [], []}, [:id])
     assert query == ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ;--RETURNING ON INSERT "schema","id"}
 
-    # query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y], [nil, :z]], [:id])
+    # query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y], [nil, :z]], {:raise, [], []}, [:id])
     # assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2),(DEFAULT,$3) RETURNING "id"}
 
-    query = SQL.insert(nil, "schema", [], [[]], [:id])
+    query = SQL.insert(nil, "schema", [], [[]], {:raise, [], []}, [:id])
     assert query == ~s{INSERT INTO "schema" DEFAULT VALUES ;--RETURNING ON INSERT "schema","id"}
 
-    query = SQL.insert(nil, "schema", [], [[]], [])
+    query = SQL.insert(nil, "schema", [], [[]], {:raise, [], []}, [])
     assert query == ~s{INSERT INTO "schema" DEFAULT VALUES}
 
-    query = SQL.insert("prefix", "schema", [], [[]], [:id])
+    query = SQL.insert("prefix", "schema", [], [[]], {:raise, [], []}, [:id])
     assert query == ~s{INSERT INTO "prefix"."schema" DEFAULT VALUES ;--RETURNING ON INSERT "prefix"."schema","id"}
 
-    query = SQL.insert("prefix", "schema", [], [[]], [])
+    query = SQL.insert("prefix", "schema", [], [[]], {:raise, [], []}, [])
     assert query == ~s{INSERT INTO "prefix"."schema" DEFAULT VALUES}
   end
 
-  test "upsert" do
-    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x, :y], [:id])
-    end
-
-    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x], [:id])
-    end
-
-    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :nothing, [], [], [])
+  test "insert with on conflict" do
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], []}, [])
     assert query == ~s{INSERT OR IGNORE INTO "schema" ("x","y") VALUES (?1,?2)}
+
+    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
+      SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], [:x, :y]}, [])
+    end
+
+    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
+      update = from("schema", update: [set: [z: "foo"]]) |> normalize(:update_all)
+      SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
+    end
+
+    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
+      update = from("schema", update: [set: [z: ^"foo"]], where: [w: true]) |> normalize(:update_all, 2)
+      SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
+    end
   end
 
   test "update" do
