@@ -443,7 +443,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) do
-      "CAST (#{expr(other, sources, query)} AS #{ecto_to_sqlite_type(type)})"
+      "CAST (#{expr(other, sources, query)} AS #{ecto_to_db(type)})"
     end
 
     defp expr(nil, _sources, _query),   do: "NULL"
@@ -513,21 +513,20 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       [@pseudo_returning_statement, cmd, fields]
     end
 
-    defp ecto_to_sqlite_type(type) do
-      case type do
-        {:array, _} -> raise ArgumentError, "Array type is not supported by SQLite"
-        :id -> "INTEGER"
-        :binary_id -> "TEXT"
-        :uuid -> "TEXT" # SQLite does not support UUID
-        :binary -> "BLOB"
-        :float -> "NUMERIC"
-        :string -> "TEXT"
-        :date -> "TEXT_DATE"          # HACK see: cast_any_datetimes/1
-        :datetime -> "TEXT_DATETIME"  # HACK see: cast_any_datetimes/1
-        :map -> "TEXT"
-        other -> other |> Atom.to_string |> String.upcase
-      end
+    defp ecto_to_db({:array, _}) do
+      raise ArgumentError, "Array type is not supported by SQLite"
     end
+
+    defp ecto_to_db(:id), do: "INTEGER"
+    defp ecto_to_db(:binary_id), do: "TEXT"
+    defp ecto_to_db(:uuid), do: "TEXT" # SQLite does not support UUID
+    defp ecto_to_db(:binary), do: "BLOB"
+    defp ecto_to_db(:float), do: "NUMERIC"
+    defp ecto_to_db(:string), do: "TEXT"
+    defp ecto_to_db(:utc_datetime), do: "TEXT_DATETIME"    # HACK see: cast_any_datetimes/1
+    defp ecto_to_db(:naive_datetime), do: "TEXT_DATETIME"  # HACK see: cast_any_datetimes/1
+    defp ecto_to_db(:map), do: "TEXT"
+    defp ecto_to_db(other), do: other |> Atom.to_string |> String.upcase
 
     defp create_names(%{prefix: prefix, sources: sources}, stmt) do
       create_names(prefix, sources, 0, tuple_size(sources), stmt)
@@ -680,15 +679,17 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     # If we are adding a DATETIME column with the NOT NULL constraint, SQLite
-    # will force us to give it a DEFAULT value.  The only default value
+    # will force us to give it a DEFAULT value. The only default value
     # that makes sense is CURRENT_TIMESTAMP, but when adding a column to a
     # table, defaults must be constant values.
     #
     # Therefore the best option is just to remove the NOT NULL constraint when
     # we add new datetime columns.
-    defp column_change(table, {:add, name, :datetime, opts}) do
+    defp column_change(table, {:add, name, type, opts})
+      when type in [:utc_datetime, :naive_datetime]
+    do
       opts = opts |> Enum.into(%{}) |> Map.delete(:null)
-      assemble(["ADD COLUMN", quote_name(name), column_type(:datetime, opts), column_options(table, :datetime, opts)])
+      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(table, type, opts)])
     end
 
     defp column_change(table, {:add, name, type, opts}) do
