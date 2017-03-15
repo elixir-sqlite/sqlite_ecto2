@@ -336,8 +336,8 @@ defmodule Sqlite.Ecto.Test do
   test "interpolated values" do
     query = "schema"
             |> select([m], {m.id, ^true})
-            |> join(:inner, [], Schema2, ^true)
-            |> join(:inner, [], Schema2, ^false)
+            |> join(:inner, [], c in Schema2, c.id == ^1)
+            |> join(:inner, [], c in Schema2, c.id == ^2)
             |> where([], fragment("?", ^true))
             |> where([], fragment("?", ^false))
             |> having([], fragment("?", ^true))
@@ -351,8 +351,8 @@ defmodule Sqlite.Ecto.Test do
             |> normalize
 
     result =
-      "SELECT s0.\"id\", ? FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON ? " <>
-      "INNER JOIN \"schema2\" AS s2 ON ? WHERE (?) AND (?) " <>
+      "SELECT s0.\"id\", ? FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON s1.\"id\" = ? " <>
+      "INNER JOIN \"schema2\" AS s2 ON s2.\"id\" = ? WHERE (?) AND (?) " <>
       "GROUP BY ?, ? HAVING (?) AND (?) " <>
       "ORDER BY ?, s0.\"x\" LIMIT ? OFFSET ?"
 
