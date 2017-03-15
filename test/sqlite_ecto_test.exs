@@ -510,6 +510,19 @@ defmodule Sqlite.Ecto.Test do
     assert query == ~s{INSERT INTO "prefix"."schema" DEFAULT VALUES}
   end
 
+  test "upsert" do
+    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
+      SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x, :y], [:id])
+    end
+
+    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
+      SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x], [:id])
+    end
+
+    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :nothing, [], [], [])
+    assert query == ~s{INSERT OR IGNORE INTO "schema" ("x","y") VALUES (?1,?2)}
+  end
+
   test "update" do
     query = SQL.update(nil, "schema", [:x, :y], [:id], [])
     assert query == ~s{UPDATE "schema" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3}

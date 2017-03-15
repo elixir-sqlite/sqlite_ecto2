@@ -115,6 +115,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     def insert(prefix, table, header, rows, returning) do
+      insert(prefix, table, header, rows, returning, false)
+    end
+
+    defp insert(prefix, table, header, rows, returning, on_conflict) do
       values =
         if header == [] do
           "DEFAULT VALUES"
@@ -123,8 +127,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           "VALUES " <> insert_all(rows, 1, "")
         end
 
+      on_conflict = case on_conflict do
+        false -> ""
+        :nothing -> " OR IGNORE"
+        _ -> raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing"
+      end
       returning = String.strip(" " <> assemble(returning_clause(prefix, table, returning, "INSERT")))
-      assemble(["INSERT INTO #{quote_table(prefix, table)}", values, returning])
+      assemble(["INSERT#{on_conflict} INTO #{quote_table(prefix, table)}", values, returning])
     end
 
     defp insert_all([row|rows], counter, acc) do
@@ -134,6 +143,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp insert_all([], _counter, "," <> acc) do
       acc
     end
+
+    def upsert(prefix, table, header, rows, on_conflict, _conflict_target, _update, returning),
+      do: insert(prefix, table, header, rows, returning, on_conflict)
 
     defp insert_each([nil|_t], _counter, _acc),
       do: raise ArgumentError, "Cell-wise default values are not supported on INSERT statements by SQLite"
