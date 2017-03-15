@@ -5,7 +5,7 @@
   "db_connection": {:hex, :db_connection, "1.0.0", "63c03e520d54886a66104d34e32397ba960db6e74b596ce221592c07d6a40d8d", [:mix], [{:connection, "~> 1.0.2", [hex: :connection, optional: false]}, {:poolboy, "~> 1.5", [hex: :poolboy, optional: true]}, {:sbroker, "~> 1.0", [hex: :sbroker, optional: true]}]},
   "decimal": {:hex, :decimal, "1.1.2", "79a769d4657b2d537b51ef3c02d29ab7141d2b486b516c109642d453ee08e00c", [:mix], []},
   "earmark": {:hex, :earmark, "1.2.0", "bf1ce17aea43ab62f6943b97bd6e3dc032ce45d4f787504e3adf738e54b42f3a", [:mix], []},
-  "ecto": {:git, "https://github.com/elixir-ecto/ecto.git", "9e2beacf0769d83c514af434713290731eae7de9", [ref: "9e2beacf0769d83c514af434713290731eae7de9"]},
+  "ecto": {:git, "https://github.com/elixir-ecto/ecto.git", "bddefff30a7f5e19af477b35551e5ca0389a99be", [ref: "bddefff30a7f5e19af477b35551e5ca0389a99be"]},
   "esqlite": {:git, "https://github.com/mmzeeman/esqlite", "c1ba116de470aadc23e7ae582c961b2ced13d306", [ref: "c1ba116de470aadc23e7ae582c961b2ced13d306"]},
   "ex_doc": {:hex, :ex_doc, "0.14.5", "c0433c8117e948404d93ca69411dd575ec6be39b47802e81ca8d91017a0cf83c", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
   "hackney": {:hex, :hackney, "1.6.6", "5564b4695d48fd87859e9df77a7fa4b4d284d24519f0cd7cc898f09e8fbdc8a3", [:rebar3], [{:certifi, "1.0.0", [hex: :certifi, optional: false]}, {:idna, "4.0.0", [hex: :idna, optional: false]}, {:metrics, "1.0.1", [hex: :metrics, optional: false]}, {:mimerl, "1.0.2", [hex: :mimerl, optional: false]}, {:ssl_verify_fun, "1.1.1", [hex: :ssl_verify_fun, optional: false]}]},
