@@ -18,8 +18,9 @@ ExUnit.start exclude: [:array_type,
                        :modify_foreign_key_on_update,
                        :alter_primary_key,
                        :map_boolean_in_subquery,
-                       :upsert_with_conflict_target,
-                       :upsert_without_conflict_target]
+                       :upsert_all,
+                       :with_conflict_target,
+                       :without_conflict_target]
 
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :primary_key_type, :id)
