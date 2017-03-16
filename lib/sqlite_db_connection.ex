@@ -54,6 +54,11 @@ defmodule Sqlite.DbConnection do
     * `:pool` - The pool module to use, see `DBConnection`, it must be
     included with all requests if not the default (default:
     `DBConnection.Connection`);
+
+    `Sqlite.DbConnection` uses the `DBConnection` framework and supports all
+    `DBConnection` options like `:idle`, `:after_connect` etc.
+
+    See `DBConnection.start_link/2` for more information.
   """
   @spec start_link(Keyword.t) :: {:ok, pid} | {:error, Sqlite.DbConnection.Error.t | term}
   def start_link(opts) do
@@ -64,11 +69,11 @@ defmodule Sqlite.DbConnection do
 
   @doc """
   Runs an (extended) query and returns the result as `{:ok, %Sqlite.DbConnection.Result{}}`
-  or `{:error, %Sqlite.DbConnection.Error{}}` if there was an error. Parameters can be
-  set in the query as `$1` embedded in the query string. Parameters are given as
-  a list of elixir values. See the README for information on how SQLite
-  encodes and decodes Elixir values by default. See `Sqlite.DbConnection.Result` for the
-  result data.
+  or `{:error, %Sqlite.DbConnection.Error{}}` if there was a database error.
+  Parameters can be set in the query as `?1` embedded in the query string.
+  Parameters are given as a list of Elixir values. See the README for information
+  on how SQLite encodes and decodes Elixir values by default. See
+  `Sqlite.DbConnection.Result` for the result data.
 
   ## Options
 
@@ -107,10 +112,14 @@ defmodule Sqlite.DbConnection do
 
   @doc """
   Prepares an (extended) query and returns the result as
-  `{:ok, %Sqlite.DbConnection.Query{}}` or `{:error, %Sqlite.DbConnection.Error{}}` if there was an
-  error. Parameters can be set in the query as `$1` embedded in the query
-  string. To execute the query call `execute/4`. To close the prepared query
-  call `close/3`. See `Sqlite.DbConnection.Query` for the query data.
+  `{:ok, %Sqlite.DbConnection.Query{}}` or `{:error, %Sqlite.DbConnection.Error{}}`
+  if there was an error. Parameters can be set in the query as `?1` embedded in
+  the query string. To execute the query call `execute/4`. To close the prepared
+  query call `close/3`. See `Sqlite.DbConnection.Query` for the query data.
+
+  This function may still raise an exception if there is an issue with types
+  (`ArgumentError`), connection (`DBConnection.ConnectionError`), ownership
+  (`DBConnection.OwnershipError`) or other error (`RuntimeError`).
 
   ## Options
 
@@ -123,16 +132,19 @@ defmodule Sqlite.DbConnection do
 
   ## Examples
 
-      Sqlite.DbConnection.prepare(conn, "CREATE TABLE posts (id serial, title text)")
+      Sqlite.DbConnection.prepare(conn, "", "CREATE TABLE posts (id serial, title text)")
   """
-  @spec prepare(conn, iodata, iodata, Keyword.t) :: {:ok, Sqlite.DbConnection.Query.t} | {:error, Sqlite.DbConnection.Error.t}
+  @spec prepare(conn, iodata, iodata, Keyword.t) ::
+    {:ok, Sqlite.DbConnection.Query.t} | {:error, Sqlite.DbConnection.Error.t}
   def prepare(conn, name, statement, opts \\ []) do
     query = %Query{name: name, statement: statement}
     case DBConnection.prepare(conn, query, defaults(opts)) do
-      {:error, %ArgumentError{} = err} ->
+      {:ok, _} = ok ->
+        ok
+      {:error, %Sqlite.DbConnection.Error{}} = error ->
+        error
+      {:error, err} ->
         raise err
-      other ->
-        other
     end
   end
 
@@ -147,11 +159,15 @@ defmodule Sqlite.DbConnection do
 
   @doc """
   Runs an (extended) prepared query and returns the result as
-  `{:ok, %Sqlite.DbConnection.Result{}}` or `{:error, %Sqlite.DbConnection.Error{}}` if there was an
-  error. Parameters are given as part of the prepared query, `%Sqlite.DbConnection.Query{}`.
-  See the README for information on how SQLite encodes and decodes Elixir
-  values by default. See `Sqlite.DbConnection.Query` for the query data and
-  `Sqlite.DbConnection.Result` for the result data.
+  `{:ok, %Sqlite.DbConnection.Result{}}` or `{:error, %Sqlite.DbConnection.Error{}}`
+  if there was an error. Parameters are given as part of the prepared query,
+  `%Sqlite.DbConnection.Query{}`. See the README for information on how SQLite
+  encodes and decodes Elixir values by default. See `Sqlite.DbConnection.Query`
+  for the query data and `Sqlite.DbConnection.Result` for the result data.
+
+  This function may still raise an exception if there is an issue with types
+  (`ArgumentError`), connection (`DBConnection.ConnectionError`), ownership
+  (`DBConnection.OwnershipError`) or other error (`RuntimeError`).
 
   ## Options
 
@@ -166,20 +182,22 @@ defmodule Sqlite.DbConnection do
 
   ## Examples
 
-      query = Sqlite.DbConnection.prepare!(conn, "CREATE TABLE posts (id serial, title text)")
+      query = Sqlite.DbConnection.prepare!(conn, "", "CREATE TABLE posts (id serial, title text)")
       Sqlite.DbConnection.execute(conn, query, [])
 
-      query = Sqlite.DbConnection.prepare!(conn, "SELECT id FROM posts WHERE title like $1")
+      query = Sqlite.DbConnection.prepare!(conn, "", "SELECT id FROM posts WHERE title like $1")
       Sqlite.DbConnection.execute(conn, query, ["%my%"])
   """
   @spec execute(conn, Sqlite.DbConnection.Query.t, list, Keyword.t) ::
     {:ok, Sqlite.DbConnection.Result.t} | {:error, Sqlite.DbConnection.Error.t}
   def execute(conn, query, params, opts \\ []) do
     case DBConnection.execute(conn, query, params, defaults(opts)) do
-      {:error, %ArgumentError{} = err} ->
+      {:ok, _} = ok ->
+        ok
+      {:error, %Postgrex.Error{}} = error ->
+        error
+      {:error, err} ->
         raise err
-      other ->
-        other
     end
   end
 
@@ -194,9 +212,13 @@ defmodule Sqlite.DbConnection do
 
   @doc """
   Closes an (extended) prepared query and returns `:ok` or
-  `{:error, %Sqlite.DbConnection.Error{}}` if there was an error. Closing a query releases
-  any resources held by SQLite for a prepared query with that name. See
+  `{:error, %Sqlite.DbConnection.Error{}}` if there was an error. Closing a query
+  releases any resources held by SQLite for a prepared query with that name. See
   `Sqlite.DbConnection.Query` for the query data.
+
+  This function may still raise an exception if there is an issue with types
+  (`ArgumentError`), connection (`DBConnection.ConnectionError`), ownership
+  (`DBConnection.OwnershipError`) or other error (`RuntimeError`).
 
   ## Options
 
@@ -209,7 +231,7 @@ defmodule Sqlite.DbConnection do
 
   ## Examples
 
-      query = Sqlite.DbConnection.prepare!(conn, "CREATE TABLE posts (id serial, title text)")
+      query = Sqlite.DbConnection.prepare!(conn, "", "CREATE TABLE posts (id serial, title text)")
       Sqlite.DbConnection.close(conn, query)
   """
   @spec close(conn, Sqlite.DbConnection.Query.t, Keyword.t) :: :ok | {:error, Sqlite.DbConnection.Error.t}
@@ -217,7 +239,9 @@ defmodule Sqlite.DbConnection do
     case DBConnection.close(conn, query, defaults(opts)) do
       {:ok, _} ->
         :ok
-      {:error, %ArgumentError{} = err} ->
+      {:error, %Postgrex.Error{}} = error ->
+        error
+      {:error, err} ->
         raise err
     end
   end
@@ -314,6 +338,14 @@ defmodule Sqlite.DbConnection do
   @spec child_spec(Keyword.t) :: Supervisor.Spec.spec
   def child_spec(opts) do
     DBConnection.child_spec(Sqlite.DbConnection.Protocol, defaults(opts))
+  end
+
+  def stream(%DBConnection{} = conn, query, params, options \\ []) do
+    {:ok, %{rows: rows}} = execute(conn, query, params, options)
+    rows
+      # Can we really get away with that?
+    # options = defaults(options)
+    # %Postgrex.Stream{conn: conn, query: query, params: params, options: options}
   end
 
   ## Helpers

@@ -14,5 +14,6 @@ Code.require_file "../../deps/ecto/integration_test/cases/type.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/sql/migration.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/sql/sandbox.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/sql/sql.exs", __DIR__
+Code.require_file "../../deps/ecto/integration_test/sql/stream.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/sql/subquery.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/sql/transaction.exs", __DIR__
