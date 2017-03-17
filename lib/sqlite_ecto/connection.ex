@@ -53,9 +53,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     def stream(conn, sql, params, opts) do
-      {:ok, %{rows: rows}} = execute(conn, sql, params, opts)
-      rows
-        # We don't have cursor support in Sqlite.Server; punt for now.
+      Sqlite.DbConnection.stream(conn, sql, params, opts)
     end
 
     defp map_params(params) do

@@ -19,6 +19,7 @@ defmodule Sqlite.DbConnection do
   @pool_timeout 5000
   @timeout 5000
   @idle_timeout 5000
+  @max_rows 500
 
   ### PUBLIC API ###
 
@@ -340,12 +341,21 @@ defmodule Sqlite.DbConnection do
     DBConnection.child_spec(Sqlite.DbConnection.Protocol, defaults(opts))
   end
 
+  @doc """
+  Returns a stream for a query on a connection.
+
+  Except that it doesn't. The implementation currently reads the entire query
+  into memory and returns it as one "stream" result. A future version may
+  implement this more fully.
+  """
+  @spec stream(DBConnection.t, iodata | Sqlite.DbConnection.Query.t, list, Keyword.t) ::
+    Sqlite.DbConnection.Stream.t
   def stream(%DBConnection{} = conn, query, params, options \\ []) do
-    {:ok, %{rows: rows}} = execute(conn, query, params, options)
-    rows
-      # Can we really get away with that?
-    # options = defaults(options)
-    # %Postgrex.Stream{conn: conn, query: query, params: params, options: options}
+    options =
+      options
+      |> defaults()
+      |> Keyword.put_new(:max_rows, @max_rows)
+    %Sqlite.DbConnection.Stream{conn: conn, query: query, params: params, options: options}
   end
 
   ## Helpers
