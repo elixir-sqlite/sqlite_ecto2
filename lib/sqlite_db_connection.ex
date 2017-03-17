@@ -195,7 +195,7 @@ defmodule Sqlite.DbConnection do
     case DBConnection.execute(conn, query, params, defaults(opts)) do
       {:ok, _} = ok ->
         ok
-      {:error, %Postgrex.Error{}} = error ->
+      {:error, %Sqlite.DbConnection.Error{}} = error ->
         error
       {:error, err} ->
         raise err
@@ -240,7 +240,7 @@ defmodule Sqlite.DbConnection do
     case DBConnection.close(conn, query, defaults(opts)) do
       {:ok, _} ->
         :ok
-      {:error, %Postgrex.Error{}} = error ->
+      {:error, %Sqlite.DbConnection.Error{}} = error ->
         error
       {:error, err} ->
         raise err
