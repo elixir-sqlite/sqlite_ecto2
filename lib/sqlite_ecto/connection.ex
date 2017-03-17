@@ -52,6 +52,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end
     end
 
+    def stream(conn, sql, params, opts) do
+      Sqlite.DbConnection.stream(conn, sql, params, opts)
+    end
+
     defp map_params(params) do
       Enum.map params, fn
         %{__struct__: _} = data_type ->
@@ -607,7 +611,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         " #{quote_table(table.prefix, table.name)} (#{column_definitions(table, columns)}#{composite_pk_def})" <> options
     end
 
-    def execute_ddl({command, %Table{}=table}) when command in @drops do
+    def execute_ddl({command, %Table{} = table}) when command in @drops do
       if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
 
       "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
@@ -620,7 +624,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     # NOTE Ignores concurrently and using values.
-    def execute_ddl({command, %Index{}=index})
+    def execute_ddl({command, %Index{} = index})
       when command in [:create, :create_if_not_exists]
     do
       fields = Enum.map_join(index.columns, ", ", &index_expr/1)
@@ -637,7 +641,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
                 if_do(index.where, "WHERE #{index.where}")])
     end
 
-    def execute_ddl({command, %Index{}=index}) when command in @drops do
+    def execute_ddl({command, %Index{} = index}) when command in @drops do
       if_exists = if command == :drop_if_exists, do: "IF EXISTS", else: []
 
       assemble(["DROP",
@@ -735,7 +739,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp pk_expr(true), do: "PRIMARY KEY"
     defp pk_expr(_), do: []
 
-    defp composite_pk_definition(%Table{}=table, columns) do
+    defp composite_pk_definition(%Table{} = table, columns) do
       pks = Enum.reduce(columns, [], fn({_, name, _, opts}, pk_acc) ->
         case Keyword.get(opts, :primary_key, false) do
           true -> [name|pk_acc]
