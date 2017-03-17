@@ -163,6 +163,9 @@ defmodule Sqlite.Ecto.Test do
   test "or_where" do
     query = Schema |> or_where([r], r.x == 42) |> or_where([r], r.y != 43) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 WHERE (s0."x" = 42) OR (s0."y" != 43)}
+
+    query = Schema |> or_where([r], r.x == 42) |> or_where([r], r.y != 43) |> where([r], r.z == 44) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 WHERE ((s0."x" = 42) OR (s0."y" != 43)) AND (s0."z" = 44)}
   end
 
   test "order by" do
@@ -356,18 +359,36 @@ defmodule Sqlite.Ecto.Test do
       "GROUP BY ?, ? HAVING (?) AND (?) " <>
       "ORDER BY ?, s0.\"x\" LIMIT ? OFFSET ?"
 
-    assert SQL.all(query) == String.rstrip(result)
+    assert SQL.all(query) == String.trim(result)
   end
+
+  test "fragments allow ? to be escaped with backslash" do
+    query =
+      normalize from(e in "schema",
+        where: fragment("? = \"query\\?\"", e.start_time),
+        select: true)
+
+    result =
+      "SELECT TRUE FROM \"schema\" AS s0 " <>
+      "WHERE (s0.\"start_time\" = \"query?\")"
+
+    assert SQL.all(query) == String.trim(result)
+  end
+
+  ## *_all
 
   test "update all" do
     query = from(m in Schema, update: [set: [x: 0]]) |> normalize(:update_all)
-    assert SQL.update_all(query) == ~s{UPDATE "schema" SET "x" = 0}
+    assert SQL.update_all(query) ==
+           ~s{UPDATE "schema" AS s0 SET "x" = 0}
 
     query = from(m in Schema, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
-    assert SQL.update_all(query) == ~s{UPDATE "schema" SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
+    assert SQL.update_all(query) ==
+           ~s{UPDATE "schema" AS s0 SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
 
     query = from(m in Schema, update: [set: [x: ^0]]) |> normalize(:update_all)
-    assert SQL.update_all(query) == ~s{UPDATE "schema" SET "x" = ?}
+    assert SQL.update_all(query) ==
+           ~s{UPDATE "schema" AS s0 SET "x" = ?}
 
     assert_raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite", fn ->
       query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z)
@@ -870,6 +891,6 @@ defmodule Sqlite.Ecto.Test do
   end
 
   defp remove_newlines(string) do
-    string |> String.strip |> String.replace("\n", " ")
+    string |> String.trim |> String.replace("\n", " ")
   end
 end
