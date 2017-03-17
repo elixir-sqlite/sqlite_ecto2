@@ -38,17 +38,17 @@ defmodule Sqlite.Ecto.Mixfile do
      {:decimal, "1.2.0", override: true},
      {:esqlite, git: "https://github.com/mmzeeman/esqlite", ref: "c1ba116de470aadc23e7ae582c961b2ced13d306", override: true},
      {:ex_doc, "~> 0.14.5", only: :dev},
-     {:ecto, git: "https://github.com/elixir-ecto/ecto.git", ref: "d251393ec2fd5631652a7d6ea365198ade2c7002"},
+     {:ecto, "~> 2.1.0"},
      {:poison, "2.2.0", override: true, optional: true},
      {:postgrex, "0.13.0", optional: true, override: true},
      {:sbroker, "~> 1.0", override: true},
      {:sqlitex, "~> 1.3", override: true}]
   end
 
-  defp description, do: "SQLite3 adapter for Ecto2 (not yet working)"
+  defp description, do: "SQLite3 adapter for Ecto2"
 
   defp package do
-    [maintainers: ["Jason M Barnes", "Eric Scouten"],
+    [maintainers: ["Eric Scouten", "Jason M Barnes"],
       licenses: ["MIT"],
       links: %{"Github" => "https://github.com/scouten/sqlite_ecto2"}]
   end
