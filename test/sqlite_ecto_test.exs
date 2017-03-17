@@ -369,7 +369,7 @@ defmodule Sqlite.Ecto.Test do
         select: true)
 
     result =
-      "SELECT TRUE FROM \"schema\" AS s0 " <>
+      "SELECT 1 FROM \"schema\" AS s0 " <>
       "WHERE (s0.\"start_time\" = \"query?\")"
 
     assert SQL.all(query) == String.trim(result)
@@ -380,15 +380,15 @@ defmodule Sqlite.Ecto.Test do
   test "update all" do
     query = from(m in Schema, update: [set: [x: 0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "schema" AS s0 SET "x" = 0}
+           ~s{UPDATE "schema" SET "x" = 0}
 
     query = from(m in Schema, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "schema" AS s0 SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
+           ~s{UPDATE "schema" SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
 
     query = from(m in Schema, update: [set: [x: ^0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "schema" AS s0 SET "x" = ?}
+           ~s{UPDATE "schema" SET "x" = ?}
 
     assert_raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite", fn ->
       query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z)
