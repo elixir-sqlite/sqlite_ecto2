@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Sqlitex.Server) do
 
+  # TODO: Port changes to query composition made just before 2.1.0 release.
+  # See https://github.com/elixir-ecto/ecto/compare/4a64a740e3c84342cadf6a1acef1e22ae454886e...d6d39bf018b7a601d999b1b8e246142d15205e0d
+
   defmodule Sqlite.Ecto.Connection do
     @moduledoc false
 
@@ -27,8 +30,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end
     end
 
-    def execute(conn, sql, params, opts) when is_binary(sql) do
-      query = %Sqlite.DbConnection.Query{name: "", statement: sql}
+    def execute(conn, sql, params, opts) when is_binary(sql) or is_list(sql) do
+      query = %Sqlite.DbConnection.Query{name: "", statement: IO.iodata_to_binary(sql)}
       case DBConnection.prepare_execute(conn, query, map_params(params), opts) do
         {:ok, %Sqlite.DbConnection.Query{}, result} ->
           {:ok, result}
@@ -168,7 +171,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
       assemble(["UPDATE #{quote_table(prefix, table)} SET " <> Enum.join(fields, ", "),
                 "WHERE " <> Enum.join(filters, " AND "),
-                return])
+                           return])
     end
 
     def delete(prefix, table, filters, returning) do
