@@ -31,17 +31,17 @@ defmodule Sqlite.Ecto.Mixfile do
 
   # Dependencies
   defp deps do
-    [{:connection, "1.0.3", override: true},
+    [{:connection, "~> 1.0.3"},
      {:coverex, "~> 1.4.11", only: :test},
-     {:db_connection, "1.1.0", optional: true, override: true},
-     {:decimal, "1.2.0", override: true},
+     {:db_connection, "~> 1.1.0", optional: true},
+     {:decimal, "~> 1.2.0", override: true},
      {:esqlite, git: "https://github.com/mmzeeman/esqlite", ref: "c1ba116de470aadc23e7ae582c961b2ced13d306", override: true},
      {:ex_doc, "~> 0.14.5", only: :dev},
      {:ecto, "~> 2.1.0"},
-     {:poison, "2.2.0", override: true, optional: true},
-     {:postgrex, "0.13.0", optional: true, override: true},
-     {:sbroker, "~> 1.0", override: true},
-     {:sqlitex, "~> 1.3", override: true}]
+     {:poison, "~> 2.2", optional: true},
+     {:postgrex, "~> 0.13.0", optional: true},
+     {:sbroker, "~> 1.0"},
+     {:sqlitex, "~> 1.3"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto2"
