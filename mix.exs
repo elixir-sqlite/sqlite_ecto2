@@ -34,14 +34,14 @@ defmodule Sqlite.Ecto.Mixfile do
     [{:connection, "~> 1.0.3"},
      {:coverex, "~> 1.4.11", only: :test},
      {:db_connection, "~> 1.1.0", optional: true},
-     {:decimal, "~> 1.2.0", override: true},
+     {:decimal, "~> 1.2"},
      {:esqlite, git: "https://github.com/mmzeeman/esqlite", ref: "c1ba116de470aadc23e7ae582c961b2ced13d306", override: true},
      {:ex_doc, "~> 0.14.5", only: :dev},
      {:ecto, "~> 2.1.0"},
      {:poison, "~> 2.2", optional: true},
      {:postgrex, "~> 0.13.0", optional: true},
      {:sbroker, "~> 1.0"},
-     {:sqlitex, "~> 1.3"}]
+     {:sqlitex, github: "scouten/sqlitex", ref: "b707ecdd8eade4db03303952a9865445d95c01f2"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto2"
