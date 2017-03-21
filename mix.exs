@@ -3,7 +3,7 @@ defmodule Sqlite.Ecto.Mixfile do
 
   def project do
     [app: :sqlite_ecto2,
-     version: "2.0.0-dev.0",
+     version: "2.0.0-dev.1",
      name: "Sqlite.Ecto2",
      elixir: "~> 1.3.4 or ~> 1.4",
      elixirc_options: [warnings_as_errors: true],
@@ -35,13 +35,13 @@ defmodule Sqlite.Ecto.Mixfile do
      {:coverex, "~> 1.4.11", only: :test},
      {:db_connection, "~> 1.1.0", optional: true},
      {:decimal, "~> 1.2"},
-     {:esqlite, git: "https://github.com/mmzeeman/esqlite", ref: "c1ba116de470aadc23e7ae582c961b2ced13d306", override: true},
+     {:esqlite, "~> 0.2.3"},
      {:ex_doc, "~> 0.14.5", only: :dev},
      {:ecto, "~> 2.1.0"},
      {:poison, "~> 2.2", optional: true},
      {:postgrex, "~> 0.13.0", optional: true},
      {:sbroker, "~> 1.0"},
-     {:sqlitex, github: "scouten/sqlitex", ref: "b707ecdd8eade4db03303952a9865445d95c01f2"}]
+     {:sqlitex, "~> 1.3.1"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto2"
