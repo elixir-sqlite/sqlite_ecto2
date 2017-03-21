@@ -36,7 +36,7 @@ defmodule Sqlite.Ecto.Mixfile do
      {:db_connection, "~> 1.1.0", optional: true},
      {:decimal, "~> 1.2"},
      {:esqlite, "~> 0.2.3"},
-     {:ex_doc, "~> 0.14.5", only: :dev},
+     {:ex_doc, "~> 0.15", only: :dev},
      {:ecto, "~> 2.1.0"},
      {:poison, "~> 2.2", optional: true},
      {:postgrex, "~> 0.13.0", optional: true},
