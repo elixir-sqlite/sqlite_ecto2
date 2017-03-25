@@ -105,7 +105,7 @@ To use the adapter in your repo:
 defmodule MyApp.Repo do
   use Ecto.Repo,
     otp_app: :my_app,
-    adapter: Sqlite.Ecto2
+    adapter: Sqlite.Ecto
 end
 ```
 
