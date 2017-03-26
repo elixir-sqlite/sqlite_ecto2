@@ -46,7 +46,7 @@ Code.require_file "../../deps/ecto/integration_test/support/migration.exs", __DI
 alias Ecto.Integration.TestRepo
 
 Application.put_env(:ecto, TestRepo,
-  adapter: Sqlite.Ecto,
+  adapter: Sqlite.Ecto2,
   database: "/tmp/test_repo.db",
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: pool)
@@ -59,7 +59,7 @@ end
 alias Ecto.Integration.PoolRepo
 
 Application.put_env(:ecto, PoolRepo,
-  adapter: Sqlite.Ecto,
+  adapter: Sqlite.Ecto2,
   pool: DBConnection.Poolboy,
   database: "/tmp/test_repo.db",
   pool_size: 10)
@@ -84,15 +84,15 @@ defmodule Ecto.Integration.Case do
   end
 end
 
-{:ok, _} = Sqlite.Ecto.ensure_all_started(TestRepo, :temporary)
+{:ok, _} = Sqlite.Ecto2.ensure_all_started(TestRepo, :temporary)
 
 # Load support models and migration
 Code.require_file "../../deps/ecto/integration_test/support/schemas.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/support/migration.exs", __DIR__
 
 # Load up the repository, start it, and run migrations
-_   = Sqlite.Ecto.storage_down(TestRepo.config)
-:ok = Sqlite.Ecto.storage_up(TestRepo.config)
+_   = Sqlite.Ecto2.storage_down(TestRepo.config)
+:ok = Sqlite.Ecto2.storage_up(TestRepo.config)
 
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link

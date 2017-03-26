@@ -105,7 +105,7 @@ To use the adapter in your repo:
 defmodule MyApp.Repo do
   use Ecto.Repo,
     otp_app: :my_app,
-    adapter: Sqlite.Ecto
+    adapter: Sqlite.Ecto2
 end
 ```
 
@@ -115,7 +115,7 @@ Several Ecto constraints are not fully implemented in `sqlite_ecto2` because SQL
 
 ## Silently Ignored Options
 
-There are a few Ecto options which `Sqlite.Ecto` silently ignores because SQLite does not support them and raising an error on them does not make sense:
+There are a few Ecto options which `Sqlite.Ecto2` silently ignores because SQLite does not support them and raising an error on them does not make sense:
 
 * Most column options will ignore `size`, `precision`, and `scale` constraints on types because columns in SQLite have no types, and SQLite will not coerce any stored value. Thus, all "strings" are `TEXT` and "numerics" will have arbitrary precision regardless of the declared column constraints. The lone exception to this rule are Decimal types which accept `precision` and `scale` options because these constraints are handled in the driver software, not the SQLite database.
 
