@@ -4,7 +4,7 @@ This is a major rewrite of the previously-existing [`sqlite_ecto`]((https://gith
 
 ## v2.0.0-dev.2
 
-_pending_
+_26 March 2017_
 
 ## Bug fixes
 
