@@ -1,33 +1,33 @@
-defmodule Sqlite.Ecto.Test do
+defmodule Sqlite.Ecto2.Test do
   use ExUnit.Case, async: true
 
   # IMPORTANT: This is closely modeled on Ecto's postgres_test.exs file.
   # We strive to avoid structural differences between that file and this one.
 
-  alias Sqlite.Ecto.Connection, as: SQL
+  alias Sqlite.Ecto2.Connection, as: SQL
   alias Ecto.Migration.Table
 
   test "storage up (twice)" do
     tmp = [database: tempfilename()]
-    assert Sqlite.Ecto.storage_up(tmp) == :ok
+    assert Sqlite.Ecto2.storage_up(tmp) == :ok
     assert File.exists? tmp[:database]
-    assert Sqlite.Ecto.storage_up(tmp) == {:error, :already_up}
+    assert Sqlite.Ecto2.storage_up(tmp) == {:error, :already_up}
     File.rm(tmp[:database])
   end
 
   test "storage down (twice)" do
     tmp = [database: tempfilename()]
-    assert Sqlite.Ecto.storage_up(tmp) == :ok
-    assert Sqlite.Ecto.storage_down(tmp) == :ok
+    assert Sqlite.Ecto2.storage_up(tmp) == :ok
+    assert Sqlite.Ecto2.storage_down(tmp) == :ok
     assert not File.exists? tmp[:database]
-    assert Sqlite.Ecto.storage_down(tmp) == {:error, :already_down}
+    assert Sqlite.Ecto2.storage_down(tmp) == {:error, :already_down}
   end
 
   test "storage up creates directory" do
     dir = "/tmp/my_sqlite_ecto_directory/"
     File.rm_rf! dir
     tmp = [database: dir <> tempfilename()]
-    :ok = Sqlite.Ecto.storage_up(tmp)
+    :ok = Sqlite.Ecto2.storage_up(tmp)
     assert File.exists?(dir <> "tmp/") && File.dir?(dir <> "tmp/")
   end
 
@@ -51,10 +51,10 @@ defmodule Sqlite.Ecto.Test do
       field :y, :integer
       field :z, :integer
 
-      has_many :comments, Sqlite.Ecto.Test.Schema2,
+      has_many :comments, Sqlite.Ecto2.Test.Schema2,
         references: :x,
         foreign_key: :z
-      has_one :permalink, Sqlite.Ecto.Test.Schema3,
+      has_one :permalink, Sqlite.Ecto2.Test.Schema3,
         references: :y,
         foreign_key: :id
     end
@@ -64,7 +64,7 @@ defmodule Sqlite.Ecto.Test do
     use Ecto.Schema
 
     schema "schema2" do
-      belongs_to :post, Sqlite.Ecto.Test.Schema,
+      belongs_to :post, Sqlite.Ecto2.Test.Schema,
         references: :x,
         foreign_key: :z
     end
@@ -81,8 +81,8 @@ defmodule Sqlite.Ecto.Test do
   end
 
   defp normalize(query, operation \\ :all, counter \\ 0) do
-    {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Sqlite.Ecto, counter)
-    Ecto.Query.Planner.normalize(query, operation, Sqlite.Ecto, counter)
+    {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Sqlite.Ecto2, counter)
+    Ecto.Query.Planner.normalize(query, operation, Sqlite.Ecto2, counter)
   end
 
   test "from" do

@@ -1,9 +1,9 @@
-defmodule Sqlite.Ecto.Mixfile do
+defmodule Sqlite.Ecto2.Mixfile do
   use Mix.Project
 
   def project do
     [app: :sqlite_ecto2,
-     version: "2.0.0-dev.1",
+     version: "2.0.0-dev.2",
      name: "Sqlite.Ecto2",
      elixir: "~> 1.3.4 or ~> 1.4",
      elixirc_options: [warnings_as_errors: true],
@@ -20,7 +20,7 @@ defmodule Sqlite.Ecto.Mixfile do
      package: package(),
 
      # docs
-     docs: [main: Sqlite.Ecto]]
+     docs: [main: Sqlite.Ecto2]]
   end
 
   # Configuration for the OTP application

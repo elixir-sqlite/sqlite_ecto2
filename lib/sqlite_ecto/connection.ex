@@ -3,7 +3,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
   # TODO: Port changes to query composition made just before 2.1.0 release.
   # See https://github.com/elixir-ecto/ecto/compare/4a64a740e3c84342cadf6a1acef1e22ae454886e...d6d39bf018b7a601d999b1b8e246142d15205e0d
 
-  defmodule Sqlite.Ecto.Connection do
+  defmodule Sqlite.Ecto2.Connection do
     @moduledoc false
 
     @behaviour Ecto.Adapters.SQL.Connection
