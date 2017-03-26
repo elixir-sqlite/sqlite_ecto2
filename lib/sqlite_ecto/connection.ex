@@ -11,6 +11,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     ## Module and Options
 
     def child_spec(opts) do
+      {:ok, _} = Application.ensure_all_started(:db_connection)
       DBConnection.child_spec(Sqlite.DbConnection.Protocol, opts)
     end
 
