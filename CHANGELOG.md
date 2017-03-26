@@ -8,7 +8,7 @@ _26 March 2017_
 
 ## Bug fixes
 
-* **BREAKING CHANGE:** Use the name `Sqlite.Ecto2` consistently in API names. Discontinue use of name `Sqlite.Ecto` (without the `2).
+* **BREAKING CHANGE:** Use the name `Sqlite.Ecto2` consistently in API names. Discontinue use of name `Sqlite.Ecto` (without the `2`)
 * Ensure db_connection app is started before relying on it.
 
 ## v2.0.0-dev.1
