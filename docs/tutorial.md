@@ -12,18 +12,19 @@ Let's create our new Elixir code with mix:  `mix new blog`.  Change into the new
 
 ```elixir
 def application do
-  [applications: [:logger, :sqlite_ecto, :ecto]]
+  [applications: [:logger, :sqlite_ecto2, :ecto]]
 end
 
 defp deps do
-  [{:sqlite_ecto, "~> 0.5.0"}]
+  [{:db_connection, "~> 1.1.0"},
+   {:sqlite_ecto2, "~> 2.0.0-dev.0"}]
 end
 ```
 
 Now make sure you can download your dependencies, compile, and setup your Ecto repository:
 ```
 $ mix deps.get
-$ mix ecto.gen.repo Blog.Repo
+$ mix ecto.gen.repo -r Blog.Repo
 ```
 
 Edit the Blog.Repo module in `lib/blog/repo.ex` to use the Sqlite.Ecto adapter:
@@ -38,9 +39,13 @@ And change the default PostgreSQL configuration in `config/config.exs` to the fo
 config :blog, Blog.Repo,
   adapter: Sqlite.Ecto,
   database: "blog.sqlite3"
+
+config :blog, ecto_repos: [Blog.Repo]
 ```
 
-In this example `blog.sqlite3` is the SQLite file that will store our blog's database.  The file will be created in the top-level directory.  You can change it to any file path you like.
+In this example `blog.sqlite3` is the SQLite file that will store our blog's database.  The file will be created in the
+top-level directory.  You can change it to any file path you like. Adding the `:ecto_repos` key with `[Blog.Repo]` tells
+Ecto's `mix` tasks about the `Blog.Repo` database.
 
 Fill in `lib/blog.ex` to start the Ecto repo when the application starts:
 ```elixir
