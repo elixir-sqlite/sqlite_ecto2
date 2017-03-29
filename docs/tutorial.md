@@ -82,7 +82,7 @@ defmodule Blog.Repo.Migrations.CreateUsers do
     create table(:users) do
       add :name, :string
       add :email, :string
-      timestamps
+      timestamps()
     end
   end
 end
@@ -105,7 +105,7 @@ defmodule Blog.User do
   schema "users" do
     field :name, :string
     field :email, :string
-    timestamps
+    timestamps()
   end
 end
 ```
