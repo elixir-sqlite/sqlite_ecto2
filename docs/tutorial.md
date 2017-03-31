@@ -88,13 +88,13 @@ defmodule Blog.Repo.Migrations.CreateUsers do
 end
 ```
 
-This migration will generate a `users` table with columns for the user's name and email address.  The `timestamps` statement will create timestamps to mark when entries have been inserted or updated.
+This migration will generate a `users` table with columns for the user's name and email address.  The `timestamps()` statement will create timestamps to mark when entries have been inserted or updated.
 
 Run `mix ecto.migrate` to create the new table.  You can verify the migration with the following:
 ```
 $ sqlite3 blog.sqlite3 .schema
-CREATE TABLE "schema_migrations" ("version" BIGINT PRIMARY KEY, "inserted_at" DATETIME);
-CREATE TABLE "users" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT, "email" TEXT, "inserted_at" DATETIME NOT NULL, "updated_at" DATETIME NOT NULL);
+CREATE TABLE "schema_migrations" ("version" BIGINT PRIMARY KEY, "inserted_at" NAIVE_DATETIME);
+CREATE TABLE "users" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT, "email" TEXT, "inserted_at" NAIVE_DATETIME NOT NULL, "updated_at" NAIVE_DATETIME NOT NULL);
 ```
 
 Before we can use the table.  We have to write an Ecto model to encapsulate it.  Edit `lib/blog/user.ex` to define the model:
@@ -113,29 +113,28 @@ end
 Notice how it resembles the migration we just wrote.  Let's quickly make sure the model is working with iex:
 ```
 $ iex -S mix
-Erlang/OTP 17 [erts-6.4.1] [source] [64-bit] [smp:4:4] [async-threads:10] [hipe] [kernel-poll:false]
+Erlang/OTP 19 [erts-8.3] [source] [64-bit] [smp:4:4] [async-threads:10] [hipe] [kernel-poll:false] [dtrace]
 
-Interactive Elixir (1.0.4) - press Ctrl+C to exit (type h() ENTER for help)
+Compiling 1 file (.ex)
+Generated blog app
+Interactive Elixir (1.4.1) - press Ctrl+C to exit (type h() ENTER for help)
 iex(1)> Blog.start(nil, nil)
-{:ok, #PID<0.129.0>}
+{:ok, #PID<0.196.0>}
 iex(2)> Blog.Repo.insert(%Blog.User{name: "jazzyb", email: "anonymous@example.com"})
 
-14:55:11.865 [debug] BEGIN [] (31.7ms)
-
-14:55:11.948 [debug] INSERT INTO "users" ("email","inserted_at","name","updated_at") VALUES (?1,?2,?3,?4) ;--RETURNING ON INSERT "users","id" ["anonymous@example.com", {{2015, 5, 20}, {18, 55, 11, 0}}, "jazzyb", {{2015, 5, 20}, {18, 55, 11, 0}}] (23.1ms)
-
-14:55:11.950 [debug] COMMIT [] (1.8ms)
-%Blog.User{__meta__: %Ecto.Schema.Metadata{source: "users", state: :loaded},
- email: "anonymous@example.com", id: 1,
- inserted_at: %Ecto.DateTime{day: 20, hour: 18, min: 55, month: 5, sec: 11,
-  usec: 0, year: 2015}, name: "jazzyb",
- updated_at: %Ecto.DateTime{day: 20, hour: 18, min: 55, month: 5, sec: 11,
-  usec: 0, year: 2015}}
+18:05:16.119 [debug] QUERY OK db=14.7ms
+INSERT INTO "users" ("email","name","inserted_at","updated_at") VALUES (?1,?2,?3,?4) ;--RETURNING ON INSERT "users","id" ["anonymous@example.com", "jazzyb", {{2017, 3, 31}, {8, 5, 16, 78423}}, {{2017, 3, 31}, {8, 5, 16, 86372}}]
+{:ok,
+ %Blog.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+  email: "anonymous@example.com", id: 1,
+  inserted_at: ~N[2017-03-31 08:05:16.078423], name: "jazzyb",
+  updated_at: ~N[2017-03-31 08:05:16.086372]}}
 iex(3)> import Ecto.Query
-nil
+Ecto.Query
 iex(4)> Blog.Repo.all(Blog.User |> select([user], user.name))
 
-14:56:38.686 [debug] SELECT u0."name" FROM "users" AS u0 [] (0.8ms)
+18:07:32.472 [debug] QUERY OK source="users" db=0.8ms queue=0.1ms
+SELECT u0."name" FROM "users" AS u0 []
 ["jazzyb"]
 iex(5)>
 ```
