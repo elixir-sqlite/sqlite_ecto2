@@ -306,7 +306,7 @@ defmodule Blog.Repo.Migrations.DistinctUsernames do
 end
 ```
 
-This creates a unique index on `users.name` that prevents two users from having the same username.  We can write another assertion to test this.  After `"ludwig_wittgenstein"` is defined in our test case, verify that we can't create another user with the same name:
+Run `mix ecto.migrate` to apply this migration. This creates a unique index on `users.name` that prevents two users from having the same username.  We can write another assertion to test this.  After `"ludwig_wittgenstein"` is defined in our test case, verify that we can't create another user with the same name:
 ```elixir
     # prevent usernames from overlapping
     assert_raise Sqlite.Ecto.Error, "constraint: UNIQUE constraint failed: users.name", fn ->
