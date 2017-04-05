@@ -287,7 +287,8 @@ end
 Let's add a new assertion to our test case to verify we can update our users' passwords:
 ```elixir
     # update user password
-    Repo.update(%User{author | password: "leopoldine"})
+    passwordChange = Ecto.Changeset.change(%User{id: author.id}, password: "leopoldine")
+    Repo.update(passwordChange)
     assert ["leopoldine"] == User
                              |> select([user], user.password)
                              |> where([user], user.id == ^author.id)
