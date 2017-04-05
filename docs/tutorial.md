@@ -100,7 +100,7 @@ CREATE TABLE "users" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT, "emai
 Before we can use the table.  We have to write an Ecto model to encapsulate it.  Edit `lib/blog/user.ex` to define the model:
 ```elixir
 defmodule Blog.User do
-  use Ecto.Model
+  use Ecto.Schema
 
   schema "users" do
     field :name, :string
@@ -153,7 +153,7 @@ defmodule Blog.Repo.Migrations.CreatePosts do
       add :title, :string
       add :body, :string
       add :user_id, references(:users)
-      timestamps
+      timestamps()
     end
   end
 end
@@ -162,14 +162,14 @@ end
 And run `mix ecto.migrate` to create the posts table, then write the Post model to `lib/blog/post.ex` like so:
 ```elixir
 defmodule Blog.Post do
-  use Ecto.Model
+  use Ecto.Schema
   alias Blog.User
 
   schema "posts" do
     belongs_to :user, User
     field :title, :string
     field :body, :string
-    timestamps
+    timestamps()
   end
 end
 ```
@@ -177,14 +177,14 @@ end
 Notice that in both the migration and the model, we define an association that "posts belong to users".  We also need to define a reverse association that says "users have multiple posts".  Edit the User model at `lib/blog/user.ex` to add the association with the Post model:
 ```elixir
 defmodule Blog.User do
-  use Ecto.Model
+  use Ecto.Schema
   alias Blog.Post
 
   schema "users" do
     has_many :posts, Post
     field :name, :string
     field :email, :string
-    timestamps
+    timestamps()
   end
 end
 ```
@@ -271,7 +271,7 @@ Run `mix ecto.migrate` and verify the new column has been added to the table.  *
 Before we can use the new table we need to update our model.  The User model at `lib/blog/user.ex` should now look like the following:
 ```elixir
 defmodule Blog.User do
-  use Ecto.Model
+  use Ecto.Schema
   alias Blog.Post
 
   schema "users" do
@@ -279,7 +279,7 @@ defmodule Blog.User do
     field :name, :string
     field :email, :string
     field :password, :string, [default: "CHANGE_ME", null: false]
-    timestamps
+    timestamps()
   end
 end
 ```
