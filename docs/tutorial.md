@@ -205,6 +205,13 @@ defmodule BlogTest do
     {:ok, [pid: pid]}
   end
 
+  setup do
+    on_exit fn ->
+      Repo.delete_all(Post)
+      Repo.delete_all(User)
+    end
+  end
+
   test "that everything works as it should" do
     # assert we can insert and query a user
     {:ok, author} = %User{name: "ludwig_wittgenstein", email: "sharp_witt@example.de"} |> Repo.insert
