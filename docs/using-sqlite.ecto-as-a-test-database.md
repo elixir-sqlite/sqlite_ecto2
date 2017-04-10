@@ -1,6 +1,6 @@
 ## Introduction
 
-SQLite isn't the best choice of a database for most production applications.  However, SQLite *can* make a great stub database for unit testing.  This short article will explain how to setup the Blog application from the [Basic Sqlite.Ecto Tutorial](tutorial.md) with a production PostgreSQL database and a separate test SQLite database.
+SQLite isn't the best choice of a database for most production applications.  However, SQLite *can* make a great stub database for unit testing.  This short article will explain how to setup the Blog application from the [Basic Sqlite.Ecto2 Tutorial](tutorial.md) with a production PostgreSQL database and a separate test SQLite database.
 
 (**NOTE:**  Although it is not required to read the basic tutorial first, this article will assume some familiarity with the general layout of that source code.)
 
@@ -37,7 +37,7 @@ Create `config/test.exs`:
 ```elixir
 use Mix.Config
 
-config :blog, :ecto_adapter, Sqlite.Ecto
+config :blog, :ecto_adapter, Sqlite.Ecto2
 
 config :blog, Blog.Repo,
   adapter: Application.get_env(:blog, :ecto_adapter),
@@ -71,7 +71,7 @@ Finally, all that remains is to update `mix.exs` with our new environmental conf
 ```elixir
   def application do
     case Mix.env do
-      :test -> [applications: [:logger, :sqlite_ecto, :ecto]]
+      :test -> [applications: [:logger, :sqlite_ecto2, :ecto]]
       :prod -> [applications: [:logger, :postgrex, :ecto]]
     end
   end

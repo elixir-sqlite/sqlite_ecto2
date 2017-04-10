@@ -27,17 +27,17 @@ $ mix deps.get
 $ mix ecto.gen.repo -r Blog.Repo
 ```
 
-Edit the Blog.Repo module in `lib/blog/repo.ex` to use the Sqlite.Ecto adapter:
+Edit the Blog.Repo module in `lib/blog/repo.ex` to use the Sqlite.Ecto2 adapter:
 ```elixir
 defmodule Blog.Repo do
-  use Ecto.Repo, otp_app: :blog, adapter: Sqlite.Ecto
+  use Ecto.Repo, otp_app: :blog, adapter: Sqlite.Ecto2
 end
 ```
 
 And change the default PostgreSQL configuration in `config/config.exs` to the following:
 ```elixir
 config :blog, Blog.Repo,
-  adapter: Sqlite.Ecto,
+  adapter: Sqlite.Ecto2,
   database: "blog.sqlite3"
 
 config :blog, ecto_repos: [Blog.Repo]
@@ -316,7 +316,7 @@ end
 Run `mix ecto.migrate` to apply this migration. This creates a unique index on `users.name` that prevents two users from having the same username.  We can write another assertion to test this.  After `"ludwig_wittgenstein"` is defined in our test case, verify that we can't create another user with the same name:
 ```elixir
     # prevent usernames from overlapping
-    assert_raise Sqlite.Ecto.Error, "constraint: UNIQUE constraint failed: users.name", fn ->
+    assert_raise Sqlite.DbConnection.Error, "constraint: UNIQUE constraint failed: users.name", fn ->
       %User{name: "ludwig_wittgenstein", password: "NOT_THE_REAL_USER"} |> Repo.insert
     end
 ```
