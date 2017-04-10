@@ -80,7 +80,7 @@ Finally, all that remains is to update `mix.exs` with our new environmental conf
 And change the `deps/0` function to set different dependencies depending on environment:
 ```elixir
   defp deps do
-    [{:sqlite_ecto2, "~> 2.0.0-dev.0", only: :test},
+    [{:sqlite_ecto2, "~> 2.0.0-dev.2", only: :test},
      {:postgrex, ">= 0.0.0", only: :prod},
      {:ecto, "~> 2.1.0"}]
   end
