@@ -2,6 +2,14 @@
 
 This is a major rewrite of the previously-existing [`sqlite_ecto`]((https://github.com/jazzyb/sqlite_ecto) that adds support for Ecto 2.1+.
 
+
+## v2.0.0-dev.4
+
+_unreleased_
+
+* Port documentation from v1 `sqlite_ecto` repo to this repo.
+
+
 ## v2.0.0-dev.3
 
 _11 April 2017_
