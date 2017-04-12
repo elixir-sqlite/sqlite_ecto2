@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/scouten/sqlite_ecto2.svg?branch=master "Build Status")](https://travis-ci.org/scouten/sqlite_ecto2)
 [![Hex.pm](https://img.shields.io/hexpm/v/sqlite_ecto2.svg)](https://hex.pm/packages/sqlite_ecto2)
+[![Ebert](https://ebertapp.io/github/scouten/sqlite_ecto2.svg)](https://ebertapp.io/github/scouten/sqlite_ecto2)
 [![Coverage Status](https://coveralls.io/repos/github/scouten/sqlite_ecto2/badge.svg?branch=master)](https://coveralls.io/github/scouten/sqlite_ecto2?branch=master)
 
 # sqlite_ecto2
@@ -23,11 +24,12 @@ If you are willing to live on the bleeding edge, I would welcome any assistance 
 
 **Code quality:**
 
+* Clean up issues [flagged by Ebert](https://ebertapp.io/github/scouten/sqlite_ecto2).
 * Improve code coverage.
 * Look for performance issues and address them. I'm particularly concerned about the temporary triggers used to implement value returns from `INSERT`, `UPDATE`, and `DELETE` queries. Can we avoid using those in some / most cases?
 * Look for errors or other failures under stress.
 * Re-review Postgres and MySQL Ecto adapters and see if there are concepts that should be applied here.
-* Add automated code-quality reviews from Credo, Dogma, and/or Ebert.
+* Add automated code-quality reviews from Dogma (?).
 
 This is by no means an exhaustive list. If you have other questions or concerns, please file issues or PRs. I do this in my spare time, so it may take me until I have time on an evening or weekend to reply, but I will appreciate any contribution.
 
