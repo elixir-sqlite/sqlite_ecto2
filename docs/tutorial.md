@@ -1,6 +1,6 @@
 ## Introduction
 
-Sqlite.Ecto is an Ecto adapter which helps you to interact with SQLite databases.
+`sqlite_ecto2` is an Ecto adapter which helps you to interact with SQLite databases.
 
 This very brief tutorial will walk you through the basics of configuring and using Ecto with SQLite.  We are going to setup a very basic schema that one might need for a blog.  The following assumes you already have some familiarity with Elixir development.
 
@@ -27,7 +27,7 @@ $ mix deps.get
 $ mix ecto.gen.repo -r Blog.Repo
 ```
 
-Edit the Blog.Repo module in `lib/blog/repo.ex` to use the Sqlite.Ecto2 adapter:
+Edit the Blog.Repo module in `lib/blog/repo.ex` to use the `sqlite_ecto2` adapter:
 ```elixir
 defmodule Blog.Repo do
   use Ecto.Repo, otp_app: :blog, adapter: Sqlite.Ecto2
@@ -48,6 +48,7 @@ top-level directory.  You can change it to any file path you like. Adding the `:
 Ecto's `mix` tasks about the `Blog.Repo` database.
 
 Fill in `lib/blog.ex` to start the Ecto repo when the application starts:
+
 ```elixir
 defmodule Blog do
   use Application
@@ -74,6 +75,7 @@ Run `mix ecto.create`.  Verify that the SQLite database has been created at `blo
 ## Ecto Models
 
 Now that we have our database configured and created, we can create tables to hold our data.  Let's start by creating a "users" database table.  Run `mix ecto.gen.migration create_users`.  This will create a file at `priv/repo/migrations/TIMESTAMP_create_users.exs` where `TIMESTAMP` is the particular date and time you ran the migration command.  Edit this file to create the new table:
+
 ```elixir
 defmodule Blog.Repo.Migrations.CreateUsers do
   use Ecto.Migration
@@ -111,6 +113,7 @@ end
 ```
 
 Notice how it resembles the migration we just wrote.  Let's quickly make sure the model is working with iex:
+
 ```
 $ iex -S mix
 Erlang/OTP 19 [erts-8.3] [source] [64-bit] [smp:4:4] [async-threads:10] [hipe] [kernel-poll:false] [dtrace]
@@ -144,6 +147,7 @@ In the above output, we start the Blog.Repo (1), create a new user `jazzyb` (2),
 ## Associations
 
 Now that we have some basic understanding of models, let's complicate the schema a little bit.  If we want to create a blog, we have to have some posts that users can write.  Let's create a new migration to generate the posts table with `mix ecto.gen.migration create_posts`.  Edit the resulting file:
+
 ```elixir
 defmodule Blog.Repo.Migrations.CreatePosts do
   use Ecto.Migration
@@ -160,6 +164,7 @@ end
 ```
 
 And run `mix ecto.migrate` to create the posts table, then write the Post model to `lib/blog/post.ex` like so:
+
 ```elixir
 defmodule Blog.Post do
   use Ecto.Schema
@@ -175,6 +180,7 @@ end
 ```
 
 Notice that in both the migration and the model, we define an association that "posts belong to users".  We also need to define a reverse association that says "users have multiple posts".  Edit the User model at `lib/blog/user.ex` to add the association with the Post model:
+
 ```elixir
 defmodule Blog.User do
   use Ecto.Schema
@@ -190,6 +196,7 @@ end
 ```
 
 The models are getting more complicated, so let's write a test to make sure we can add entries to our repo and make sure everything is working as it should.  Edit `test/blog_test.exs` and add the following:
+
 ```elixir
 defmodule BlogTest do
   use ExUnit.Case
@@ -238,6 +245,7 @@ end
 ```
 
 This test shows how to insert entries into your database and query it for information.  Run it with `mix test` to see that everything is working alright.  **NOTE**  You may need to re-migrate the database if you run into errors involving entries you've added in the past.  If this is the case, just do the following to delete the old database and create a new pristine one:
+
 ```
 $ mix ecto.drop
 $ mix ecto.create
@@ -245,6 +253,7 @@ $ mix ecto.migrate
 ```
 
 Now that we know everything works as it should, let's see what we can do with the associations we defined between User and Post.  Write a new assertion at the end of the test which queries for all the posts of a particular user:
+
 ```elixir
     # preload user posts
     query = from u in User, where: u.id == ^author.id, preload: [:posts]
@@ -261,6 +270,7 @@ In the example above, the `preload` command in the query fills in the `posts` va
 ## Making Changes to the Database
 
 What if we want to add values for our users, like, requiring passwords to access the blog?  We can add columns to tables using migrations.  Create a new migration with `mix ecto.gen.migration user_passwords` and edit the result:
+
 ```elixir
 defmodule Blog.Repo.Migrations.UserPasswords do
   use Ecto.Migration
@@ -273,9 +283,10 @@ defmodule Blog.Repo.Migrations.UserPasswords do
 end
 ```
 
-Run `mix ecto.migrate` and verify the new column has been added to the table.  **NOTE**  Sqlite.Ecto can only add columns to tables -- it cannot remove or modify columns once they have been created.
+Run `mix ecto.migrate` and verify the new column has been added to the table.  **NOTE**  `sqlite_ecto2` can only add columns to tables -- it cannot remove or modify columns once they have been created.
 
 Before we can use the new table we need to update our model.  The User model at `lib/blog/user.ex` should now look like the following:
+
 ```elixir
 defmodule Blog.User do
   use Ecto.Schema
@@ -292,6 +303,7 @@ end
 ```
 
 Let's add a new assertion to our test case to verify we can update our users' passwords:
+
 ```elixir
     # update user password
     passwordChange = Ecto.Changeset.change(%User{id: author.id}, password: "leopoldine")
@@ -303,6 +315,7 @@ Let's add a new assertion to our test case to verify we can update our users' pa
 ```
 
 We have another problem as our schema stands:  There is nothing preventing users from sharing the same username.  That could get very confusing.  We can fix that in Ecto by creating a unique index.  Run `mix ecto.gen.migration distinct_usernames` and edit the resulting file:
+
 ```elixir
 defmodule Blog.Repo.Migrations.DistinctUsernames do
   use Ecto.Migration
@@ -314,6 +327,7 @@ end
 ```
 
 Run `mix ecto.migrate` to apply this migration. This creates a unique index on `users.name` that prevents two users from having the same username.  We can write another assertion to test this.  After `"ludwig_wittgenstein"` is defined in our test case, verify that we can't create another user with the same name:
+
 ```elixir
     # prevent usernames from overlapping
     assert_raise Sqlite.DbConnection.Error, "constraint: UNIQUE constraint failed: users.name", fn ->

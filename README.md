@@ -10,7 +10,7 @@
 
 If you're able to use Ecto 1.x, please look at [sqlite_ecto](https://github.com/jazzyb/sqlite_ecto), on which this project is based.
 
-Read [the tutorial](https://github.com/jazzyb/sqlite_ecto/wiki/Basic-Sqlite.Ecto-Tutorial) (**TODO** Port this to sqlite_ecto2 repo) for a detailed example of how to setup and use a SQLite repo with Ecto, or just check-out the CliffsNotes in the sections below if you want to get started quickly.
+Read [the tutorial](./docs/tutorial.md) for a detailed example of how to setup and use a SQLite repo with Ecto, or just check-out the CliffsNotes in the sections below if you want to get started quickly.
 
 ## Help Wanted!
 
@@ -18,7 +18,6 @@ If you are willing to live on the bleeding edge, I would welcome any assistance 
 
 **Documentation:**
 
-* We should review the original documentation from [`sqlite_ecto` version 1](https://github.com/jazzyb/sqlite_ecto) and its wiki, update them as appropriate, and bring them over. (FWIW I'm not a fan of the GitHub wiki; I'd prefer that any content be incorporated as Markdown files directly in this repo.)
 * Newcomers, especially: I'd like feedback on the getting started content. What works and what is confusing? How can we make adopting this library more intuitive?
 * I'd like to have at least one public example application.
 
@@ -93,7 +92,7 @@ def deps do
 end
 ```
 
-If you are using Elixir 1.3, uou should also update your applications list to include `sqlite_ecto2` and `ecto`:
+If you are using Elixir 1.3, you should also update your applications list to include `sqlite_ecto2` and `ecto`:
 
 ```elixir
 def application do
@@ -101,7 +100,7 @@ def application do
 end
 ```
 
-With Elixir 1.4, you can do this or rely on application inference.
+With Elixir 1.4+, you can do this or rely on application inference.
 
 To use the adapter in your repo:
 
@@ -119,7 +118,7 @@ Several Ecto constraints are not fully implemented in `sqlite_ecto2` because SQL
 
 ## Silently Ignored Options
 
-There are a few Ecto options which `Sqlite.Ecto2` silently ignores because SQLite does not support them and raising an error on them does not make sense:
+There are a few Ecto options which `sqlite_ecto2` silently ignores because SQLite does not support them and raising an error on them does not make sense:
 
 * Most column options will ignore `size`, `precision`, and `scale` constraints on types because columns in SQLite have no types, and SQLite will not coerce any stored value. Thus, all "strings" are `TEXT` and "numerics" will have arbitrary precision regardless of the declared column constraints. The lone exception to this rule are Decimal types which accept `precision` and `scale` options because these constraints are handled in the driver software, not the SQLite database.
 

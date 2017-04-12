@@ -5,7 +5,7 @@ Ecto relies on a returning clause for its insert, update, and delete statements.
 INSERT INTO distributors (did, dname) VALUES (DEFAULT, 'XYZ Widgets') RETURNING did;
 ```
 
-The returning clause returns one or more values from each row that was inserted, updated, or deleted with the statement.  SQLite lacks such a clause, but because Ecto uses it often, we must find a way to implement it in Sqlite.Ecto.
+The returning clause returns one or more values from each row that was inserted, updated, or deleted with the statement.  SQLite lacks such a clause, but because Ecto uses it often, we must find a way to implement it in `sqlite_ecto2`. (Actually, the `RETURNING` clause is now [implemented by `sqlitex`](https://github.com/mmmries/sqlitex/pull/55).)
 
 ## Approach One:  Last Insert Rowid
 
@@ -13,7 +13,7 @@ During my experimentation with Ecto, I only noticed one use of the returning cla
 
 * The function only returns ID for inserts.  Updates and deletes would still require a different method.
 * The function requires another select statement to return the ID of the inserted row.  If another row is inserted before the select statement to return the last ID, then the value might be wrong.
-* Ecto *may* only use the returning statement for getting IDs from rows **today**, but I don't want my Sqlite.Ecto adapter to rely on an undocumented "feature" of Ecto that may change in the future.
+* Ecto *may* only use the returning statement for getting IDs from rows **today**, but I don't want my `sqlite_ecto2` adapter to rely on an undocumented "feature" of Ecto that may change in the future.
 
 None of these reasons preclude me from utilizing the `last_insert_rowid()` function, but another method will need to be used as well.
 
@@ -66,7 +66,7 @@ It seems possible to implement the returning clause this way, but working out th
 
 ## Approach Three (and Solution):  Triggers
 
-[Triggers](https://www.sqlite.org/lang_createtrigger.html) are SQL database operations which can be automatically performed when a specified event occurs -- such as an insert, update, or delete on a particular table.  Triggers can access values from a row before or after a statement has been executed.  The solution we use in Sqlite.Ecto to implement the returning clause is the following algorithm (English explanation follows):
+[Triggers](https://www.sqlite.org/lang_createtrigger.html) are SQL database operations which can be automatically performed when a specified event occurs -- such as an insert, update, or delete on a particular table.  Triggers can access values from a row before or after a statement has been executed.  The solution we use in `sqlite_ecto2` to implement the returning clause is the following algorithm (English explanation follows):
 
 ```
 SAVEPOINT sp_temp;
@@ -98,7 +98,7 @@ There is an important disadvantage to using triggers to implement returning:  **
 
 ## Syntax of the Returning Clause
 
-There remains one tricky bit to how the *pseudo*-returning clause is implemented.  Ecto executes database commands in two steps:  (1) Call the adapter to convert an Ecto.Query into a SQL string and (2) invoke `Sqlite.Ecto.Connection.query` with the SQL string.  This means that the only access we have to the returning values is in step (1), but the only place we can implement the above algorithm is in step (2).  Thus, we must add our own syntax to represent the returning clause as a part of the SQL string, then in step (2) we must parse the returning clause to reconstruct the columns to return.  The syntax of the returning clause is the following:
+There remains one tricky bit to how the *pseudo*-returning clause is implemented.  Ecto executes database commands in two steps:  (1) Call the adapter to convert an Ecto.Query into a SQL string and (2) invoke `Sqlite.Ecto2.Connection.query` with the SQL string.  This means that the only access we have to the returning values is in step (1), but the only place we can implement the above algorithm is in step (2).  Thus, we must add our own syntax to represent the returning clause as a part of the SQL string, then in step (2) we must parse the returning clause to reconstruct the columns to return.  The syntax of the returning clause is the following:
 ```
 ;--RETURNING ON [INSERT | UPDATE | DELETE] tablename,col1,col2,...
 ```
