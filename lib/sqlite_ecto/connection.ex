@@ -233,10 +233,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp update_fields(%Query{updates: updates} = query, sources) do
-      for(%{expr: expr} <- updates,
+      Enum.join(
+        for(%{expr: expr} <- updates,
           {op, kw} <- expr,
           {key, value} <- kw,
-          do: update_op(op, key, value, sources, query)) |> Enum.join(", ")
+          do: update_op(op, key, value, sources, query)), ", ")
     end
 
     defp update_op(:set, key, value, sources, query) do
