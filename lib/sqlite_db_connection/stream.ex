@@ -1,4 +1,5 @@
 defmodule Sqlite.DbConnection.Stream do
+  @moduledoc false
   defstruct [:conn, :query, :params, :options, max_rows: 500]
   @type t :: %Sqlite.DbConnection.Stream{}
 end
