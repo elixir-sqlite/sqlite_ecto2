@@ -123,7 +123,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       assemble(["DELETE FROM #{from}", join, where, returning(query, sources, :delete)])
     end
 
+    @lint {Credo.Check.Refactor.FunctionArity, false}
     def insert(prefix, table, header, rows, on_conflict, returning) do
+      _ = @lint
       values =
         if header == [] do
           "DEFAULT VALUES"
@@ -149,8 +151,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       acc
     end
 
-    def upsert(prefix, table, header, rows, on_conflict, _conflict_target, _update, returning),
-      do: insert(prefix, table, header, rows, returning, on_conflict)
+    @lint {Credo.Check.Refactor.FunctionArity, false}
+    def upsert(prefix, table, header, rows, on_conflict, _conflict_target, _update, returning) do
+      _ = @lint
+      insert(prefix, table, header, rows, returning, on_conflict)
+    end
 
     defp insert_each([nil|_t], _counter, _acc),
       do: raise ArgumentError, "Cell-wise default values are not supported on INSERT statements by SQLite"
@@ -228,10 +233,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp update_fields(%Query{updates: updates} = query, sources) do
-      for(%{expr: expr} <- updates,
+      Enum.join(
+        for(%{expr: expr} <- updates,
           {op, kw} <- expr,
           {key, value} <- kw,
-          do: update_op(op, key, value, sources, query)) |> Enum.join(", ")
+          do: update_op(op, key, value, sources, query)), ", ")
     end
 
     defp update_op(:set, key, value, sources, query) do
@@ -331,12 +337,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp boolean(_name, [], _sources, _query), do: []
     defp boolean(name, [%{expr: expr, op: op} | query_exprs], sources, query) do
       name <> " " <>
-        (Enum.reduce(query_exprs, {op, paren_expr(expr, sources, query)}, fn
+        elem(Enum.reduce(query_exprs, {op, paren_expr(expr, sources, query)}, fn
           %BooleanExpr{expr: expr, op: op}, {op, acc} ->
             {op, acc <> operator_to_boolean(op) <> paren_expr(expr, sources, query)}
           %BooleanExpr{expr: expr, op: op}, {_, acc} ->
             {op, "(" <> acc <> ")" <> operator_to_boolean(op) <> paren_expr(expr, sources, query)}
-        end) |> elem(1))
+        end), 1)
     end
 
     defp operator_to_boolean(:and), do: " AND "
@@ -376,7 +382,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources, query) do
-      args = Enum.map_join ix+1..ix+length, ",", &"?#{&1}"
+      args = Enum.map_join ix + 1 .. ix + length, ",", &"?#{&1}"
       expr(left, sources, query) <> " IN (" <> args <> ")"
     end
 
@@ -646,7 +652,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
                 quote_table(index.prefix, index.name)])
     end
 
-    def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do
+    def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
       "ALTER TABLE #{quote_table(current_table.prefix, current_table.name)} RENAME TO #{quote_table(new_table.prefix, new_table.name)}"
     end
 
@@ -742,7 +748,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           false -> pk_acc
         end
       end)
-      if length(pks)>1 do
+      if length(pks) > 1 do
         composite_pk_expr = pks |> Enum.reverse |> Enum.map_join(", ", &quote_name/1)
         {%{table | primary_key: :composite}, ", PRIMARY KEY (" <> composite_pk_expr <> ")"}
       else

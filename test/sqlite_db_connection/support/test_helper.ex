@@ -3,6 +3,8 @@
 # We strive to avoid structural differences between that file and this one.
 
 defmodule Sqlite.DbConnection.TestHelper do
+  @moduledoc false
+
   defmacro query(stat, params, opts \\ []) do
     quote do
       case Sqlite.DbConnection.query(var!(context)[:pid], unquote(stat),
