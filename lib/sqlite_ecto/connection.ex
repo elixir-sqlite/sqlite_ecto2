@@ -376,7 +376,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources, query) do
-      args = Enum.map_join ix+1..ix+length, ",", &"?#{&1}"
+      args = Enum.map_join ix + 1 .. ix + length, ",", &"?#{&1}"
       expr(left, sources, query) <> " IN (" <> args <> ")"
     end
 
@@ -646,7 +646,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
                 quote_table(index.prefix, index.name)])
     end
 
-    def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do
+    def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
       "ALTER TABLE #{quote_table(current_table.prefix, current_table.name)} RENAME TO #{quote_table(new_table.prefix, new_table.name)}"
     end
 
@@ -742,7 +742,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           false -> pk_acc
         end
       end)
-      if length(pks)>1 do
+      if length(pks) > 1 do
         composite_pk_expr = pks |> Enum.reverse |> Enum.map_join(", ", &quote_name/1)
         {%{table | primary_key: :composite}, ", PRIMARY KEY (" <> composite_pk_expr <> ")"}
       else

@@ -560,7 +560,6 @@ defmodule Sqlite.Ecto2.Test do
     query = SQL.update("prefix", "schema", [:x, :y], [:id], [:x, :z])
     assert query == ~s{UPDATE "prefix"."schema" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "prefix"."schema","x","z"}
 
-
     query = SQL.update("prefix", "schema", [:x, :y], [:id], [])
     assert query == ~s{UPDATE "prefix"."schema" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3}
   end
