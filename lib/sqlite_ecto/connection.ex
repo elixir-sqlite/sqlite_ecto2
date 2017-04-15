@@ -123,7 +123,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       assemble(["DELETE FROM #{from}", join, where, returning(query, sources, :delete)])
     end
 
+    @lint {Credo.Check.Refactor.FunctionArity, false}
     def insert(prefix, table, header, rows, on_conflict, returning) do
+      _ = @lint
       values =
         if header == [] do
           "DEFAULT VALUES"
@@ -149,8 +151,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       acc
     end
 
-    def upsert(prefix, table, header, rows, on_conflict, _conflict_target, _update, returning),
-      do: insert(prefix, table, header, rows, returning, on_conflict)
+    @lint {Credo.Check.Refactor.FunctionArity, false}
+    def upsert(prefix, table, header, rows, on_conflict, _conflict_target, _update, returning) do
+      _ = @lint
+      insert(prefix, table, header, rows, returning, on_conflict)
+    end
 
     defp insert_each([nil|_t], _counter, _acc),
       do: raise ArgumentError, "Cell-wise default values are not supported on INSERT statements by SQLite"
