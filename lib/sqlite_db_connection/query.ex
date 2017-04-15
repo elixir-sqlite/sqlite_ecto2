@@ -98,7 +98,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   defp translate_value({0, "boolean"}), do: false
   defp translate_value({1, "boolean"}), do: true
 
-  defp translate_value({int, type=<<"decimal", _ :: binary>>}) when is_integer(int) do
+  defp translate_value({int, type = <<"decimal", _ :: binary>>}) when is_integer(int) do
     {result, _} = int |> Integer.to_string |> Float.parse
     translate_value({result, type})
   end
