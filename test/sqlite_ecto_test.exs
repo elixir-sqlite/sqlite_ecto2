@@ -98,15 +98,15 @@ defmodule Sqlite.Ecto2.Test do
     assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
 
     assert_raise Ecto.QueryError, ~r"SQLite requires a schema module", fn ->
-      SQL.all from(p in "posts", select: p) |> normalize()
+      SQL.all normalize(from(p in "posts", select: p))
     end
   end
 
   test "from with subquery" do
-    query = subquery("posts" |> select([r], %{x: r.x, y: r.y})) |> select([r], r.x) |> normalize
+    query = subquery(select("posts", [r], %{x: r.x, y: r.y})) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT s0."x" FROM (SELECT p0."x" AS "x", p0."y" AS "y" FROM "posts" AS p0) AS s0}
 
-    query = subquery("posts" |> select([r], %{x: r.x, z: r.y})) |> select([r], r) |> normalize
+    query = subquery(select("posts", [r], %{x: r.x, z: r.y})) |> select([r], r) |> normalize
     assert SQL.all(query) == ~s{SELECT s0."x", s0."z" FROM (SELECT p0."x" AS "x", p0."y" AS "z" FROM "posts" AS p0) AS s0}
   end
 
@@ -378,15 +378,15 @@ defmodule Sqlite.Ecto2.Test do
   ## *_all
 
   test "update all" do
-    query = from(m in Schema, update: [set: [x: 0]]) |> normalize(:update_all)
+    query = normalize(from(m in Schema, update: [set: [x: 0]]), :update_all)
     assert SQL.update_all(query) ==
            ~s{UPDATE "schema" SET "x" = 0}
 
-    query = from(m in Schema, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
+    query = normalize(from(m in Schema, update: [set: [x: 0], inc: [y: 1, z: -3]]), :update_all)
     assert SQL.update_all(query) ==
            ~s{UPDATE "schema" SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
 
-    query = from(m in Schema, update: [set: [x: ^0]]) |> normalize(:update_all)
+    query = normalize(from(m in Schema, update: [set: [x: ^0]]), :update_all)
     assert SQL.update_all(query) ==
            ~s{UPDATE "schema" SET "x" = ?}
 
@@ -401,7 +401,7 @@ defmodule Sqlite.Ecto2.Test do
     query = Schema |> Queryable.to_query |> normalize
     assert SQL.delete_all(query) == ~s{DELETE FROM "schema"}
 
-    query = from(e in Schema, where: e.x == 123) |> normalize
+    query = normalize(from(e in Schema, where: e.x == 123))
     assert SQL.delete_all(query) == ~s{DELETE FROM "schema" WHERE ("schema"."x" = 123)}
 
     assert_raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite", fn ->
@@ -540,12 +540,12 @@ defmodule Sqlite.Ecto2.Test do
     end
 
     assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      update = from("schema", update: [set: [z: "foo"]]) |> normalize(:update_all)
+      update = normalize(from("schema", update: [set: [z: "foo"]]), :update_all)
       SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
     end
 
     assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      update = from("schema", update: [set: [z: ^"foo"]], where: [w: true]) |> normalize(:update_all, 2)
+      update = normalize(from("schema", update: [set: [z: ^"foo"]], where: [w: true]), :update_all, 2)
       SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
     end
   end
@@ -597,12 +597,12 @@ defmodule Sqlite.Ecto2.Test do
                 {:add, :on_hand, :integer, [default: 0, null: true]},
                 {:add, :is_active, :boolean, [default: true]}]}
 
-    assert SQL.execute_ddl(create) == """
+    assert SQL.execute_ddl(create) == remove_newlines """
     CREATE TABLE "posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL,
     "price" NUMERIC DEFAULT (expr),
     "on_hand" INTEGER DEFAULT 0,
     "is_active" BOOLEAN DEFAULT 1)
-    """ |> remove_newlines
+    """
   end
 
   test "create table if not exists" do
@@ -612,22 +612,22 @@ defmodule Sqlite.Ecto2.Test do
                 {:add, :price, :decimal, [precision: 10, scale: 2]},
                 {:add, :created_at, :datetime, []}]}
     query = SQL.execute_ddl(create)
-    assert query == """
+    assert query == remove_newlines """
     CREATE TABLE IF NOT EXISTS "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "title" TEXT,
     "price" DECIMAL(10,2),
     "created_at" DATETIME)
-    """ |> remove_newlines
+    """
   end
 
   test "create table with prefix" do
     create = {:create, table(:posts, prefix: :foo),
                [{:add, :category_0, references(:categories), []}]}
 
-    assert SQL.execute_ddl(create) == """
+    assert SQL.execute_ddl(create) == remove_newlines """
     CREATE TABLE "foo"."posts"
     ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"))
-    """ |> remove_newlines
+    """
   end
 
   test "create table with references" do
@@ -643,7 +643,7 @@ defmodule Sqlite.Ecto2.Test do
                 {:add, :category_7, references(:categories, on_update: :nilify_all), []},
                 {:add, :category_8, references(:categories, on_delete: :nilify_all, on_update: :update_all), [null: false]}]}
 
-    assert SQL.execute_ddl(create) == """
+    assert SQL.execute_ddl(create) == remove_newlines """
     CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"),
     "category_1" INTEGER CONSTRAINT "foo_bar" REFERENCES "categories"("id"),
@@ -654,7 +654,7 @@ defmodule Sqlite.Ecto2.Test do
     "category_6" INTEGER NOT NULL CONSTRAINT "posts_category_6_fkey" REFERENCES "categories"("id") ON UPDATE CASCADE,
     "category_7" INTEGER CONSTRAINT "posts_category_7_fkey" REFERENCES "categories"("id") ON UPDATE SET NULL,
     "category_8" INTEGER NOT NULL CONSTRAINT "posts_category_8_fkey" REFERENCES "categories"("id") ON DELETE SET NULL ON UPDATE CASCADE)
-    """ |> remove_newlines
+    """
   end
 
   test "create table with references including prefixes" do
@@ -666,14 +666,14 @@ defmodule Sqlite.Ecto2.Test do
                 {:add, :category_3, references(:categories, on_delete: :delete_all, prefix: :foo), [null: false]},
                 {:add, :category_4, references(:categories, on_delete: :nilify_all, prefix: :foo), []}]}
 
-    assert SQL.execute_ddl(create) == """
+    assert SQL.execute_ddl(create) == remove_newlines """
     CREATE TABLE "foo"."posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"),
     "category_1" INTEGER CONSTRAINT "foo_bar" REFERENCES "foo"."categories"("id"),
     "category_2" INTEGER CONSTRAINT "posts_category_2_fkey" REFERENCES "foo"."categories"("id"),
     "category_3" INTEGER NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "foo"."categories"("id") ON DELETE CASCADE,
     "category_4" INTEGER CONSTRAINT "posts_category_4_fkey" REFERENCES "foo"."categories"("id") ON DELETE SET NULL)
-    """ |> remove_newlines
+    """
   end
 
   test "create table with options" do
@@ -690,9 +690,9 @@ defmodule Sqlite.Ecto2.Test do
                 {:add, :b, :integer, [primary_key: true]},
                 {:add, :name, :string, []}]}
 
-    assert SQL.execute_ddl(create) == """
+    assert SQL.execute_ddl(create) == remove_newlines """
     CREATE TABLE "posts" ("a" INTEGER, "b" INTEGER, "name" TEXT, PRIMARY KEY ("a", "b"))
-    """ |> remove_newlines
+    """
   end
 
   test "drop table" do
@@ -713,10 +713,10 @@ defmodule Sqlite.Ecto2.Test do
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
                 {:add, :author_id, references(:author), []}]}
-    assert SQL.execute_ddl(alter) == """
+    assert SQL.execute_ddl(alter) == remove_newlines """
     ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL;
     ALTER TABLE "posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")
-    """ |> remove_newlines
+    """
   end
 
   test "alter table with prefix" do
@@ -724,10 +724,10 @@ defmodule Sqlite.Ecto2.Test do
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
                 {:add, :author_id, references(:author, prefix: :foo), []}]}
 
-    assert SQL.execute_ddl(alter) == """
+    assert SQL.execute_ddl(alter) == remove_newlines """
     ALTER TABLE "foo"."posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL;
     ALTER TABLE "foo"."posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id")
-    """ |> remove_newlines
+    """
   end
 
   test "alter column errors for :modify column" do

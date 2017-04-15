@@ -336,12 +336,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp boolean(_name, [], _sources, _query), do: []
     defp boolean(name, [%{expr: expr, op: op} | query_exprs], sources, query) do
       name <> " " <>
-        (Enum.reduce(query_exprs, {op, paren_expr(expr, sources, query)}, fn
+        elem(Enum.reduce(query_exprs, {op, paren_expr(expr, sources, query)}, fn
           %BooleanExpr{expr: expr, op: op}, {op, acc} ->
             {op, acc <> operator_to_boolean(op) <> paren_expr(expr, sources, query)}
           %BooleanExpr{expr: expr, op: op}, {_, acc} ->
             {op, "(" <> acc <> ")" <> operator_to_boolean(op) <> paren_expr(expr, sources, query)}
-        end) |> elem(1))
+        end), 1)
     end
 
     defp operator_to_boolean(:and), do: " AND "
