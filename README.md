@@ -114,6 +114,10 @@ defmodule MyApp.Repo do
 end
 ```
 
+## Incorrect (Surprising?) Implementation of Boolean Operators
+
+SQLite's implementation of the boolean operator ('AND', 'OR', and 'NOT') return a integer values (0 or 1) since there is no boolean data type in SQLite. Certain Ecto code (and, in particular, some Ecto integration tests) expect actual boolean values to be returned. When `sqlite_ecto2` is returning a value directly from a column, it is possible to determine that the expected value is boolean and that mapping will occur. Once any mapping occurs (even as simple as `NOT column_value`), this mapping is no longer possible and you will get the integer value as presented by SQLite instead.
+
 ## Incomplete Ecto Constraint Implementation
 
 Several Ecto constraints are not fully implemented in `sqlite_ecto2` because SQLite does not provide enough information in its error reporting to implement changeset validation properly in all cases. Specifically, some foreign key and uniqueness constraints are reported by raising `Sqlite.Ecto2.Error` exceptions instead of returning an Ecto changeset with the error detail.
