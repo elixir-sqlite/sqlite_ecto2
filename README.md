@@ -7,11 +7,21 @@
 
 `sqlite_ecto2` is an Ecto 2.x adapter that allows you to create and maintain SQLite3 databases.
 
+Read [the tutorial](./docs/tutorial.md) for a detailed example of how to setup and use a SQLite repo with Ecto, or just check-out the CliffsNotes in the sections below if you want to get started quickly.
+
+
+## When to Use `sqlite_ecto2`
+
+*(and when not to use it ...)*
+
 **IMPORTANT!!!!** This is a preliminary, bleeding-edge release. It is believed to work with all 2.0.x and 2.1.x versions of Ecto, but it has not been subjected to any serious performance analysis or stress test. I recommend against deploying this into any sort of production environment at this time.
 
 If you're able to use Ecto 1.x, please look at [sqlite_ecto](https://github.com/jazzyb/sqlite_ecto), on which this project is based.
 
-Read [the tutorial](./docs/tutorial.md) for a detailed example of how to setup and use a SQLite repo with Ecto, or just check-out the CliffsNotes in the sections below if you want to get started quickly.
+Setting aside the prerelease nature of this library, I strongly recommend reading [Appropriate Uses for SQLite](https://sqlite.org/whentouse.html) on the SQLite page itself. All of the considerations mentioned there apply to this library as well.
+
+I will add one more: If there is *any* potential that more than one server node will need to write directly to the database at once (as often happens when using Elixir in a clustered environment), **do not use** `sqlite_ecto2`. Remember that there is no separate database process in this configuration, so each of your cluster nodes would be writing to its **own** copy of the database without any synchronization. You probably don't want that. Look for a true client/server database (Postgres, MySQL, or similar) in that case. SQLite's sweet spot is single-machine deployments (embedded, desktop, etc.).
+
 
 ## Help Wanted!
 
