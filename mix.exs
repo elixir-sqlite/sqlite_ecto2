@@ -33,6 +33,7 @@ defmodule Sqlite.Ecto2.Mixfile do
   defp deps do
     [{:connection, "~> 1.0.3"},
      {:coverex, "~> 1.4.11", only: :test},
+     {:credo, "~> 0.7", only: [:dev, :test]},
      {:db_connection, "~> 1.1.0", optional: true},
      {:decimal, "~> 1.2"},
      {:esqlite, "~> 0.2.3"},
