@@ -353,13 +353,14 @@ defmodule Sqlite.Ecto2.Test do
             |> offset([], ^5)
             |> normalize
 
-    result =
-      "SELECT s0.\"id\", ? FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON ? " <>
-      "INNER JOIN \"schema2\" AS s2 ON ? WHERE (?) AND (?) " <>
-      "GROUP BY ?, ? HAVING (?) AND (?) " <>
-      "ORDER BY ?, s0.\"x\" LIMIT ? OFFSET ?"
+    result = remove_newlines """
+    SELECT s0."id", ? FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON ?
+    INNER JOIN "schema2" AS s2 ON ? WHERE (?) AND (?)
+    GROUP BY ?, ? HAVING (?) AND (?)
+    ORDER BY ?, s0."x" LIMIT ? OFFSET ?
+    """
 
-    assert SQL.all(query) == String.trim(result)
+    assert SQL.all(query) == result
   end
 
   test "fragments allow ? to be escaped with backslash" do
