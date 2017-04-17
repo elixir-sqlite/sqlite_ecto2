@@ -70,7 +70,8 @@
       {Credo.Check.Warning.NameRedeclarationByCase, false},
       {Credo.Check.Warning.NameRedeclarationByDef, false},
       {Credo.Check.Warning.NameRedeclarationByFn, false},
-      {Credo.Check.Warning.OperationOnSameValues, false}, # Disabled because of p.x == p.x in Ecto queries
+      {Credo.Check.Warning.OperationOnSameValues, false},
+        # Disabled because of p.x == p.x in Ecto queries
       {Credo.Check.Warning.OperationWithConstantResult},
       {Credo.Check.Warning.UnusedEnumOperation},
       {Credo.Check.Warning.UnusedFileOperation},
