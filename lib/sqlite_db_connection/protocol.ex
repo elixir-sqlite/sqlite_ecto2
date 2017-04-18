@@ -290,10 +290,8 @@ defmodule Sqlite.DbConnection.Protocol do
     end
   end
 
-  @lint {Credo.Check.Readability.PreferImplicitTry, false}
   defp query_rows(db, stmt, opts) do
     try do
-      _ = @lint
       Sqlitex.Server.query_rows(db, stmt, opts)
     catch
       :exit, _ ->
