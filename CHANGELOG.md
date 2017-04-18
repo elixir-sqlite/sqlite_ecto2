@@ -5,9 +5,10 @@ This is a major rewrite of the previously-existing [`sqlite_ecto`]((https://gith
 
 ## v2.0.0-dev.4
 
-_unreleased_
+_17 April 2017_
 
 * Port documentation from v1 `sqlite_ecto` repo to this repo.
+* Enable automated code review by Ebert. Fix some of the issues it flagged.
 
 
 ## v2.0.0-dev.3
