@@ -534,10 +534,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp ecto_to_db(:binary), do: "BLOB"
     defp ecto_to_db(:float), do: "NUMERIC"
     defp ecto_to_db(:string), do: "TEXT"
-    defp ecto_to_db(:utc_datetime), do: "TEXT_DATETIME"    # HACK see: cast_any_datetimes/1
-    defp ecto_to_db(:naive_datetime), do: "TEXT_DATETIME"  # HACK see: cast_any_datetimes/1
+    defp ecto_to_db(:utc_datetime), do: "TEXT_DATETIME"    # see below
+    defp ecto_to_db(:naive_datetime), do: "TEXT_DATETIME"  # see below
     defp ecto_to_db(:map), do: "TEXT"
     defp ecto_to_db(other), do: other |> Atom.to_string |> String.upcase
+
+    # We use a special conversion for when the user is trying to cast to a
+    # DATETIME type. We introduce a TEXT_DATETIME psudo-type to preserve the
+    # datetime string. When we get here, we look for a CAST function as a signal
+    # to convert that back to Elixir date types.
 
     defp create_names(%{prefix: prefix, sources: sources}, stmt) do
       create_names(prefix, sources, 0, tuple_size(sources), stmt)
