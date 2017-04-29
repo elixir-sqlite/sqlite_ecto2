@@ -135,12 +135,10 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), fr}
   end
 
-  # HACK: We have to do a special conversion if the user is trying to cast to
-  # a DATETIME type.  Sqlitex cannot determine that the type of the cast is a
-  # datetime value because datetime defaults to an integer type in SQLite.
-  # Thus, we cast the value to a TEXT_DATETIME pseudo-type to preserve the
-  # datetime string.  Then when we get here, we convert the string to an Ecto
-  # datetime tuple if it looks like a cast was attempted.
+  # We use a special conversion for when the user is trying to cast to a
+  # DATETIME type. We introduce a TEXT_DATETIME psudo-type to preserve the
+  # datetime string. When we get here, we look for a CAST function as a signal
+  # to convert that back to Elixir date types.
   defp cast_any_datetimes(row) do
     Enum.map row, fn {value, column_name} ->
       if String.contains?(column_name, "CAST (") && String.contains?(column_name, "TEXT_DATE") do
