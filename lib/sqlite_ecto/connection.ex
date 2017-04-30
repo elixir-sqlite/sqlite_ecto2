@@ -1,8 +1,4 @@
 if Code.ensure_loaded?(Sqlitex.Server) do
-
-  # TODO: Port changes to query composition made just before 2.1.0 release.
-  # See https://github.com/elixir-ecto/ecto/compare/4a64a740e3c84342cadf6a1acef1e22ae454886e...d6d39bf018b7a601d999b1b8e246142d15205e0d
-
   defmodule Sqlite.Ecto2.Connection do
     @moduledoc false
 
@@ -83,7 +79,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       {select_distinct, order_by_distinct} = distinct(query.distinct, sources, query)
 
       from = from(query, sources)
-      select   = select(query, select_distinct, sources)
+      select = select(query, select_distinct, sources)
       join = join(query, sources)
       where = where(query, sources)
       group_by = group_by(query, sources)
@@ -92,7 +88,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       limit = limit(query, sources)
       offset = offset(query, sources)
 
-      assemble([select, from, join, where, group_by, having, order_by, limit, offset])
+      IO.iodata_to_binary([select, from, join, where, group_by, having, order_by, limit, offset])
     end
 
     def update_all(%Ecto.Query{joins: [_ | _]}) do
@@ -102,12 +98,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       sources = create_names(query, :update)
       {from, _name} = get_source(query, sources, 0, from)
 
+      prefix = prefix || ["UPDATE ", from, " SET "]
       fields = update_fields(query, sources)
       {join, wheres} = using_join(query, :update_all, "FROM", sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      assemble([prefix || "UPDATE #{from} SET", fields, join,
-                where, returning(query, sources, :update)])
+      IO.iodata_to_binary([prefix, fields, join, where | returning(query, sources, :update)])
     end
 
     def delete_all(%Ecto.Query{joins: [_ | _]}) do
@@ -120,16 +116,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       {join, wheres} = using_join(query, :delete_all, "USING", sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      assemble(["DELETE FROM #{from}", join, where, returning(query, sources, :delete)])
+      IO.iodata_to_binary(["DELETE FROM ", from, join, where | returning(query, sources, :delete)])
     end
 
     def insert(prefix, table, header, rows, on_conflict, returning) do
       values =
         if header == [] do
-          "DEFAULT VALUES"
+          " DEFAULT VALUES"
         else
-          "(" <> Enum.map_join(header, ",", &quote_name/1) <> ") " <>
-          "VALUES " <> insert_all(rows, 1, "")
+          [?\s, ?(, intersperse_map(header, ?,, &quote_name/1), ") VALUES " | insert_all(rows, 1)]
         end
 
       on_conflict = case on_conflict do
@@ -137,60 +132,57 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         {:nothing, [], []} -> " OR IGNORE"
         _ -> raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing"
       end
-      returning = String.strip(" " <> assemble(returning_clause(prefix, table, returning, "INSERT")))
-      assemble(["INSERT#{on_conflict} INTO #{quote_table(prefix, table)}", values, returning])
+      returning = returning_clause(prefix, table, returning, "INSERT")
+      IO.iodata_to_binary(["INSERT", on_conflict, " INTO ", quote_table(prefix, table),
+                           values, returning])
     end
 
-    defp insert_all([row|rows], counter, acc) do
-      {counter, row} = insert_each(row, counter, "")
-      insert_all(rows, counter, acc <> ",(" <> row <> ")")
-    end
-    defp insert_all([], _counter, "," <> acc) do
-      acc
-    end
-
-    def upsert(prefix, table, header, rows, on_conflict, _conflict_target, _update, returning) do
-      insert(prefix, table, header, rows, returning, on_conflict)
+    defp insert_all(rows, counter) do
+      intersperse_reduce(rows, ?,, counter, fn row, counter ->
+        {row, counter} = insert_each(row, counter)
+        {[?(, row, ?)], counter}
+      end)
+      |> elem(0)
     end
 
-    defp insert_each([nil|_t], _counter, _acc),
-      do: raise ArgumentError, "Cell-wise default values are not supported on INSERT statements by SQLite"
-    defp insert_each([_|t], counter, acc),
-      do: insert_each(t, counter + 1, acc <> ",?" <> Integer.to_string(counter))
-    defp insert_each([], counter, "," <> acc),
-      do: {counter, acc}
+    defp insert_each(values, counter) do
+      intersperse_reduce(values, ?,, counter, fn
+        nil, _counter ->
+          raise ArgumentError, "Cell-wise default values are not supported on INSERT statements by SQLite"
+        _, counter ->
+          {[?? | Integer.to_string(counter)], counter + 1}
+      end)
+    end
 
     def update(prefix, table, fields, filters, returning) do
-      {fields, count} = Enum.map_reduce fields, 1, fn field, acc ->
-        {"#{quote_name(field)} = ?#{acc}", acc + 1}
-      end
+      {fields, count} = intersperse_reduce(fields, ", ", 1, fn field, acc ->
+        {[quote_name(field), " = ?" | Integer.to_string(acc)], acc + 1}
+      end)
 
-      {filters, _count} = Enum.map_reduce filters, count, fn field, acc ->
-        {"#{quote_name(field)} = ?#{acc}", acc + 1}
-      end
+      {filters, _count} = intersperse_reduce(filters, " AND ", count, fn field, acc ->
+        {[quote_name(field), " = ?" | Integer.to_string(acc)], acc + 1}
+      end)
 
       return = returning_clause(prefix, table, returning, "UPDATE")
 
-      assemble(["UPDATE #{quote_table(prefix, table)} SET " <> Enum.join(fields, ", "),
-                "WHERE " <> Enum.join(filters, " AND "),
-                           return])
+      IO.iodata_to_binary(["UPDATE ", quote_table(prefix, table), " SET ",
+                           fields, " WHERE ", filters | return])
     end
 
     def delete(prefix, table, filters, returning) do
-      {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
-        {"#{quote_name(field)} = ?#{acc}", acc + 1}
-      end
+      {filters, _} = intersperse_reduce(filters, " AND ", 1, fn field, acc ->
+        {[quote_name(field), " = ?" | Integer.to_string(acc)], acc + 1}
+      end)
 
-      assemble(["DELETE FROM #{quote_table(prefix, table)} WHERE " <> Enum.join(filters, " AND "),
-                returning_clause(prefix, table, returning, "DELETE")])
+      IO.iodata_to_binary(["DELETE FROM ", quote_table(prefix, table), " WHERE ",
+                           filters | returning_clause(prefix, table, returning, "DELETE")])
     end
 
     ## Query generation
 
     binary_ops =
-      [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
-       and: "AND", or: "OR",
-       ilike: "ILIKE", like: "LIKE"]
+      [==: " = ", !=: " != ", <=: " <= ", >=: " >= ", <: " < ", >: " > ",
+       and: " AND ", or: " OR ", ilike: " ILIKE ", like: " LIKE "]
 
     @binary_ops Keyword.keys(binary_ops)
 
@@ -201,48 +193,47 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
     defp select(%Query{select: %{fields: fields}} = query, select_distinct, sources) do
-      "SELECT " <> select_distinct <> select_fields(fields, sources, query)
+      ["SELECT", select_distinct, ?\s | select_fields(fields, sources, query)]
     end
 
     defp select_fields([], _sources, _query),
       do: "1"
     defp select_fields(fields, sources, query) do
-      Enum.map_join(fields, ", ", fn
+      intersperse_map(fields, ", ", fn
         {key, value} ->
-          expr(value, sources, query) <> " AS " <> quote_name(key)
+          [expr(value, sources, query), " AS " | quote_name(key)]
         value ->
           expr(value, sources, query)
       end)
     end
 
-    defp distinct(nil, _, _), do: {"", []}
-    defp distinct(%QueryExpr{expr: []}, _, _), do: {"", []}
-    defp distinct(%QueryExpr{expr: true}, _, _), do: {"DISTINCT ", []}
-    defp distinct(%QueryExpr{expr: false}, _, _), do: {"", []}
-    defp distinct(_query, _, _) do
+    defp distinct(nil, _, _), do: {[], []}
+    defp distinct(%QueryExpr{expr: []}, _, _), do: {[], []}
+    defp distinct(%QueryExpr{expr: true}, _, _), do: {" DISTINCT", []}
+    defp distinct(%QueryExpr{expr: false}, _, _), do: {[], []}
+    defp distinct(_expr, _sources, _query) do
       raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite"
     end
 
     defp from(%{from: from} = query, sources) do
       {from, name} = get_source(query, sources, 0, from)
-      "FROM #{from} AS #{name}"
+      [" FROM ", from, " AS " | name]
     end
 
     defp update_fields(%Query{updates: updates} = query, sources) do
-      Enum.join(
-        for(%{expr: expr} <- updates,
+      for(%{expr: expr} <- updates,
           {op, kw} <- expr,
           {key, value} <- kw,
-          do: update_op(op, key, value, sources, query)), ", ")
+          do: update_op(op, key, value, sources, query)) |> Enum.intersperse(", ")
     end
 
     defp update_op(:set, key, value, sources, query) do
-      quote_name(key) <> " = " <> expr(value, sources, query)
+      [quote_name(key), " = ", expr(value, sources, query)]
     end
 
     defp update_op(:inc, key, value, sources, query) do
-      quoted = quote_name(key)
-      quoted <> " = " <> quoted <> " + " <> expr(value, sources, query)
+      [quote_name(key), " = ", quote_qualified_name(key, sources, 0), " + " |
+       expr(value, sources, query)]
     end
 
     defp update_op(command, _key, _value, _sources, query) do
@@ -252,12 +243,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp using_join(%Query{joins: []}, _kind, _prefix, _sources), do: {[], []}
     defp using_join(%Query{joins: joins} = query, kind, prefix, sources) do
       froms =
-        Enum.map_join(joins, ", ", fn
+        intersperse_map(joins, ", ", fn
           %JoinExpr{qual: :inner, ix: ix, source: source} ->
             {join, name} = get_source(query, sources, ix, source)
-            join <> " AS " <> name
+            [join, " AS " | name]
           %JoinExpr{qual: qual} ->
-            error!(query, "SQLite supports only inner joins on #{kind}, got: `#{qual}`")
+            error!(query, "PostgreSQL supports only inner joins on #{kind}, got: `#{qual}`")
         end)
 
       wheres =
@@ -265,133 +256,123 @@ if Code.ensure_loaded?(Sqlitex.Server) do
             value != true,
             do: expr |> Map.put(:__struct__, BooleanExpr) |> Map.put(:op, :and)
 
-      {prefix <> " " <> froms, wheres}
+      {[?\s, prefix, ?\s | froms], wheres}
     end
 
     defp join(%Query{joins: []}, _sources), do: []
     defp join(%Query{joins: joins} = query, sources) do
-      Enum.map_join(joins, " ", fn
+      [?\s | intersperse_map(joins, ?\s, fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
           {join, name} = get_source(query, sources, ix, source)
-          qual = join_qual(qual)
-          qual <> " " <> join <> " AS " <> name <> " ON " <> expr(expr, sources, query)
-      end)
+          [join_qual(qual), join, " AS ", name, " ON " | expr(expr, sources, query)]
+      end)]
     end
 
-    defp join_qual(:inner), do: "INNER JOIN"
-    defp join_qual(:left), do: "LEFT JOIN"
+    defp join_qual(:inner), do: "INNER JOIN "
+    defp join_qual(:left), do: "LEFT JOIN "
     defp join_qual(mode), do: raise ArgumentError, "join `#{inspect mode}` not supported by SQLite"
 
     defp where(%Query{wheres: wheres} = query, sources) do
-      boolean("WHERE", wheres, sources, query)
+      boolean(" WHERE ", wheres, sources, query)
     end
 
     defp having(%Query{havings: havings} = query, sources) do
-      boolean("HAVING", havings, sources, query)
+      boolean(" HAVING ", havings, sources, query)
     end
 
+    defp group_by(%Query{group_bys: []}, _sources), do: []
     defp group_by(%Query{group_bys: group_bys} = query, sources) do
-      exprs =
-        Enum.map_join(group_bys, ", ", fn
+      [" GROUP BY " |
+       intersperse_map(group_bys, ", ", fn
           %QueryExpr{expr: expr} ->
-            Enum.map_join(expr, ", ", &expr(&1, sources, query))
-        end)
-
-      case exprs do
-        "" -> []
-        _  -> "GROUP BY " <> exprs
-      end
+           intersperse_map(expr, ", ", &expr(&1, sources, query))
+       end)]
     end
 
-    defp order_by(%Query{order_bys: []}, _distinct, _sources) do
-      []
-    end
+    defp order_by(%Query{order_bys: []}, _distinct, _sources), do: []
     defp order_by(%Query{order_bys: order_bys} = query, distinct, sources) do
       order_bys = Enum.flat_map(order_bys, & &1.expr)
-      exprs = Enum.map_join(distinct ++ order_bys, ", ", &order_by_expr(&1, sources, query))
-      "ORDER BY " <> exprs
+      [" ORDER BY " |
+       intersperse_map(distinct ++ order_bys, ", ", &order_by_expr(&1, sources, query))]
     end
 
     defp order_by_expr({dir, expr}, sources, query) do
       str = expr(expr, sources, query)
       case dir do
         :asc  -> str
-        :desc -> str <> " DESC"
+        :desc -> [str | " DESC"]
       end
     end
 
     defp limit(%Query{limit: nil}, _sources), do: []
     defp limit(%Query{limit: %QueryExpr{expr: expr}} = query, sources) do
-      "LIMIT " <> expr(expr, sources, query)
+      [" LIMIT " | expr(expr, sources, query)]
     end
 
     defp offset(%Query{offset: nil}, _sources), do: []
     defp offset(%Query{offset: %QueryExpr{expr: expr}} = query, sources) do
-      "OFFSET " <> expr(expr, sources, query)
+      [" OFFSET " | expr(expr, sources, query)]
     end
 
     defp boolean(_name, [], _sources, _query), do: []
     defp boolean(name, [%{expr: expr, op: op} | query_exprs], sources, query) do
-      name <> " " <>
-        elem(Enum.reduce(query_exprs, {op, paren_expr(expr, sources, query)}, fn
-          %BooleanExpr{expr: expr, op: op}, {op, acc} ->
-            {op, acc <> operator_to_boolean(op) <> paren_expr(expr, sources, query)}
-          %BooleanExpr{expr: expr, op: op}, {_, acc} ->
-            {op, "(" <> acc <> ")" <> operator_to_boolean(op) <> paren_expr(expr, sources, query)}
-        end), 1)
+      [name |
+       Enum.reduce(query_exprs, {op, paren_expr(expr, sources, query)}, fn
+         %BooleanExpr{expr: expr, op: op}, {op, acc} ->
+           {op, [acc, operator_to_boolean(op), paren_expr(expr, sources, query)]}
+         %BooleanExpr{expr: expr, op: op}, {_, acc} ->
+           {op, [?(, acc, ?), operator_to_boolean(op), paren_expr(expr, sources, query)]}
+       end) |> elem(1)]
     end
 
     defp operator_to_boolean(:and), do: " AND "
     defp operator_to_boolean(:or), do: " OR "
 
     defp paren_expr(expr, sources, query) do
-      "(" <> expr(expr, sources, query) <> ")"
+      [?(, expr(expr, sources, query), ?)]
     end
 
     defp expr({:^, [], [_ix]}, _sources, _query) do
-      "?"
+      [??]
     end
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query) when is_atom(field) do
-      {_, name, _} = elem(sources, idx)
-      "#{name}.#{quote_name(field)}"
+      quote_qualified_name(field, sources, idx)
     end
 
     defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
-      {_, name, schema} = elem(sources, idx)
+      {source, name, schema} = elem(sources, idx)
       if is_nil(schema) and is_nil(fields) do
-        error!(query, "SQLite requires a schema module when using selector " <>
-          "#{inspect name} but none was given. " <>
-          "Please specify a schema or specify exactly which fields from " <>
-          "#{inspect name} you desire")
+        error!(query, "SQLite does not support selecting all fields from #{source} without a schema. " <>
+                      "Please specify a schema or specify exactly which fields you want to select")
       end
-      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
+      intersperse_map(fields, ", ", &[name, ?. | quote_name(&1)])
     end
 
     defp expr({:in, _, [left, right]}, sources, query) when is_list(right) do
-      args = Enum.map_join right, ",", &expr(&1, sources, query)
-      expr(left, sources, query) <> " IN (" <> args <> ")"
+      args = intersperse_map(right, ?,, &expr(&1, sources, query))
+      [expr(left, sources, query), " IN (", args, ?)]
     end
 
     defp expr({:in, _, [left, {:^, _, [_ix, 0]}]}, sources, query) do
-      expr(left, sources, query) <> " IN ()"
+      [expr(left, sources, query), " IN ()"]
     end
 
     defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources, query) do
       args = Enum.map_join ix + 1 .. ix + length, ",", &"?#{&1}"
-      expr(left, sources, query) <> " IN (" <> args <> ")"
+      [expr(left, sources, query), " IN (", args, ")"]
     end
 
     defp expr({:in, _, [left, right]}, sources, query) do
-      expr(left, sources, query) <> " IN (" <> expr(right, sources, query) <> ")"
+      [expr(left, sources, query), " IN (", expr(right, sources, query), ?)]
     end
 
     defp expr({:is_nil, _, [arg]}, sources, query) do
-      "#{expr(arg, sources, query)} IS NULL"
+      [expr(arg, sources, query) | " IS NULL"]
     end
 
     defp expr({:not, _, [expr]}, sources, query) do
-      "NOT (" <> expr(expr, sources, query) <> ")"
+      ["NOT (", expr(expr, sources, query), ?)]
     end
 
     defp expr(%Ecto.SubQuery{query: query, fields: fields}, _sources, _query) do
@@ -403,7 +384,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp expr({:fragment, _, parts}, sources, query) do
-      Enum.map_join(parts, "", fn
+      Enum.map(parts, fn
         {:raw, part}  -> part
         {:expr, expr} -> expr(expr, sources, query)
       end)
@@ -412,31 +393,28 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     @datetime_format "strftime('%Y-%m-%d %H:%M:%f000'" # NOTE: Open paren must be closed
 
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
-      "CAST (#{@datetime_format},#{expr(datetime, sources, query)},#{interval(count, interval, sources)}) AS TEXT_DATETIME)"
+      ["CAST (", @datetime_format, ",", expr(datetime, sources, query), ",", interval(count, interval, sources), ") AS TEXT_DATETIME)"]
     end
 
     @date_format "strftime('%Y-%m-%d'" # NOTE: Open paren must be closed
 
     defp expr({:date_add, _, [date, count, interval]}, sources, query) do
-      "CAST (#{@date_format},#{expr(date, sources, query)},#{interval(count, interval, sources)}) AS TEXT_DATE)"
+      ["CAST (", @date_format, ",", expr(date, sources, query), ",", interval(count, interval, sources), ") AS TEXT_DATE)"]
     end
 
     defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do
       {modifier, args} =
         case args do
           [rest, :distinct] -> {"DISTINCT ", [rest]}
-          _ -> {"", args}
+          _ -> {[], args}
        end
 
       case handle_call(fun, length(args)) do
         {:binary_op, op} ->
           [left, right] = args
-          op_to_binary(left, sources, query) <>
-          " #{op} "
-          <> op_to_binary(right, sources, query)
-
+          [op_to_binary(left, sources, query), op | op_to_binary(right, sources, query)]
         {:fun, fun} ->
-          "#{fun}(" <> modifier <> Enum.map_join(args, ", ", &expr(&1, sources, query)) <> ")"
+          [fun, ?(, modifier, intersperse_map(args, ", ", &expr(&1, sources, query)), ?)]
       end
     end
 
@@ -446,7 +424,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources, _query)
         when is_binary(binary) do
-      "X'#{Base.encode16(binary, case: :upper)}'"
+      ["X'", Base.encode16(binary, case: :upper), "'"]
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) when type in [:id, :integer, :float] do
@@ -454,7 +432,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) do
-      "CAST (#{expr(other, sources, query)} AS #{ecto_to_db(type)})"
+      ["CAST (", expr(other, sources, query), " AS ", ecto_to_db(type), ?)]
     end
 
     defp expr(nil, _sources, _query),   do: "NULL"
@@ -462,15 +440,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp expr(false, _sources, _query), do: "0"
 
     defp expr(literal, _sources, _query) when is_integer(literal) do
-      String.Chars.Integer.to_string(literal)
+      Integer.to_string(literal)
     end
 
     defp expr(literal, _sources, _query) when is_float(literal) do
-      String.Chars.Float.to_string(literal)
+      Float.to_string(literal)
     end
 
     defp expr(literal, _sources, _query) when is_binary(literal) do
-      "'#{:binary.replace(literal, "'", "''", [:global])}'"
+      [?', :binary.replace(literal, "'", "''", [:global]), ?']
     end
 
     defp interval(_, "microsecond", _sources) do
@@ -499,7 +477,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     ## Returning Clause Helpers
 
-    @pseudo_returning_statement ";--RETURNING ON"
+    @pseudo_returning_statement " ;--RETURNING ON "
 
     # SQLite does not have a returning clause, but we append a pseudo one so
     # that query() can parse the string later and emulate it with a
@@ -510,18 +488,21 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       cmd = cmd |> Atom.to_string |> String.upcase
       table = table_from_first_source(sources)
       fields = Enum.map_join([table | fields], ",", &quote_id/1)
-      [@pseudo_returning_statement, cmd, fields]
+      [@pseudo_returning_statement, cmd, ?\s, fields]
     end
 
     defp table_from_first_source(sources) do
-      {_, table, _} = elem(sources, 0)
-      String.trim(table, "\"")
+      sources
+      |> elem(0)
+      |> elem(1) # yeah, this is odd
+      |> IO.iodata_to_binary
+      |> String.trim("\"")
     end
 
     defp returning_clause(_prefix, _table, [], _cmd), do: []
     defp returning_clause(prefix, table, returning, cmd) do
       fields = Enum.map_join([{prefix, table} | returning], ",", &quote_id/1)
-      [@pseudo_returning_statement, cmd, fields]
+      [@pseudo_returning_statement, cmd, ?\s, fields]
     end
 
     defp ecto_to_db({:array, _}) do
@@ -554,12 +535,12 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       current =
         case elem(sources, pos) do
           {table, schema} ->
-            name = String.first(table) <> Integer.to_string(pos)
+            name = [String.first(table) | Integer.to_string(pos)]
             {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->
-            {nil, "f" <> Integer.to_string(pos), nil}
+            {nil, [?f | Integer.to_string(pos)], nil}
           %Ecto.SubQuery{} ->
-            {nil, "s" <> Integer.to_string(pos), nil}
+            {nil, [?s | Integer.to_string(pos)], nil}
         end
       [current|create_names(prefix, sources, pos + 1, limit, stmt)]
     end
@@ -602,27 +583,25 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       raise ArgumentError, "SQLite adapter does not support keyword lists in :options"
     end
 
-    def execute_ddl({command, %Table{} = table, columns})
-      when command in [:create, :create_if_not_exists]
-    do
-      options       = options_expr(table.options)
-      if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
-      # if more than one has primary_key: true then we alte table with %{table | primary_key: :composite}
+    def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
+      # If more than one has primary_key: true then we alter table with %{table | primary_key: :composite}.
       {table, composite_pk_def} = composite_pk_definition(table, columns)
 
-      "CREATE TABLE" <> if_not_exists <>
-        " #{quote_table(table.prefix, table.name)} (#{column_definitions(table, columns)}#{composite_pk_def})" <> options
+      [["CREATE TABLE ",
+        if_do(command == :create_if_not_exists, "IF NOT EXISTS "),
+        quote_table(table.prefix, table.name), ?\s, ?(,
+        column_definitions(table, columns), composite_pk_def, ?),
+        options_expr(table.options)]]
     end
 
     def execute_ddl({command, %Table{} = table}) when command in @drops do
-      if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
-
-      "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
+      [["DROP TABLE ", if_do(command == :drop_if_exists, "IF EXISTS "),
+        quote_table(table.prefix, table.name)]]
     end
 
     def execute_ddl({:alter, %Table{} = table, changes}) do
-      Enum.map_join(changes, "; ", fn (change) ->
-        "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_change(table, change)}"
+      Enum.map(changes, fn (change) ->
+        ["ALTER TABLE ", quote_table(table.prefix, table.name), ?\s, column_change(table, change)]
       end)
     end
 
@@ -630,31 +609,31 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     def execute_ddl({command, %Index{} = index})
       when command in [:create, :create_if_not_exists]
     do
-      fields = Enum.map_join(index.columns, ", ", &index_expr/1)
-      if_not_exists = if command == :create_if_not_exists, do: "IF NOT EXISTS", else: []
+      fields = intersperse_map(index.columns, ", ", &index_expr/1)
 
-      assemble(["CREATE",
-                if_do(index.unique, "UNIQUE"),
-                "INDEX",
-                if_not_exists,
-                quote_name(index.name),
-                "ON",
-                quote_table(index.prefix, index.table),
-                "(#{fields})",
-                if_do(index.where, "WHERE #{index.where}")])
+      [["CREATE ",
+        if_do(index.unique, "UNIQUE "),
+        "INDEX",
+        if_do(command == :create_if_not_exists, " IF NOT EXISTS"),
+        ?\s,
+        quote_name(index.name),
+        " ON ",
+        quote_table(index.prefix, index.table),
+        ?\s, ?(, fields, ?),
+        if_do(index.where, [" WHERE ", to_string(index.where)])]]
     end
 
     def execute_ddl({command, %Index{} = index}) when command in @drops do
-      if_exists = if command == :drop_if_exists, do: "IF EXISTS", else: []
+      if_exists = if command == :drop_if_exists, do: "IF EXISTS ", else: []
 
-      assemble(["DROP",
-                "INDEX",
-                if_exists,
-                quote_table(index.prefix, index.name)])
+      [["DROP INDEX ",
+        if_exists,
+        quote_table(index.prefix, index.name)]]
     end
 
     def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
-      "ALTER TABLE #{quote_table(current_table.prefix, current_table.name)} RENAME TO #{quote_table(new_table.prefix, new_table.name)}"
+      [["ALTER TABLE ", quote_table(current_table.prefix, current_table.name),
+        " RENAME TO ", quote_table(nil, new_table.name)]]
     end
 
     def execute_ddl({:rename, %Table{}, _old_col, _new_col}) do
@@ -667,31 +646,27 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite"
     end
 
-    def execute_ddl(string) when is_binary(string), do: string
+    def execute_ddl(string) when is_binary(string), do: [string]
 
     def execute_ddl(keyword) when is_list(keyword),
       do: error!(nil, "SQLite adapter does not support keyword lists in execute")
 
-        defp column_definitions(table, columns) do
-      Enum.map_join(columns, ", ", &column_definition(table, &1))
+    defp column_definitions(table, columns) do
+      intersperse_map(columns, ", ", &column_definition(table, &1))
     end
 
     defp column_definition(table, {:add, name, %Reference{} = ref, opts}) do
-      assemble([
-        quote_name(name), reference_column_type(ref.type, opts),
-        column_options(table, ref.type, opts), reference_expr(ref, table, name)
-      ])
+      [quote_name(name), ?\s, reference_column_type(ref.type, opts),
+        column_options(table, ref.type, opts), reference_expr(ref, table, name)]
     end
 
     defp column_definition(table, {:add, name, type, opts}) do
-      assemble([quote_name(name), column_type(type, opts), column_options(table, type, opts)])
+      [quote_name(name), ?\s, column_type(type, opts), column_options(table, type, opts)]
     end
 
     defp column_change(table, {:add, name, %Reference{} = ref, opts}) do
-      assemble([
-        "ADD COLUMN", quote_name(name), reference_column_type(ref.type, opts),
-        column_options(table, ref.type, opts), reference_expr(ref, table, name)
-      ])
+      ["ADD COLUMN ", quote_name(name), ?\s, reference_column_type(ref.type, opts),
+        column_options(table, ref.type, opts), reference_expr(ref, table, name)]
     end
 
     # If we are adding a DATETIME column with the NOT NULL constraint, SQLite
@@ -705,11 +680,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       when type in [:utc_datetime, :naive_datetime]
     do
       opts = opts |> Enum.into(%{}) |> Map.delete(:null)
-      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(table, type, opts)])
+      ["ADD COLUMN ", quote_name(name), ?\s, column_type(type, opts), column_options(table, type, opts)]
     end
 
     defp column_change(table, {:add, name, type, opts}) do
-      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(table, type, opts)])
+      ["ADD COLUMN ", quote_name(name), ?\s, column_type(type, opts), column_options(table, type, opts)]
     end
 
     defp column_change(_table, {:modify, _name, _type, _opts}) do
@@ -733,13 +708,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp column_options(_default, :serial, _, true) do
-      "PRIMARY KEY AUTOINCREMENT"
+      " PRIMARY KEY AUTOINCREMENT"
     end
     defp column_options(default, type, null, pk) do
       [default_expr(default, type), null_expr(null), pk_expr(pk)]
     end
 
-    defp pk_expr(true), do: "PRIMARY KEY"
+    defp pk_expr(true), do: " PRIMARY KEY"
     defp pk_expr(_), do: []
 
     defp composite_pk_definition(%Table{} = table, columns) do
@@ -757,22 +732,22 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end
     end
 
-    defp null_expr(false), do: "NOT NULL"
-    # defp null_expr(true), do: "NULL"  # SQLite does not allow this syntax.
+    defp null_expr(false), do: " NOT NULL"
+    # defp null_expr(true), do: " NULL"  # SQLite does not allow this syntax.
     defp null_expr(_), do: []
 
     defp default_expr({:ok, nil}, _type),
-      do: "DEFAULT NULL"
+      do: " DEFAULT NULL"
     defp default_expr({:ok, true}, _type),
-      do: "DEFAULT 1"
+      do: " DEFAULT 1"
     defp default_expr({:ok, false}, _type),
-      do: "DEFAULT 0"
+      do: " DEFAULT 0"
     defp default_expr({:ok, literal}, _type) when is_binary(literal),
-      do: "DEFAULT '#{escape_string(literal)}'"
+      do: [" DEFAULT '", escape_string(literal), ?']
     defp default_expr({:ok, literal}, _type) when is_number(literal) or is_boolean(literal),
-      do: "DEFAULT #{literal}"
+      do: [" DEFAULT ", to_string(literal)]
     defp default_expr({:ok, {:fragment, expr}}, _type),
-      do: "DEFAULT (#{expr})"
+      do: [" DEFAULT ", expr]
     defp default_expr({:ok, expr}, type),
       do: raise(ArgumentError, "unknown default `#{inspect expr}` for type `#{inspect type}`. " <>
                                ":default may be a string, number, boolean, empty list or a fragment(...)")
@@ -785,11 +760,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       do: quote_name(literal)
 
     defp options_expr(nil),
-      do: ""
+      do: []
     defp options_expr(keyword) when is_list(keyword),
       do: error!(nil, "PostgreSQL adapter does not support keyword lists in :options")
     defp options_expr(options),
-      do: " #{options}"
+      do: [?\s, options]
 
     # Simple column types. Note that we ignore options like :size, :precision,
     # etc. because columns do not have types, and SQLite will not coerce any
@@ -815,9 +790,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp decimal_column_type(_precision, _scale), do: "DECIMAL"
 
     defp reference_expr(%Reference{} = ref, table, name),
-      do: "CONSTRAINT #{reference_name(ref, table, name)} REFERENCES " <>
-          "#{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
-          reference_on_delete(ref.on_delete) <> reference_on_update(ref.on_update)
+      do: [" CONSTRAINT ", reference_name(ref, table, name), " REFERENCES ",
+           quote_table(table.prefix, ref.table), ?(, quote_name(ref.column), ?),
+           reference_on_delete(ref.on_delete), reference_on_update(ref.on_update)]
 
     # A reference pointing to a serial column becomes integer in SQLite
     defp reference_name(%Reference{name: nil}, table, column),
@@ -830,11 +805,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
     defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
-    defp reference_on_delete(_), do: ""
+    defp reference_on_delete(_), do: []
 
     defp reference_on_update(:nilify_all), do: " ON UPDATE SET NULL"
     defp reference_on_update(:update_all), do: " ON UPDATE CASCADE"
-    defp reference_on_update(_), do: ""
+    defp reference_on_update(_), do: []
 
         ## Helpers
 
@@ -843,14 +818,19 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       {expr || paren_expr(source, sources, query), name}
     end
 
-    defp quote_name(name)
-    defp quote_name(name) when is_atom(name),
-      do: quote_name(Atom.to_string(name))
+    defp quote_qualified_name(name, sources, ix) do
+      {_, source, _} = elem(sources, ix)
+      [source, ?. | quote_name(name)]
+    end
+
+    defp quote_name(name) when is_atom(name) do
+      quote_name(Atom.to_string(name))
+    end
     defp quote_name(name) do
       if String.contains?(name, "\"") do
         error!(nil, "bad field name #{inspect name}")
       end
-      <<?", name::binary, ?">>
+      [?", name, ?"]
     end
 
     # Quote the given identifier.
@@ -865,7 +845,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp quote_table(nil, name),    do: quote_table(name)
-    defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
+    defp quote_table(prefix, name), do: [quote_table(prefix), ?., quote_table(name)]
 
     defp quote_table(%Table{prefix: prefix, name: name}) do
       quote_table(prefix, name)
@@ -876,27 +856,33 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       if String.contains?(name, "\"") do
         error!(nil, "bad table name #{inspect name}")
       end
-      <<?", name::binary, ?">>
+      [?", name, ?"]
     end
 
-    def assemble([]), do: ""
-    def assemble(list) when is_list(list) do
-      list = for x <- List.flatten(list), x != nil && x != "", do: x
-      Enum.reduce list, fn word, result ->
-          if word == "," || word == ")" || String.ends_with?(result, "(") do
-            Enum.join([result, word])
-          else
-            Enum.join([result, word], " ")
-          end
-      end
+    defp intersperse_map(list, separator, mapper, acc \\ [])
+    defp intersperse_map([], _separator, _mapper, acc),
+      do: acc
+    defp intersperse_map([elem], _separator, mapper, acc),
+      do: [acc | mapper.(elem)]
+    defp intersperse_map([elem | rest], separator, mapper, acc),
+      do: intersperse_map(rest, separator, mapper, [acc, mapper.(elem), separator])
+
+    defp intersperse_reduce(list, separator, user_acc, reducer, acc \\ [])
+    defp intersperse_reduce([], _separator, user_acc, _reducer, acc),
+      do: {acc, user_acc}
+    defp intersperse_reduce([elem], _separator, user_acc, reducer, acc) do
+      {elem, user_acc} = reducer.(elem, user_acc)
+      {[acc | elem], user_acc}
     end
-    def assemble(literal), do: literal
+    defp intersperse_reduce([elem | rest], separator, user_acc, reducer, acc) do
+      {elem, user_acc} = reducer.(elem, user_acc)
+      intersperse_reduce(rest, separator, user_acc, reducer, [acc, elem, separator])
+    end
 
     defp if_do(condition, value) do
       if condition, do: value, else: []
     end
 
-    # Not sure if this will be valid in SQLite.
     defp escape_string(value) when is_binary(value) do
       :binary.replace(value, "'", "''", [:global])
     end
