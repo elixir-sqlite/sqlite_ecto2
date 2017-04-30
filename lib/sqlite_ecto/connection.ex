@@ -883,7 +883,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       if condition, do: value, else: []
     end
 
-    # TODO:  Not sure if this will be valid in SQLite.
     defp escape_string(value) when is_binary(value) do
       :binary.replace(value, "'", "''", [:global])
     end
