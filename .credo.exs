@@ -41,7 +41,10 @@
       {Credo.Check.Readability.PreferImplicitTry, false},
       {Credo.Check.Readability.RedundantBlankLines},
       {Credo.Check.Readability.Semicolons},
-      {Credo.Check.Readability.SinglePipe},
+      {Credo.Check.Readability.SinglePipe, false},
+        # Ecto does this quite a bit and we want to follow their
+        # code format closely, so silence this warning.
+
       {Credo.Check.Readability.SpaceAfterCommas},
       {Credo.Check.Readability.Specs, false},
       {Credo.Check.Readability.StringSigils},
