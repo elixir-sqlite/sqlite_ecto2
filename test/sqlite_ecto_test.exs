@@ -773,6 +773,15 @@ defmodule Sqlite.Ecto2.Test do
     """ |> remove_newlines]
   end
 
+  test "create table invalid default" do
+    create = {:create, table(:posts),
+               [{:add, :name, :string, [default: :atoms_not_allowed]}]}
+
+    assert_raise ArgumentError, ~r"unknown default `:atoms_not_allowed` for type `:string`", fn ->
+      execute_ddl(create)
+    end
+  end
+
   test "create table if not exists" do
     create = {:create_if_not_exists, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
