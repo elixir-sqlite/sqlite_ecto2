@@ -259,7 +259,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
             {join, name} = get_source(query, sources, ix, source)
             [join, " AS " | name]
           %JoinExpr{qual: qual} ->
-            error!(query, "PostgreSQL supports only inner joins on #{kind}, got: `#{qual}`")
+            error!(query, "SQLite supports only inner joins on #{kind}, got: `#{qual}`")
         end)
 
       wheres =
@@ -777,7 +777,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp options_expr(nil),
       do: []
     defp options_expr(keyword) when is_list(keyword),
-      do: error!(nil, "PostgreSQL adapter does not support keyword lists in :options")
+      do: error!(nil, "SQLite adapter does not support keyword lists in :options")
     defp options_expr(options),
       do: [?\s, options]
 

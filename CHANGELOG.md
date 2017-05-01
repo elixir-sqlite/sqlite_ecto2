@@ -3,6 +3,13 @@
 This is a major rewrite of the previously-existing [`sqlite_ecto`]((https://github.com/jazzyb/sqlite_ecto) that adds support for Ecto 2.1+.
 
 
+## v2.0.0-dev.6
+
+_not yet released_
+
+* Fix error messages that referred to PostgreSQL instead of SQLite.
+
+
 ## v2.0.0-dev.5
 
 _30 April 2017_
