@@ -99,7 +99,7 @@ Add `sqlite_ecto2` as a dependency in your `mix.exs` file.
 
 ```elixir
 def deps do
-  [{:sqlite_ecto2, "~> 2.0.0-dev.4"}]
+  [{:sqlite_ecto2, "~> 2.0.0-dev.5"}]
 end
 ```
 
@@ -139,4 +139,4 @@ There are a few Ecto options which `sqlite_ecto2` silently ignores because SQLit
 
 * If we are altering a table to add a `DATETIME` column with a `NOT NULL` constraint, SQLite will require a default value to be provided. The only default value which would make sense in this situation is `CURRENT_TIMESTAMP`; however, when adding a column to a table, defaults must be constant values. Therefore, in this situation the `NOT NULL` constraint will be ignored so that a default value does not need to be provided.
 
-* When creating an index, `concurrently` and `using` values are silently ignored since they do not apply to SQLite.
+* When creating an index, `comment`, `concurrently`, and `using` values are silently ignored since they do not apply to SQLite.
