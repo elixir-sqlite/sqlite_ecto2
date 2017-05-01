@@ -752,6 +752,12 @@ defmodule Sqlite.Ecto2.Test do
     assert execute_ddl("example") == ["example"]
   end
 
+  test "keyword list during migration" do
+    assert_raise ArgumentError, "SQLite adapter does not support keyword lists in execute", fn ->
+      execute_ddl(testing: false)
+    end
+  end
+
   test "create table" do
     create = {:create, table(:posts),
                [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
