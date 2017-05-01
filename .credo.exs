@@ -42,12 +42,15 @@
       {Credo.Check.Readability.RedundantBlankLines},
       {Credo.Check.Readability.Semicolons},
       {Credo.Check.Readability.SinglePipe, false},
-        # Ecto does this quite a bit and we want to follow their
+        # ^^ Ecto does this quite a bit and we want to follow their
         # code format closely, so silence this warning.
 
       {Credo.Check.Readability.SpaceAfterCommas},
       {Credo.Check.Readability.Specs, false},
-      {Credo.Check.Readability.StringSigils},
+      {Credo.Check.Readability.StringSigils, false},
+        # ^^ Ecto does this quite a bit and we want to follow their
+        # code format closely, so silence this warning.
+
       {Credo.Check.Readability.TrailingBlankLine},
       {Credo.Check.Readability.TrailingWhiteSpace},
       {Credo.Check.Readability.VariableNames},
