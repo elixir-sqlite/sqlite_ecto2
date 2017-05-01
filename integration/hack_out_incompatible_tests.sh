@@ -5,7 +5,7 @@
 
 # WARNING: There is trailing whitespace on the `sed` line that must be retained.
 
-if [ `uname` == "Darwin" ] ; then
+if [ "$(uname)" == "Darwin" ] ; then
 
 sed -i "" '/test "insert all/ i\ 
   @tag :insert_cell_wise_defaults
