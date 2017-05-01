@@ -4,6 +4,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     @behaviour Ecto.Adapters.SQL.Connection
 
+    # IMPORTANT: This is closely modeled on Ecto's postgres/connection.exs file.
+    # We strive to avoid structural differences between that file and this one.
+
     ## Module and Options
 
     def child_spec(opts) do
@@ -236,6 +239,14 @@ if Code.ensure_loaded?(Sqlitex.Server) do
        expr(value, sources, query)]
     end
 
+    defp update_op(:push, _key, _value, _sources, _query) do
+      raise ArgumentError, "Array operations are not supported by SQLite"
+    end
+
+    defp update_op(:pull, _key, _value, _sources, _query) do
+      raise ArgumentError, "Array operations are not supported by SQLite"
+    end
+
     defp update_op(command, _key, _value, _sources, query) do
       error!(query, "Unknown update operation #{inspect command} for SQLite")
     end
@@ -332,8 +343,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       [?(, expr(expr, sources, query), ?)]
     end
 
-    defp expr({:^, [], [_ix]}, _sources, _query) do
-      [??]
+    defp expr({:^, [], [ix]}, _sources, _query) do
+      [?? | Integer.to_string(ix + 1)]
     end
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query) when is_atom(field) do
@@ -418,6 +429,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       end
     end
 
+    defp expr(list, _sources, _query) when is_list(list) do
+      raise ArgumentError, "Array values are not supported by SQLite"
+    end
+
     defp expr(%Decimal{} = decimal, _sources, _query) do
       Decimal.to_string(decimal, :normal)
     end
@@ -439,16 +454,16 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp expr(true, _sources, _query),  do: "1"
     defp expr(false, _sources, _query), do: "0"
 
+    defp expr(literal, _sources, _query) when is_binary(literal) do
+      [?\', escape_string(literal), ?\']
+    end
+
     defp expr(literal, _sources, _query) when is_integer(literal) do
       Integer.to_string(literal)
     end
 
     defp expr(literal, _sources, _query) when is_float(literal) do
       Float.to_string(literal)
-    end
-
-    defp expr(literal, _sources, _query) when is_binary(literal) do
-      [?', :binary.replace(literal, "'", "''", [:global]), ?']
     end
 
     defp interval(_, "microsecond", _sources) do
