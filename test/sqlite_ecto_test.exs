@@ -919,6 +919,24 @@ defmodule Sqlite.Ecto2.Test do
     """ |> remove_newlines]
   end
 
+  test "create table with bad table name" do
+    assert_raise ArgumentError, "bad table name \"po\\\"sts\"", fn ->
+      create = {:create, table(:"po\"sts"),
+                 [{:add, :id, :serial, [primary_key: true]},
+                  {:add, :created_at, :datetime, []}]}
+      execute_ddl(create)
+    end
+  end
+
+  test "create table with bad column name" do
+    assert_raise ArgumentError, "bad field name \"crea\\\"ted_at\"", fn ->
+      create = {:create, table(:"posts"),
+                 [{:add, :id, :serial, [primary_key: true]},
+                  {:add, :"crea\"ted_at", :datetime, []}]}
+      execute_ddl(create)
+    end
+  end
+
   test "drop table" do
     drop = {:drop, table(:posts)}
     assert execute_ddl(drop) == [~s|DROP TABLE "posts"|]
