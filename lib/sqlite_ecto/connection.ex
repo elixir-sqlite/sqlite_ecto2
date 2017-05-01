@@ -694,7 +694,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp column_change(table, {:add, name, type, opts})
       when type in [:utc_datetime, :naive_datetime]
     do
-      opts = opts |> Enum.into(%{}) |> Map.delete(:null)
+      opts = Keyword.delete(opts, :null)
       ["ADD COLUMN ", quote_name(name), ?\s, column_type(type, opts), column_options(table, type, opts)]
     end
 

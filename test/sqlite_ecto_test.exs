@@ -942,6 +942,15 @@ defmodule Sqlite.Ecto2.Test do
       remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")|)]
   end
 
+  test "alter table with datetime not null" do
+    alter = {:alter, table(:posts),
+               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
+                {:add, :when, :utc_datetime, [null: false]}]}
+    assert execute_ddl(alter) == [
+      remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL|),
+      remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "when" UTC_DATETIME|)]
+  end
+
   test "alter table with prefix" do
     alter = {:alter, table(:posts, prefix: :foo),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
