@@ -968,6 +968,13 @@ defmodule Sqlite.Ecto2.Test do
     end
   end
 
+  test "alter column errors for :remove column" do
+    alter = {:alter, table(:posts), [{:remove, :price, :numeric, [precision: 8, scale: 2]}]}
+    assert_raise ArgumentError, "ALTER COLUMN not supported by SQLite", fn ->
+      SQL.execute_ddl(alter)
+    end
+  end
+
   test "alter table with primary key" do
     alter = {:alter, table(:posts),
              [{:add, :my_pk, :serial, [primary_key: true]}]}
