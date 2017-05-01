@@ -3,11 +3,20 @@
 This is a major rewrite of the previously-existing [`sqlite_ecto`]((https://github.com/jazzyb/sqlite_ecto) that adds support for Ecto 2.1+.
 
 
+## v2.0.0-dev.5
+
+_30 April 2017_
+
+* Use iodata lists as much as possible during query generation.
+* Switch to numeric placeholders across the board.
+* Bring sqlite_ecto_test.exs up to date with corresponding postgres_test.exs from Ecto.
+
+
 ## v2.0.0-dev.4
 
 _17 April 2017_
 
-* Port documentation from v1 `sqlite_ecto` repo to this repo.
+* Port documentation from v1 `sqlite_ecto` repo to this repo. (Thank you, @taufiqkh!)
 * Enable automated code review by Ebert. Fix some of the issues it flagged.
 
 
