@@ -236,6 +236,14 @@ if Code.ensure_loaded?(Sqlitex.Server) do
        expr(value, sources, query)]
     end
 
+    defp update_op(:push, _key, _value, _sources, _query) do
+      raise ArgumentError, "Array operations are not supported by SQLite"
+    end
+
+    defp update_op(:pull, _key, _value, _sources, _query) do
+      raise ArgumentError, "Array operations are not supported by SQLite"
+    end
+
     defp update_op(command, _key, _value, _sources, query) do
       error!(query, "Unknown update operation #{inspect command} for SQLite")
     end
@@ -416,6 +424,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         {:fun, fun} ->
           [fun, ?(, modifier, intersperse_map(args, ", ", &expr(&1, sources, query)), ?)]
       end
+    end
+
+    defp expr(list, _sources, _query) when is_list(list) do
+      raise ArgumentError, "Array values are not supported by SQLite"
     end
 
     defp expr(%Decimal{} = decimal, _sources, _query) do
