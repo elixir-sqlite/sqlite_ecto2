@@ -340,8 +340,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       [?(, expr(expr, sources, query), ?)]
     end
 
-    defp expr({:^, [], [_ix]}, _sources, _query) do
-      [??]
+    defp expr({:^, [], [ix]}, _sources, _query) do
+      [?? | Integer.to_string(ix + 1)]
     end
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query) when is_atom(field) do
@@ -451,16 +451,16 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp expr(true, _sources, _query),  do: "1"
     defp expr(false, _sources, _query), do: "0"
 
+    defp expr(literal, _sources, _query) when is_binary(literal) do
+      [?\', escape_string(literal), ?\']
+    end
+
     defp expr(literal, _sources, _query) when is_integer(literal) do
       Integer.to_string(literal)
     end
 
     defp expr(literal, _sources, _query) when is_float(literal) do
       Float.to_string(literal)
-    end
-
-    defp expr(literal, _sources, _query) when is_binary(literal) do
-      [?', :binary.replace(literal, "'", "''", [:global]), ?']
     end
 
     defp interval(_, "microsecond", _sources) do

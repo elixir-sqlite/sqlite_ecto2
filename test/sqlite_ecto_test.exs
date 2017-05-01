@@ -268,7 +268,7 @@ defmodule Sqlite.Ecto2.Test do
 
     value = 13
     query = Schema |> select([r], fragment("ltrim(?, ?)", r.x, ^value)) |> normalize
-    assert SQL.all(query) == ~s{SELECT ltrim(s0."x", ?) FROM "schema" AS s0}
+    assert SQL.all(query) == ~s{SELECT ltrim(s0."x", ?1) FROM "schema" AS s0}
 
     query = Schema |> select([], fragment(title: 2)) |> normalize
     assert_raise Ecto.QueryError, ~r"SQLite adapter does not support keyword or interpolated fragments", fn ->
@@ -298,7 +298,7 @@ defmodule Sqlite.Ecto2.Test do
 
   test "tagged type" do
     query = Schema |> select([], type(^"601d74e4-a8d3-4b6e-8365-eddb4c893327", Ecto.UUID)) |> normalize
-    assert SQL.all(query) == ~s{SELECT CAST (? AS TEXT) FROM "schema" AS s0}
+    assert SQL.all(query) == ~s{SELECT CAST (?1 AS TEXT) FROM "schema" AS s0}
 
     assert_raise ArgumentError, "Array type is not supported by SQLite", fn ->
       query = Schema |> select([], type(^[1,2,3], {:array, :integer})) |> normalize
@@ -309,7 +309,7 @@ defmodule Sqlite.Ecto2.Test do
   test "nested expressions" do
     z = 123
     query = from(r in Schema, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
-    assert SQL.all(query) == ~s{SELECT ((s0."x" > 0) AND (s0."y" > ?)) OR 1 FROM "schema" AS s0}
+    assert SQL.all(query) == ~s{SELECT ((s0."x" > 0) AND (s0."y" > ?1)) OR 1 FROM "schema" AS s0}
   end
 
   test "in expression" do
@@ -326,13 +326,13 @@ defmodule Sqlite.Ecto2.Test do
     assert SQL.all(query) == ~s{SELECT 1 IN (?1,?2,?3) FROM "schema" AS s0}
 
     query = Schema |> select([e], 1 in [1, ^2, 3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN (1,?,3) FROM "schema" AS s0}
+    assert SQL.all(query) == ~s{SELECT 1 IN (1,?1,3) FROM "schema" AS s0}
 
     query = Schema |> select([e], ^1 in [1, ^2, 3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT ? IN (1,?,3) FROM "schema" AS s0}
+    assert SQL.all(query) == ~s{SELECT ?1 IN (1,?2,3) FROM "schema" AS s0}
 
     query = Schema |> select([e], ^1 in ^[1, 2, 3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT ? IN (?2,?3,?4) FROM "schema" AS s0}
+    assert SQL.all(query) == ~s{SELECT ?1 IN (?2,?3,?4) FROM "schema" AS s0}
 
     # query = Schema |> select([e], 1 in e.w) |> normalize
     # assert SQL.all(query) == ~s{SELECT 1 = ANY(s0."w") FROM "schema" AS s0}
@@ -402,10 +402,10 @@ defmodule Sqlite.Ecto2.Test do
             |> normalize
 
     result = remove_newlines """
-    SELECT s0."id", ? FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON ?
-    INNER JOIN "schema2" AS s2 ON ? WHERE (?) AND (?)
-    GROUP BY ?, ? HAVING (?) AND (?)
-    ORDER BY ?, s0."x" LIMIT ? OFFSET ?
+    SELECT s0."id", ?1 FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON ?2
+    INNER JOIN "schema2" AS s2 ON ?3 WHERE (?4) AND (?5)
+    GROUP BY ?6, ?7 HAVING (?8) AND (?9)
+    ORDER BY ?10, s0."x" LIMIT ?11 OFFSET ?12
     """
 
     assert SQL.all(query) == result
@@ -420,8 +420,8 @@ defmodule Sqlite.Ecto2.Test do
 
     result =
       "SELECT 1 FROM \"schema\" AS s0 " <>
-      "WHERE (extract(? from s0.\"start_time\") = ?) " <>
-      "AND (extract(? from s0.\"start_time\") = ?)"
+      "WHERE (extract(?1 from s0.\"start_time\") = ?2) " <>
+      "AND (extract(?3 from s0.\"start_time\") = ?4)"
 
     assert SQL.all(query) == String.trim(result)
   end
@@ -456,7 +456,7 @@ defmodule Sqlite.Ecto2.Test do
 
     query = from(m in Schema, update: [set: [x: ^0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "schema" SET "x" = ?}
+           ~s{UPDATE "schema" SET "x" = ?1}
 
     assert_raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite", fn ->
       query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z)
@@ -561,13 +561,13 @@ defmodule Sqlite.Ecto2.Test do
     query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p.x) |> normalize
     assert SQL.all(query) ==
            ~s{SELECT s1."x" FROM "comments" AS c0 } <>
-           ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "y" FROM "posts" AS p0 WHERE (p0."title" = ?)) AS s1 ON 1}
+           ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "y" FROM "posts" AS p0 WHERE (p0."title" = ?1)) AS s1 ON 1}
 
     posts = subquery("posts" |> where(title: ^"hello") |> select([r], %{x: r.x, z: r.y}))
     query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p) |> normalize
     assert SQL.all(query) ==
            ~s{SELECT s1."x", s1."z" FROM "comments" AS c0 } <>
-           ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "z" FROM "posts" AS p0 WHERE (p0."title" = ?)) AS s1 ON 1}
+           ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "z" FROM "posts" AS p0 WHERE (p0."title" = ?1)) AS s1 ON 1}
   end
 
   test "join with prefix" do
@@ -583,9 +583,9 @@ defmodule Sqlite.Ecto2.Test do
             |> where([p], p.id > 0 and p.id < ^100)
             |> normalize
     assert SQL.all(query) ==
-      ~s{SELECT s0."id", ? FROM "schema" AS s0 INNER JOIN } <>
-      ~s{(SELECT * FROM schema2 AS s2 WHERE s2.id = s0."x" AND s2.field = ?) AS f1 ON 1 } <>
-      ~s{WHERE ((s0."id" > 0) AND (s0."id" < ?))}
+      ~s{SELECT s0."id", ?1 FROM "schema" AS s0 INNER JOIN } <>
+      ~s{(SELECT * FROM schema2 AS s2 WHERE s2.id = s0."x" AND s2.field = ?2) AS f1 ON 1 } <>
+      ~s{WHERE ((s0."id" > 0) AND (s0."id" < ?3))}
   end
 
   test "join with fragment and on defined" do
@@ -594,7 +594,7 @@ defmodule Sqlite.Ecto2.Test do
             |> select([p], {p.id, ^0})
             |> normalize
     assert SQL.all(query) ==
-           ~s{SELECT s0."id", ? FROM "schema" AS s0 INNER JOIN } <>
+           ~s{SELECT s0."id", ?1 FROM "schema" AS s0 INNER JOIN } <>
            ~s{(SELECT * FROM schema2) AS f1 ON f1."id" = s0."id"}
   end
 
