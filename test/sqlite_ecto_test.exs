@@ -752,6 +752,12 @@ defmodule Sqlite.Ecto2.Test do
     assert execute_ddl("example") == ["example"]
   end
 
+  test "keyword list during migration" do
+    assert_raise ArgumentError, "SQLite adapter does not support keyword lists in execute", fn ->
+      execute_ddl(testing: false)
+    end
+  end
+
   test "create table" do
     create = {:create, table(:posts),
                [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
@@ -765,6 +771,24 @@ defmodule Sqlite.Ecto2.Test do
     "on_hand" INTEGER DEFAULT 0,
     "is_active" BOOLEAN DEFAULT 1)
     """ |> remove_newlines]
+  end
+
+  test "create table invalid default" do
+    create = {:create, table(:posts),
+               [{:add, :name, :string, [default: :atoms_not_allowed]}]}
+
+    assert_raise ArgumentError, ~r"unknown default `:atoms_not_allowed` for type `:string`", fn ->
+      execute_ddl(create)
+    end
+  end
+
+  test "create table array type" do
+    create = {:create, table(:posts),
+               [{:add, :name, {:array, :numeric}, []}]}
+
+    assert_raise ArgumentError, ~r"Array type is not supported by SQLite", fn ->
+      execute_ddl(create)
+    end
   end
 
   test "create table if not exists" do
