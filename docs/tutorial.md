@@ -17,7 +17,7 @@ end
 
 defp deps do
   [{:db_connection, "~> 1.1.0"},
-   {:sqlite_ecto2, "~> 2.0.0-dev.4"}]
+   {:sqlite_ecto2, "~> 2.0.0-dev.5"}]
 end
 ```
 
