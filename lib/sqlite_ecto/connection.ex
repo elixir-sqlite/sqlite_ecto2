@@ -4,6 +4,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     @behaviour Ecto.Adapters.SQL.Connection
 
+    # IMPORTANT: This is closely modeled on Ecto's postgres/connection.exs file.
+    # We strive to avoid structural differences between that file and this one.
+
     ## Module and Options
 
     def child_spec(opts) do
