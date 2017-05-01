@@ -919,6 +919,24 @@ defmodule Sqlite.Ecto2.Test do
     """ |> remove_newlines]
   end
 
+  test "create table with bad table name" do
+    assert_raise ArgumentError, "bad table name \"po\\\"sts\"", fn ->
+      create = {:create, table(:"po\"sts"),
+                 [{:add, :id, :serial, [primary_key: true]},
+                  {:add, :created_at, :datetime, []}]}
+      execute_ddl(create)
+    end
+  end
+
+  test "create table with bad column name" do
+    assert_raise ArgumentError, "bad field name \"crea\\\"ted_at\"", fn ->
+      create = {:create, table(:"posts"),
+                 [{:add, :id, :serial, [primary_key: true]},
+                  {:add, :"crea\"ted_at", :datetime, []}]}
+      execute_ddl(create)
+    end
+  end
+
   test "drop table" do
     drop = {:drop, table(:posts)}
     assert execute_ddl(drop) == [~s|DROP TABLE "posts"|]
@@ -942,6 +960,15 @@ defmodule Sqlite.Ecto2.Test do
       remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")|)]
   end
 
+  test "alter table with datetime not null" do
+    alter = {:alter, table(:posts),
+               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
+                {:add, :when, :utc_datetime, [null: false]}]}
+    assert execute_ddl(alter) == [
+      remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL|),
+      remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "when" UTC_DATETIME|)]
+  end
+
   test "alter table with prefix" do
     alter = {:alter, table(:posts, prefix: :foo),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
@@ -954,6 +981,13 @@ defmodule Sqlite.Ecto2.Test do
 
   test "alter column errors for :modify column" do
     alter = {:alter, table(:posts), [{:modify, :price, :numeric, [precision: 8, scale: 2]}]}
+    assert_raise ArgumentError, "ALTER COLUMN not supported by SQLite", fn ->
+      SQL.execute_ddl(alter)
+    end
+  end
+
+  test "alter column errors for :remove column" do
+    alter = {:alter, table(:posts), [{:remove, :price, :numeric, [precision: 8, scale: 2]}]}
     assert_raise ArgumentError, "ALTER COLUMN not supported by SQLite", fn ->
       SQL.execute_ddl(alter)
     end
