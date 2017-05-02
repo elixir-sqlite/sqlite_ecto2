@@ -1175,7 +1175,7 @@ defmodule Sqlite.Ecto2.Test do
   end
 
   test "datetime_add with microsecond" do
-    assert_raise ArgumentError, "SQLite does not support microsecond precision in datetime intervals", fn->
+    assert_raise ArgumentError, "SQLite does not support microsecond precision in datetime intervals", fn ->
       TestRepo.all(from p in Post, select: datetime_add(p.inserted_at, 1500, "microsecond"))
     end
   end
