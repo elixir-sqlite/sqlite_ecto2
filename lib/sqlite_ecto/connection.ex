@@ -247,10 +247,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       raise ArgumentError, "Array operations are not supported by SQLite"
     end
 
-    defp update_op(command, _key, _value, _sources, query) do
-      error!(query, "Unknown update operation #{inspect command} for SQLite")
-    end
-
     defp using_join(%Query{joins: []}, _kind, _prefix, _sources), do: {[], []}
     defp using_join(%Query{joins: joins} = query, kind, prefix, sources) do
       froms =
