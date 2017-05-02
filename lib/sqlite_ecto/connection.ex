@@ -103,10 +103,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
       prefix = prefix || ["UPDATE ", from, " SET "]
       fields = update_fields(query, sources)
-      {join, wheres} = using_join(query, :update_all, "FROM", sources)
-      where = where(%{query | wheres: wheres ++ query.wheres}, sources)
+      where = where(%{query | wheres: query.wheres}, sources)
 
-      IO.iodata_to_binary([prefix, fields, join, where | returning(query, sources, :update)])
+      IO.iodata_to_binary([prefix, fields, where | returning(query, sources, :update)])
     end
 
     def delete_all(%Ecto.Query{joins: [_ | _]}) do
@@ -116,10 +115,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       sources = create_names(query, :delete)
       {from, _name} = get_source(query, sources, 0, from)
 
-      {join, wheres} = using_join(query, :delete_all, "USING", sources)
-      where = where(%{query | wheres: wheres ++ query.wheres}, sources)
+      where = where(%{query | wheres: query.wheres}, sources)
 
-      IO.iodata_to_binary(["DELETE FROM ", from, join, where | returning(query, sources, :delete)])
+      IO.iodata_to_binary(["DELETE FROM ", from, where | returning(query, sources, :delete)])
     end
 
     def insert(prefix, table, header, rows, on_conflict, returning) do
@@ -245,25 +243,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp update_op(:pull, _key, _value, _sources, _query) do
       raise ArgumentError, "Array operations are not supported by SQLite"
-    end
-
-    defp using_join(%Query{joins: []}, _kind, _prefix, _sources), do: {[], []}
-    defp using_join(%Query{joins: joins} = query, kind, prefix, sources) do
-      froms =
-        intersperse_map(joins, ", ", fn
-          %JoinExpr{qual: :inner, ix: ix, source: source} ->
-            {join, name} = get_source(query, sources, ix, source)
-            [join, " AS " | name]
-          %JoinExpr{qual: qual} ->
-            error!(query, "SQLite supports only inner joins on #{kind}, got: `#{qual}`")
-        end)
-
-      wheres =
-        for %JoinExpr{on: %QueryExpr{expr: value} = expr} <- joins,
-            value != true,
-            do: expr |> Map.put(:__struct__, BooleanExpr) |> Map.put(:op, :and)
-
-      {[?\s, prefix, ?\s | froms], wheres}
     end
 
     defp join(%Query{joins: []}, _sources), do: []
