@@ -4,8 +4,12 @@ defmodule Sqlite.Ecto2.Test do
   # IMPORTANT: This is closely modeled on Ecto's postgres_test.exs file.
   # We strive to avoid structural differences between that file and this one.
 
-  alias Sqlite.Ecto2.Connection, as: SQL
+  alias Ecto.Integration.Post
+  alias Ecto.Integration.TestRepo
   alias Ecto.Migration.Table
+  alias Sqlite.Ecto2.Connection, as: SQL
+
+  import Ecto.Query
 
   test "storage up (twice)" do
     tmp = [database: tempfilename()]
@@ -1167,6 +1171,12 @@ defmodule Sqlite.Ecto2.Test do
     alter = {:alter, table(:posts), [{:remove, :summary}]}
     assert_raise ArgumentError, "DROP COLUMN not supported by SQLite", fn ->
       SQL.execute_ddl(alter)
+    end
+  end
+
+  test "datetime_add with microsecond" do
+    assert_raise ArgumentError, "SQLite does not support microsecond precision in datetime intervals", fn->
+      TestRepo.all(from p in Post, select: datetime_add(p.inserted_at, 1500, "microsecond"))
     end
   end
 
