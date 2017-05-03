@@ -831,9 +831,6 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp quote_table(nil, name),    do: quote_table(name)
     defp quote_table(prefix, name), do: [quote_table(prefix), ?., quote_table(name)]
 
-    defp quote_table(%Table{prefix: prefix, name: name}) do
-      quote_table(prefix, name)
-    end
     defp quote_table(name) when is_atom(name),
       do: quote_table(Atom.to_string(name))
     defp quote_table(name) do
