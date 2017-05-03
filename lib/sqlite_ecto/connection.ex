@@ -751,9 +751,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     defp options_expr(nil),
       do: []
-    defp options_expr(keyword) when is_list(keyword),
-      do: error!(nil, "SQLite adapter does not support keyword lists in :options")
-    defp options_expr(options),
+    defp options_expr(options) when is_binary(options),
       do: [?\s, options]
 
     # Simple column types. Note that we ignore options like :size, :precision,
