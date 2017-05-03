@@ -532,7 +532,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           %Ecto.SubQuery{} ->
             {nil, [?s | Integer.to_string(pos)], nil}
         end
-      [current|create_names(prefix, sources, pos + 1, limit, stmt)]
+      [current | create_names(prefix, sources, pos + 1, limit, stmt)]
     end
 
     defp create_names(_prefix, _sources, pos, pos, _stmt) do
