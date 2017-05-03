@@ -795,6 +795,15 @@ defmodule Sqlite.Ecto2.Test do
     end
   end
 
+  test "create table illegal options" do
+    create = {:create, table(:posts, options: [allowed: :not]),
+               [{:add, :name, :string}]}
+
+    assert_raise ArgumentError, ~r"SQLite adapter does not support keyword lists in :options", fn ->
+      execute_ddl(create)
+    end
+  end
+
   test "create table if not exists" do
     create = {:create_if_not_exists, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},

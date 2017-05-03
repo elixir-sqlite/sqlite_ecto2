@@ -532,7 +532,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           %Ecto.SubQuery{} ->
             {nil, [?s | Integer.to_string(pos)], nil}
         end
-      [current|create_names(prefix, sources, pos + 1, limit, stmt)]
+      [current | create_names(prefix, sources, pos + 1, limit, stmt)]
     end
 
     defp create_names(_prefix, _sources, pos, pos, _stmt) do
@@ -824,22 +824,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     # Quote the given identifier.
-    defp quote_id({nil, id}), do: quote_id(id)
-    defp quote_id({prefix, table}), do: quote_id(prefix) <> "." <> quote_id(table)
-    defp quote_id(id) when is_atom(id), do: id |> Atom.to_string |> quote_id
-    defp quote_id(id) do
-      if String.contains?(id, "\"") || String.contains?(id, ",") do
-        raise ArgumentError, "bad identifier #{inspect id}"
-      end
-      "\"#{id}\""
-    end
+    defp quote_id({nil, id}), do: quote_name(id)
+    defp quote_id({prefix, id}), do: [quote_name(prefix), ?., quote_name(id)]
+    defp quote_id(id), do: quote_name(id)
 
     defp quote_table(nil, name),    do: quote_table(name)
     defp quote_table(prefix, name), do: [quote_table(prefix), ?., quote_table(name)]
 
-    defp quote_table(%Table{prefix: prefix, name: name}) do
-      quote_table(prefix, name)
-    end
     defp quote_table(name) when is_atom(name),
       do: quote_table(Atom.to_string(name))
     defp quote_table(name) do
