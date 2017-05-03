@@ -824,15 +824,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     # Quote the given identifier.
-    defp quote_id({nil, id}), do: quote_id(id)
-    defp quote_id({prefix, table}), do: quote_id(prefix) <> "." <> quote_id(table)
-    defp quote_id(id) when is_atom(id), do: id |> Atom.to_string |> quote_id
-    defp quote_id(id) do
-      if String.contains?(id, "\"") || String.contains?(id, ",") do
-        raise ArgumentError, "bad identifier #{inspect id}"
-      end
-      "\"#{id}\""
-    end
+    defp quote_id({nil, id}), do: quote_name(id)
+    defp quote_id({prefix, id}), do: [quote_name(prefix), ?., quote_name(id)]
+    defp quote_id(id), do: quote_name(id)
 
     defp quote_table(nil, name),    do: quote_table(name)
     defp quote_table(prefix, name), do: [quote_table(prefix), ?., quote_table(name)]
