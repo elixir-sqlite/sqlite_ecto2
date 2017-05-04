@@ -38,13 +38,6 @@ defmodule Sqlite.DbConnection.Protocol do
   end
   def disconnect(_exception, _state), do: :ok
 
-  @spec ping(state :: any) ::
-    {:ok, new_state :: any} | {:disconnect, Exception.t, new_state :: any}
-  def ping(state) do
-    # No such thing with SQLite, so this is an intentional no-op.
-    {:ok, state}
-  end
-
   @spec checkout(state) ::
     {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
   # def checkout(%{checked_out?: true} = s), do:  # unreachable in tests; restore if hit
