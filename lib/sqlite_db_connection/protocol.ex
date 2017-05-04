@@ -15,7 +15,7 @@ defmodule Sqlite.DbConnection.Protocol do
     {db_path, _opts} = Keyword.pop(opts, :database)
     with {:ok, db} <- Sqlitex.Server.start_link(db_path),
          :ok <- Sqlitex.Server.exec(db, "PRAGMA foreign_keys = ON"),
-         {:ok, [[foreign_keys: 1]]} = Sqlitex.Server.query(db, "PRAGMA foreign_keys")
+         {:ok, [[foreign_keys: 1]]} <- Sqlitex.Server.query(db, "PRAGMA foreign_keys")
     do
       {:ok, %__MODULE__{db: db, path: db_path, checked_out?: false}}
     end
