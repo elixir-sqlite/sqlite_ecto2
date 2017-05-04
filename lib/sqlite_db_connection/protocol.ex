@@ -1,23 +1,13 @@
 defmodule Sqlite.DbConnection.Protocol do
   @moduledoc false
 
-  # alias Sqlite.DbConnection.Types
   alias Sqlite.DbConnection.Query
-  # import Sqlite.DbConnection.Messages
-  # import Sqlite.DbConnection.BinaryUtils
   require Logger
   use DBConnection
 
-  # IMPORTANT: This is closely modeled on Postgrex's protocol.ex file.
-  # We strive to avoid structural differences between that file and this one.
-
-  # @sock_opts [packet: :raw, mode: :binary, active: false]
-
   defstruct [db: nil, path: nil, checked_out?: false]
 
-  @type state :: %__MODULE__{db: pid,
-                             path: String.t,
-                             checked_out?: false}
+  @type state :: %__MODULE__{db: pid, path: String.t, checked_out?: false}
 
   @spec connect(Keyword.t) ::
     {:ok, state} | {:error, Sqlite.DbConnection.Error.t}
@@ -40,15 +30,11 @@ defmodule Sqlite.DbConnection.Protocol do
 
   @spec checkout(state) ::
     {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
-  # def checkout(%{checked_out?: true} = s), do:  # unreachable in tests; restore if hit
-  #   {:disconnect, :already_checked_out, s}  # FIXME: Proper error here
   def checkout(%{checked_out?: false} = s), do:
     {:ok, %{s | checked_out?: true}}
 
   @spec checkin(state) ::
     {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
-  # def checkin(%{checked_out?: false} = s), do:  # unreachable in tests; restore if hit
-  #   {:disconnect, :not_checked_out, s}  # FIXME: Proper error here
   def checkin(%{checked_out?: true} = s), do:
     {:ok, %{s | checked_out?: false}}
 
@@ -78,18 +64,6 @@ defmodule Sqlite.DbConnection.Protocol do
   def handle_execute(%Query{} = query, params, opts, s) do
     handle_execute(query, params, :sync, opts, s)
   end
-  # @spec handle_execute(Sqlite.DbConnection.Parameters.t, nil, Keyword.t, state) ::
-  #   {:ok, %{binary => binary}, state} |
-  #   {:error, Sqlite.DbConnection.Errpr.t, state}
-  # def handle_execute(%Sqlite.DbConnection.Parameters{}, nil, _, s) do
-  #   %{parameters: parameters} = s
-  #   case Sqlite.DbConnection.Parameters.fetch(parameters) do
-  #     {:ok, parameters} ->
-  #       {:ok, parameters, s}
-  #     :error ->
-  #       {:error, %Sqlite.DbConnection.Error{message: "parameters not available"}, s}
-  #   end
-  # end
 
   @spec handle_close(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
@@ -135,16 +109,6 @@ defmodule Sqlite.DbConnection.Protocol do
     handle_transaction(sql, s)
   end
 
-  # @spec handle_simple(String.t, Keyword.t, state) ::
-  #   {:ok, Sqlite.DbConnection.Result.t, state} |
-  #   {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
-  # def handle_simple(statement, opts, %{buffer: buffer} = s) do
-  #   status = %{notify: notify(opts), sync: :sync}
-  #   simple_send(%{s | buffer: nil}, status, statement, buffer)
-  # end
-
-  ## prepare
-
   defp refined_info(prepared_info) do
     types =
       prepared_info.types
@@ -165,8 +129,6 @@ defmodule Sqlite.DbConnection.Protocol do
 
   defp maybe_atom_to_lc_string(nil), do: nil
   defp maybe_atom_to_lc_string(item), do: item |> to_string |> String.downcase
-
-  ## execute
 
   defp handle_execute(%Query{statement: sql}, params, _sync, _opts, s) do
     # Note that we rely on Sqlitex.Server to cache the prepared statement,
@@ -213,7 +175,6 @@ defmodule Sqlite.DbConnection.Protocol do
   defp get_changes_count(db, command)
     when command in [:insert, :update, :delete]
   do
-    # TODO: This statement should be cached.
     {:ok, %{rows: [[changes_count]]}} = Sqlitex.Server.query_rows(db, "SELECT changes()")
     changes_count
   end
@@ -233,11 +194,6 @@ defmodule Sqlite.DbConnection.Protocol do
 
   defp command_from_words(words) when is_list(words), do:
     String.to_atom(List.first(words))
-
-  # defp reserved_error(query, s) do
-  #   err = ArgumentError.exception("query #{inspect query} uses reserved name")
-  #   {:error, err, s}
-  # end
 
   ## transaction
 
