@@ -13,9 +13,7 @@ defmodule Sqlite.DbConnection.Protocol do
 
   # @sock_opts [packet: :raw, mode: :binary, active: false]
 
-  defstruct [db: nil,
-             path: nil,
-             checked_out?: false]
+  defstruct [db: nil, path: nil, checked_out?: false]
 
   @type state :: %__MODULE__{db: pid,
                              path: String.t,
