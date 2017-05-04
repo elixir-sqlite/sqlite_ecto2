@@ -26,14 +26,12 @@ defmodule Sqlite.DbConnection.Protocol do
   end
   def disconnect(_exception, _state), do: :ok
 
-  @spec checkout(state) ::
-    {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
+  @spec checkout(state) :: {:ok, state}
   def checkout(%{checked_out?: false} = s) do
     {:ok, %{s | checked_out?: true}}
   end
 
-  @spec checkin(state) ::
-    {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
+  @spec checkin(state) :: {:ok, state}
   def checkin(%{checked_out?: true} = s) do
     {:ok, %{s | checked_out?: false}}
   end
@@ -60,7 +58,7 @@ defmodule Sqlite.DbConnection.Protocol do
   @spec handle_execute(Sqlite.DbConnection.Query.t, list, Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
     {:error, ArgumentError.t, state} |
-    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
+    {:error, Sqlite.DbConnection.Error.t, state}
   def handle_execute(%Query{} = query, params, opts, s) do
     handle_execute(query, params, :sync, opts, s)
   end
@@ -68,7 +66,7 @@ defmodule Sqlite.DbConnection.Protocol do
   @spec handle_close(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
     {:error, ArgumentError.t, state} |
-    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
+    {:error, Sqlite.DbConnection.Error.t, state}
   def handle_close(_query, _opts, s) do
     # no-op: esqlite doesn't expose statement close.
     # Instead it relies on statements getting garbage collected.
@@ -77,8 +75,7 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   @spec handle_begin(Keyword.t, state) ::
-    {:ok, Sqlite.DbConnection.Result.t, state} |
-    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
+    {:ok, Sqlite.DbConnection.Result.t, state}
   def handle_begin(opts, s) do
     sql = case Keyword.get(opts, :mode, :transaction) do
       :transaction -> "BEGIN"
@@ -88,8 +85,7 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   @spec handle_commit(Keyword.t, state) ::
-    {:ok, Sqlite.DbConnection.Result.t, state} |
-    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
+    {:ok, Sqlite.DbConnection.Result.t, state}
   def handle_commit(opts, s) do
     sql = case Keyword.get(opts, :mode, :transaction) do
       :transaction -> "COMMIT"
@@ -99,8 +95,7 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   @spec handle_rollback(Keyword.t, state) ::
-    {:ok, Sqlite.DbConnection.Result.t, state} |
-    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
+    {:ok, Sqlite.DbConnection.Result.t, state}
   def handle_rollback(opts, s) do
     sql = case Keyword.get(opts, :mode, :transaction) do
       :transaction -> "ROLLBACK"
