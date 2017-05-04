@@ -272,39 +272,4 @@ defmodule Sqlite.DbConnection.Protocol do
         {:raise, %Sqlite.DbConnection.Error{message: "Disconnected"}}
     end
   end
-
-  ## Cursors (not supported)
-
-  @type query :: any
-  @type params :: any
-  @type result :: any
-  @type cursor :: any
-
-  @spec handle_declare(query, params, opts :: Keyword.t, state :: any) ::
-    {:ok, cursor, new_state :: any} |
-    {:error | :disconnect, Exception.t, new_state :: any}
-  def handle_declare(_query, _params, _opts, _state) do
-    raise "Cursors not supported in SQLite"
-  end
-
-  @spec handle_first(query, cursor, opts :: Keyword.t, state :: any) ::
-    {:ok | :deallocate, result, new_state :: any} |
-    {:error | :disconnect, Exception.t, new_state :: any}
-  def handle_first(_query, _cursor, _opts, _state) do
-    raise "Cursors not supported in SQLite"
-  end
-
-  @spec handle_next(query, cursor, opts :: Keyword.t, state :: any) ::
-    {:ok | :deallocate, result, new_state :: any} |
-    {:error | :disconnect, Exception.t, new_state :: any}
-  def handle_next(_query, _cursor, _opts, _state) do
-    raise "Cursors not supported in SQLite"
-  end
-
-  @spec handle_deallocate(query, cursor, opts :: Keyword.t, state :: any) ::
-    {:ok, result, new_state :: any} |
-    {:error | :disconnect, Exception.t, new_state :: any}
-  def handle_deallocate(_query, _cursor, _opts, _state) do
-    raise "Cursors not supported in SQLite"
-  end
 end
