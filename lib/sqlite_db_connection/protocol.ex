@@ -9,16 +9,15 @@ defmodule Sqlite.DbConnection.Protocol do
 
   @type state :: %__MODULE__{db: pid, path: String.t, checked_out?: false}
 
-  @spec connect(Keyword.t) ::
-    {:ok, state} | {:error, Sqlite.DbConnection.Error.t}
+  @spec connect(Keyword.t) :: {:ok, state}
   def connect(opts) do
     {db_path, _opts} = Keyword.pop(opts, :database)
-    with {:ok, db} <- Sqlitex.Server.start_link(db_path),
-         :ok <- Sqlitex.Server.exec(db, "PRAGMA foreign_keys = ON"),
-         {:ok, [[foreign_keys: 1]]} <- Sqlitex.Server.query(db, "PRAGMA foreign_keys")
-    do
-      {:ok, %__MODULE__{db: db, path: db_path, checked_out?: false}}
-    end
+
+    {:ok, db} = Sqlitex.Server.start_link(db_path)
+    :ok = Sqlitex.Server.exec(db, "PRAGMA foreign_keys = ON")
+    {:ok, [[foreign_keys: 1]]} = Sqlitex.Server.query(db, "PRAGMA foreign_keys")
+
+    {:ok, %__MODULE__{db: db, path: db_path, checked_out?: false}}
   end
 
   @spec disconnect(Exception.t, state) :: :ok
