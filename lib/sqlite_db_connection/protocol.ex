@@ -6,7 +6,7 @@ defmodule Sqlite.DbConnection.Protocol do
 
   defstruct [db: nil, path: nil, checked_out?: false]
 
-  @type state :: %__MODULE__{db: pid, path: String.t, checked_out?: false}
+  @type state :: %__MODULE__{db: pid, path: String.t, checked_out?: boolean}
 
   @spec connect(Keyword.t) :: {:ok, state}
   def connect(opts) do
