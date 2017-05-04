@@ -29,13 +29,15 @@ defmodule Sqlite.DbConnection.Protocol do
 
   @spec checkout(state) ::
     {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
-  def checkout(%{checked_out?: false} = s), do:
+  def checkout(%{checked_out?: false} = s) do
     {:ok, %{s | checked_out?: true}}
+  end
 
   @spec checkin(state) ::
     {:ok, state} | {:disconnect, Sqlite.DbConnection.Error.t, state}
-  def checkin(%{checked_out?: true} = s), do:
+  def checkin(%{checked_out?: true} = s) do
     {:ok, %{s | checked_out?: false}}
+  end
 
   @spec handle_prepare(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Query.t, state} |
@@ -188,13 +190,14 @@ defmodule Sqlite.DbConnection.Protocol do
   end
 
   defp command_from_words([verb, subject, _])
-    when verb == "alter" or verb == "create" or verb == "drop",
-  do: String.to_atom("#{verb}_#{subject}")
+    when verb == "alter" or verb == "create" or verb == "drop"
+  do
+    String.to_atom("#{verb}_#{subject}")
+  end
 
-  defp command_from_words(words) when is_list(words), do:
+  defp command_from_words(words) when is_list(words) do
     String.to_atom(List.first(words))
-
-  ## transaction
+  end
 
   defp handle_transaction(stmt, s) do
     {:ok, _rows} = query_rows(s.db, stmt, into: :raw_list)
