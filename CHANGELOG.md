@@ -5,9 +5,12 @@ This is a major rewrite of the previously-existing [`sqlite_ecto`]((https://gith
 
 ## v2.0.0-dev.6
 
-_not yet released_
+_03 May 2017_
 
 * Fix error messages that referred to PostgreSQL instead of SQLite.
+* Improve test coverage (now 91%).
+* Fix shell script issues flagged by Ebert.
+* Clean up and simplify implementation of `Sqlite.DbConnection.Protocol`.
 
 
 ## v2.0.0-dev.5
