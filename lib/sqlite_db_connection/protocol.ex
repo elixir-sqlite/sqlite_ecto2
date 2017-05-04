@@ -2,7 +2,6 @@ defmodule Sqlite.DbConnection.Protocol do
   @moduledoc false
 
   alias Sqlite.DbConnection.Query
-  require Logger
   use DBConnection
 
   defstruct [db: nil, path: nil, checked_out?: false]
