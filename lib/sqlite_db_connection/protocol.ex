@@ -6,7 +6,7 @@ defmodule Sqlite.DbConnection.Protocol do
   # import Sqlite.DbConnection.Messages
   # import Sqlite.DbConnection.BinaryUtils
   require Logger
-  @behaviour DBConnection
+  use DBConnection
 
   # IMPORTANT: This is closely modeled on Postgrex's protocol.ex file.
   # We strive to avoid structural differences between that file and this one.
@@ -151,17 +151,6 @@ defmodule Sqlite.DbConnection.Protocol do
   #   status = %{notify: notify(opts), sync: :sync}
   #   simple_send(%{s | buffer: nil}, status, statement, buffer)
   # end
-
-  @spec handle_info(any, state) ::
-    {:ok, state} | {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
-  def handle_info(msg, s) do
-    # Not expecting any messages, but DbConnection behavior interface requires
-    # that we handle this.
-    Logger.info(fn() -> [inspect(__MODULE__), ?\s, inspect(self()),
-      " received unexpected message: " | inspect(msg)]
-    end)
-    {:ok, s}
-  end
 
   ## prepare
 
