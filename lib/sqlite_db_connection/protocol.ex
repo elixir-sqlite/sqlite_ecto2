@@ -251,17 +251,13 @@ defmodule Sqlite.DbConnection.Protocol do
   ## transaction
 
   defp handle_transaction(stmt, s) do
-    case query_rows(s.db, stmt, into: :raw_list) do
-      {:ok, _rows} ->
-        command = command_from_sql(stmt)
-        result = %Sqlite.DbConnection.Result{rows: nil,
-                                             num_rows: nil,
-                                             columns: nil,
-                                             command: command}
-        {:ok, result, s}
-      {:error, {_sqlite_errcode, _message}} = err ->
-        sqlite_error(err, s)
-    end
+    {:ok, _rows} = query_rows(s.db, stmt, into: :raw_list)
+    command = command_from_sql(stmt)
+    result = %Sqlite.DbConnection.Result{rows: nil,
+                                         num_rows: nil,
+                                         columns: nil,
+                                         command: command}
+    {:ok, result, s}
   end
 
   defp query_rows(db, stmt, opts) do
