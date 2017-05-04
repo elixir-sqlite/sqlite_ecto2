@@ -100,17 +100,6 @@ defmodule Sqlite.DbConnection.Protocol do
   #   end
   # end
 
-  @spec handle_execute_close(Sqlite.DbConnection.Query.t, list, Keyword.t, state) ::
-    {:ok, Sqlite.DbConnection.Result.t, state} |
-    {:error, ArgumentError.t, state} |
-    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
-  # def handle_execute_close(%Query{name: @reserved_prefix <> _} = query, _, _, s) do
-  #   reserved_error(query, s)
-  # end
-  def handle_execute_close(query, params, opts, s) do
-    handle_execute(query, params, :sync_close, opts, s)
-  end
-
   @spec handle_close(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Result.t, state} |
     {:error, ArgumentError.t, state} |
