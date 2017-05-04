@@ -167,6 +167,11 @@ defmodule QueryTest do
     assert [[42]] = query("SELECT 42", [])
   end
 
+  test "error on second attempt to prepare", context do
+    %Sqlite.DbConnection.Query{} = query = prepare("", "SELECT 41")
+    assert {:error, %ArgumentError{}} = DBConnection.prepare(context.pid, query)
+  end
+
   test "connection reuses prepared query after query", context do
     %Sqlite.DbConnection.Query{} = query = prepare("", "SELECT 41")
     assert [[42]] = query("SELECT 42", [])

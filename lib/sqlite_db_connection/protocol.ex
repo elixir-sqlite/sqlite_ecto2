@@ -63,12 +63,8 @@ defmodule Sqlite.DbConnection.Protocol do
 
   @spec handle_prepare(Sqlite.DbConnection.Query.t, Keyword.t, state) ::
     {:ok, Sqlite.DbConnection.Query.t, state} |
-    {:error, ArgumentError.t, state} |
-    {:error | :disconnect, Sqlite.DbConnection.Error.t, state}
-  # def handle_prepare(%Query{name: @reserved_prefix <> _} = query, _, s) do
-  #   reserved_error(query, s)
-  # end
-  def handle_prepare(%Query{statement: statement, types: nil} = query, _opts,
+    {:error, ArgumentError.t, state}
+  def handle_prepare(%Query{statement: statement, prepared: nil} = query, _opts,
                      %__MODULE__{checked_out?: true, db: db} = s)
   do
     binary_stmt = :erlang.iolist_to_binary(statement)
