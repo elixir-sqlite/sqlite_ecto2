@@ -228,22 +228,6 @@ defmodule Sqlite.DbConnection do
   end
 
   @doc """
-  Rollback a transaction, does not return.
-
-  Aborts the current transaction fun. If inside multiple `transaction/3`
-  functions, bubbles up to the top level.
-
-  ## Example
-
-      {:error, :oops} = Sqlite.DbConnection.transaction(pid, fn(conn) ->
-        DBConnection.rollback(conn, :bar)
-        IO.puts "never reaches here!"
-      end)
-  """
-  @spec rollback(DBConnection.t, any) :: no_return()
-  defdelegate rollback(conn, any), to: DBConnection
-
-  @doc """
   Returns a supervisor child specification for a DBConnection pool.
   """
   @spec child_spec(Keyword.t) :: Supervisor.Spec.spec
@@ -271,6 +255,7 @@ defmodule Sqlite.DbConnection do
   ## Helpers
 
   defp defaults(opts) do
-    Keyword.put_new(opts, :timeout, @timeout)
+    opts
+    # Keyword.put_new(opts, :timeout, @timeout)
   end
 end
