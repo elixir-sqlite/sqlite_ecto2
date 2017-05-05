@@ -3,7 +3,7 @@ defmodule Sqlite.DbConnection do
   DBConnection implementation for SQLite.
   """
 
-  # IMPORTANT: This is closely modeled on Postgrex's connection.ex file.
+  # IMPORTANT: This is closely modeled on Postgrex's postgrex.ex file.
   # We strive to avoid structural differences between that file and this one.
 
   alias Sqlite.DbConnection.Query
@@ -18,7 +18,6 @@ defmodule Sqlite.DbConnection do
 
   @pool_timeout 5000
   @timeout 5000
-  @idle_timeout 5000
   @max_rows 500
 
   ### PUBLIC API ###
@@ -28,28 +27,11 @@ defmodule Sqlite.DbConnection do
 
   ## Options
 
-    * `:hostname` - Server hostname (default: PGHOST env variable, then localhost);
-    * `:port` - Server port (default: 5432);
     * `:database` - Database (required);
-    * `:username` - Username (default: PGUSER env variable, then USER env var);
-    * `:password` - User password (default PGPASSWORD);
     * `:parameters` - Keyword list of connection parameters;
-    * `:timeout` - Connect timeout in milliseconds (default: `#{@timeout}`);
-    * `:ssl` - Set to `true` if ssl should be used (default: `false`);
-    * `:ssl_opts` - A list of ssl options, see ssl docs;
-    * `:socket_options` - Options to be given to the underlying socket;
-    * `:sync_connect` - Block in `start_link/1` until connection is set up (default: `false`)
     * `:after_connect` - A function to run on connect, either a 1-arity fun
     called with a connection reference, `{module, function, args}` with the
     connection reference prepended to `args` or `nil`, (default: `nil`)
-    * `:idle_timeout` - Idle timeout to ping SQLite to maintain a connection
-    (default: `#{@idle_timeout}`)
-    * `:backoff_start` - The first backoff interval when reconnecting (default:
-    `200`);
-    * `:backoff_max` - The maximum backoff interval when reconnecting (default:
-    `15_000`);
-    * `:backoff_type` - The backoff strategy when reconnecting, `:stop` for no
-    backoff and to stop (see `:backoff`, default: `:jitter`)
     * `:transactions` - Set to `:strict` to error on unexpected transaction
     state, otherwise set to `naive` (default: `:naive`);
     * `:pool` - The pool module to use, see `DBConnection`, it must be
@@ -63,8 +45,6 @@ defmodule Sqlite.DbConnection do
   """
   @spec start_link(Keyword.t) :: {:ok, pid} | {:error, Sqlite.DbConnection.Error.t | term}
   def start_link(opts) do
-    # TODO: Not sure how to map this to SQLite opts.
-    # opts = [types: true] ++ Sqlite.DbConnection.Utils.default_opts(opts)
     DBConnection.start_link(Sqlite.DbConnection.Protocol, opts)
   end
 
@@ -104,10 +84,10 @@ defmodule Sqlite.DbConnection do
     case DBConnection.prepare_execute(conn, query, params, defaults(opts)) do
       {:ok, _, result} ->
         {:ok, result}
+      {:error, %Sqlite.DbConnection.Error{}} = error ->
+        error
       {:error, %ArgumentError{} = err} ->
         raise err
-      {:error, _} = error ->
-        error
     end
   end
 
@@ -248,92 +228,6 @@ defmodule Sqlite.DbConnection do
   end
 
   @doc """
-  Closes an (extended) prepared query and returns `:ok` or raises
-  `Sqlite.DbConnection.Error` if there was an error. See `close/3`.
-  """
-  @spec close!(conn, Sqlite.DbConnection.Query.t, Keyword.t) :: :ok
-  def close!(conn, query, opts \\ []) do
-    DBConnection.close!(conn, query, defaults(opts))
-  end
-
-  @doc """
-  Acquire a lock on a connection and run a series of requests inside a
-  transaction. The result of the transaction fun is return inside an `:ok`
-  tuple: `{:ok, result}`.
-
-  To use the locked connection call the request with the connection
-  reference passed as the single argument to the `fun`. If the
-  connection disconnects all future calls using that connection
-  reference will fail.
-
-  `rollback/2` rolls back the transaction and causes the function to
-  return `{:error, reason}`.
-
-  `transaction/3` can be nested multiple times if the connection
-  reference is used to start a nested transaction. The top level
-  transaction function is the actual transaction.
-
-  ## Options
-
-    * `:pool_timeout` - Time to wait in the queue for the connection
-    (default: `#{@pool_timeout}`)
-    * `:queue` - Whether to wait for connection in a queue (default: `true`);
-    * `:timeout` - Transaction timeout (default: `#{@timeout}`);
-    * `:pool` - The pool module to use, must match that set on
-    `start_link/1`, see `DBConnection`
-    * `:mode` - Set to `:savepoint` to use savepoints instead of an SQL
-    transaction, otherwise set to `:transaction` (default: `:transaction`);
-
-  The `:timeout` is for the duration of the transaction and all nested
-  transactions and requests. This timeout overrides timeouts set by internal
-  transactions and requests. The `:pool` and `:mode` will be used for all
-  requests inside the transaction function.
-
-  ## Example
-
-      {:ok, res} = Sqlite.DbConnection.transaction(pid, fn(conn) ->
-        Sqlite.DbConnection.query!(conn, "SELECT title FROM posts", [])
-      end)
-  """
-  @spec transaction(conn, ((DBConnection.t) -> result), Keyword.t) ::
-    {:ok, result} | {:error, any} when result: var
-  def transaction(conn, fun, opts \\ []) do
-    DBConnection.transaction(conn, fun, defaults(opts))
-  end
-
-  @doc """
-  Rollback a transaction, does not return.
-
-  Aborts the current transaction fun. If inside multiple `transaction/3`
-  functions, bubbles up to the top level.
-
-  ## Example
-
-      {:error, :oops} = Sqlite.DbConnection.transaction(pid, fn(conn) ->
-        DBConnection.rollback(conn, :bar)
-        IO.puts "never reaches here!"
-      end)
-  """
-  @spec rollback(DBConnection.t, any) :: no_return()
-  defdelegate rollback(conn, any), to: DBConnection
-
-  # This may not apply in the SQLite case. Let's wait to see if we need it.
-  # @doc """
-  # Returns a cached map of connection parameters.
-  #
-  # ## Options
-  #
-  #   * `:pool_timeout` - Call timeout (default: `#{@pool_timeout}`)
-  #   * `:pool` - The pool module to use, must match that set on
-  #   `start_link/1`, see `DBConnection`
-  #
-  # """
-  # @spec parameters(conn, Keyword.t) :: %{binary => binary}
-  # def parameters(conn, opts \\ []) do
-  #   DBConnection.execute!(conn, %Sqlite.DbConnection.Parameters{}, nil, defaults(opts))
-  # end
-
-  @doc """
   Returns a supervisor child specification for a DBConnection pool.
   """
   @spec child_spec(Keyword.t) :: Supervisor.Spec.spec
@@ -361,6 +255,7 @@ defmodule Sqlite.DbConnection do
   ## Helpers
 
   defp defaults(opts) do
-    Keyword.put_new(opts, :timeout, @timeout)
+    opts
+    # Keyword.put_new(opts, :timeout, @timeout)
   end
 end
