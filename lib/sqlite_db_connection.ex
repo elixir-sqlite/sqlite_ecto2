@@ -228,15 +228,6 @@ defmodule Sqlite.DbConnection do
   end
 
   @doc """
-  Closes an (extended) prepared query and returns `:ok` or raises
-  `Sqlite.DbConnection.Error` if there was an error. See `close/3`.
-  """
-  @spec close!(conn, Sqlite.DbConnection.Query.t, Keyword.t) :: :ok
-  def close!(conn, query, opts \\ []) do
-    DBConnection.close!(conn, query, defaults(opts))
-  end
-
-  @doc """
   Acquire a lock on a connection and run a series of requests inside a
   transaction. The result of the transaction fun is return inside an `:ok`
   tuple: `{:ok, result}`.
