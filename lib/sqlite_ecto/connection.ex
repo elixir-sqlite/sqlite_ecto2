@@ -56,7 +56,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     def stream(conn, sql, params, opts) do
-      Sqlite.DbConnection.stream(conn, sql, params, opts)
+      %Sqlite.DbConnection.Stream{conn: conn, query: sql, params: params, options: opts}
     end
 
     defp map_params(params) do

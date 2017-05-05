@@ -15,8 +15,9 @@ defimpl Enumerable, for: Sqlite.DbConnection.Stream do
                                          params: params,
                                          options: opts}, acc, fun)
   do
-    case Sqlite.DbConnection.query(conn, statement, params, opts) do
-      {:ok, %{rows: _rows} = result} ->
+    query = %Query{name: "", statement: statement}
+    case DBConnection.prepare_execute(conn, query, params, opts) do
+      {:ok, _, %{rows: _rows} = result} ->
         Enumerable.reduce([result], acc, fun)
       {:error, err} ->
         raise err
