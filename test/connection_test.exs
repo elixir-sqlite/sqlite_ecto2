@@ -2,6 +2,7 @@ defmodule ConnectionTest do
   use ExUnit.Case, async: true
 
   alias Sqlite.DbConnection.Query
+  alias Sqlite.DbConnection.Result
 
   setup do
     opts = [database: ":memory:", backoff_type: :stop]
@@ -13,11 +14,31 @@ defmodule ConnectionTest do
     {:ok, [pid: pid]}
   end
 
+  test "prepare twice", context do
+    pid = context[:pid]
+
+    query = %Query{name: "42", statement: "SELECT 42"}
+    assert {:ok, query} = DBConnection.prepare(pid, query)
+    assert {:error, %ArgumentError{}} = DBConnection.prepare(pid, query)
+  end
+
   test "prepare failure case", context do
     pid = context[:pid]
     query = %Query{name: "test", statement: "huh"}
     assert {:error, err} = DBConnection.prepare(pid, query)
     assert %Sqlite.DbConnection.Error{message: "near \"huh\": syntax error",
                                       sqlite: %{code: :sqlite_error}} = err
+  end
+
+  test "prepare, execute and close", context do
+    pid = context[:pid]
+
+    query = %Query{name: "42", statement: "SELECT 42"}
+    assert {:ok, query} = DBConnection.prepare(pid, query)
+
+    assert {:ok, %Result{rows: [[42]]}} = DBConnection.execute(pid, query, [])
+    assert {:ok, %Result{rows: [[42]]}} = DBConnection.execute(pid, query, [])
+    assert {:ok, %Result{}} = DBConnection.close(pid, query)
+    assert {:ok, %Result{rows: [[42]]}} = DBConnection.execute(pid, query, [])
   end
 end
