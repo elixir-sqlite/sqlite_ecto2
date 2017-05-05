@@ -14,25 +14,20 @@ defmodule ConnectionTest do
     {:ok, [pid: pid]}
   end
 
-  test "prepare twice", context do
-    pid = context[:pid]
-
+  test "prepare twice", %{pid: pid} do
     query = %Query{name: "42", statement: "SELECT 42"}
     assert {:ok, query} = DBConnection.prepare(pid, query)
     assert {:error, %ArgumentError{}} = DBConnection.prepare(pid, query)
   end
 
-  test "prepare failure case", context do
-    pid = context[:pid]
+  test "prepare failure case", %{pid: pid} do
     query = %Query{name: "test", statement: "huh"}
     assert {:error, err} = DBConnection.prepare(pid, query)
     assert %Sqlite.DbConnection.Error{message: "near \"huh\": syntax error",
                                       sqlite: %{code: :sqlite_error}} = err
   end
 
-  test "prepare, execute and close", context do
-    pid = context[:pid]
-
+  test "prepare, execute and close", %{pid: pid} do
     query = %Query{name: "42", statement: "SELECT 42"}
     assert {:ok, query} = DBConnection.prepare(pid, query)
 
@@ -40,5 +35,14 @@ defmodule ConnectionTest do
     assert {:ok, %Result{rows: [[42]]}} = DBConnection.execute(pid, query, [])
     assert {:ok, %Result{}} = DBConnection.close(pid, query)
     assert {:ok, %Result{rows: [[42]]}} = DBConnection.execute(pid, query, [])
+  end
+
+  test "wrong number of placeholders", context do
+    pid = context[:pid]
+
+    query = %Query{name: "value", statement: "SELECT ?1"}
+    assert {:ok, query} = DBConnection.prepare(pid, query)
+    assert {:error, %ArgumentError{message: "parameters must match number of placeholders in query"}} =
+      DBConnection.execute(pid, query, [])
   end
 end
