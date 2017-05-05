@@ -18,7 +18,6 @@ defmodule Sqlite.DbConnection do
 
   @pool_timeout 5000
   @timeout 5000
-  @idle_timeout 5000
   @max_rows 500
 
   ### PUBLIC API ###
