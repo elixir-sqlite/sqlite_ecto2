@@ -37,7 +37,6 @@ If you are willing to live on the bleeding edge, I would welcome any assistance 
 * Improve code coverage.
 * Look for performance issues and address them. I'm particularly concerned about the temporary triggers used to implement value returns from `INSERT`, `UPDATE`, and `DELETE` queries. Can we avoid using those in some / most cases?
 * Look for errors or other failures under stress.
-* Add automated code-quality reviews from Dogma (?).
 
 This is by no means an exhaustive list. If you have other questions or concerns, please file issues or PRs. I do this in my spare time, so it may take me until I have time on an evening or weekend to reply, but I will appreciate any contribution.
 

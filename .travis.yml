@@ -16,6 +16,7 @@ matrix:
 
 script:
   - mix deps.get && ./integration/hack_out_incompatible_tests.sh && mix test --cover
+  - mix dogma
 
 branches:
   only:
