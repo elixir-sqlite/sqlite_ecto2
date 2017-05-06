@@ -552,15 +552,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     defp prohibit_subquery_tables(other_sources) do
-      if Enum.any?(other_sources, &is_subquery_table?/1) do
+      if Enum.any?(other_sources, &subquery_table?/1) do
         raise ArgumentError, "SQLite adapter does not support subqueries"
       else
         other_sources
       end
     end
 
-    defp is_subquery_table?({nil, _, _}), do: false
-    defp is_subquery_table?(_), do: true
+    defp subquery_table?({nil, _, _}), do: false
+    defp subquery_table?(_), do: true
 
     # DDL
 
@@ -710,7 +710,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp composite_pk_definition(%Table{} = table, columns) do
       pks = Enum.reduce(columns, [], fn({_, name, _, opts}, pk_acc) ->
         case Keyword.get(opts, :primary_key, false) do
-          true -> [name|pk_acc]
+          true -> [name | pk_acc]
           false -> pk_acc
         end
       end)

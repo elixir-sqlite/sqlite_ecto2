@@ -23,7 +23,7 @@ defmodule Sqlite.Ecto2.Test do
     tmp = [database: tempfilename()]
     assert Sqlite.Ecto2.storage_up(tmp) == :ok
     assert Sqlite.Ecto2.storage_down(tmp) == :ok
-    assert not File.exists? tmp[:database]
+    refute File.exists? tmp[:database]
     assert Sqlite.Ecto2.storage_down(tmp) == {:error, :already_down}
   end
 
@@ -290,7 +290,7 @@ defmodule Sqlite.Ecto2.Test do
     query = "schema" |> where(foo: "abc") |> select([], true) |> normalize
     assert SQL.all(query) == ~s{SELECT 1 FROM "schema" AS s0 WHERE (s0."foo" = 'abc')}
 
-    query = "schema" |> where(foo: <<0,?a,?b,?c>>) |> select([], true) |> normalize
+    query = "schema" |> where(foo: <<0, ?a, ?b, ?c>>) |> select([], true) |> normalize
     assert SQL.all(query) == ~s{SELECT 1 FROM "schema" AS s0 WHERE (s0."foo" = X'00616263')}
 
     query = "schema" |> where(foo: 123) |> select([], true) |> normalize
