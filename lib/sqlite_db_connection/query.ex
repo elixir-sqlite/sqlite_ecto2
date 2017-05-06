@@ -18,10 +18,9 @@ defmodule Sqlite.DbConnection.Query do
     prepared:       reference,
     columns:        [String.t] | nil,
     result_formats: [:binary | :text] | nil,
-    decoders:       [Sqlite.DbConnection.Types.oid] | [(binary -> term)] | nil,
     types:          Sqlite.DbConnection.TypeServer.table | nil}
 
-  defstruct [:name, :statement, :prepared,:columns, :result_formats, :decoders, :types]
+  defstruct [:name, :statement, :prepared,:columns, :result_formats, :types]
 end
 
 defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
@@ -36,7 +35,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
 
   def decode(_query, %Sqlite.DbConnection.Result{rows: nil} = res, _opts), do: res
 
-  def decode(%Sqlite.DbConnection.Query{decoders: nil, prepared: %{types: types}},
+  def decode(%Sqlite.DbConnection.Query{prepared: %{types: types}},
              %Sqlite.DbConnection.Result{rows: rows, columns: columns} = res,
              opts)
   do
@@ -45,9 +44,8 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     %{res | rows: decoded_rows}
   end
 
-  ## helpers
+  ## Helpers
 
-  defp decoders(nil, _), do: {[], nil}
   defp decode_row(row, types, column_names, nil) do
     row
     |> Enum.zip(types)
