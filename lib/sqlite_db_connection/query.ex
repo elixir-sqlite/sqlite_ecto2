@@ -95,7 +95,6 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
       end)
   end
 
-  defp translate_value({binary, :blob}), do: binary
   defp translate_value({value, _type}), do: value
 
   defp to_date(date) do
