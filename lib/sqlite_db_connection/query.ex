@@ -1,15 +1,12 @@
 defmodule Sqlite.DbConnection.Query do
   @moduledoc """
-  Query struct returned from a successfully prepared query. Its fields are:
+  Query struct returned from a successfully prepared query.
+
+  Its public fields are:
 
     * `name` - The name of the prepared statement;
     * `statement` - The prepared statement;
-    * `param_formats` - List of formats for each parameters encoded to;
-    * `encoders` - List of anonymous functions to encode each parameter;
     * `columns` - The column names;
-    * `result_formats` - List of formats for each column is decoded from;
-    * `decoders` - List of anonymous functions to decode each column;
-    * `types` - The type serber table to fetch the type information from;
   """
 
   # IMPORTANT: This is closely modeled on Postgrex's query.ex file.
@@ -19,38 +16,26 @@ defmodule Sqlite.DbConnection.Query do
     name:           iodata,
     statement:      iodata,
     prepared:       reference,
-    param_formats:  [:binary | :text] | nil,
-    encoders:       [Sqlite.DbConnection.Types.oid] | [(term -> iodata)] | nil,
     columns:        [String.t] | nil,
     result_formats: [:binary | :text] | nil,
-    decoders:       [Sqlite.DbConnection.Types.oid] | [(binary -> term)] | nil,
     types:          Sqlite.DbConnection.TypeServer.table | nil}
 
-  defstruct [:name, :statement, :prepared, :param_formats, :encoders, :columns,
-    :result_formats, :decoders, :types]
+  defstruct [:name, :statement, :prepared,:columns, :result_formats, :types]
 end
 
 defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
-
-  # import Sqlite.DbConnection.BinaryUtils
-
-  def parse(query, _), do: query
-
-  def describe(query, _) do
-    %Sqlite.DbConnection.Query{encoders: poids, decoders: roids, types: types} = query
-    {pfs, encoders} = encoders(poids, types)
-    {rfs, decoders} = decoders(roids, types)
-    %Sqlite.DbConnection.Query{query | param_formats: pfs, encoders: encoders,
-                               result_formats: rfs, decoders: decoders}
+  def parse(%{name: name} = query, _) do
+    # for query table to match names must be equal
+    %{query | name: IO.iodata_to_binary(name)}
   end
 
-  def encode(%Sqlite.DbConnection.Query{encoders: nil}, params, opts) do
-    encode_params(opts[:encode_mapper], params)
-  end
+  def describe(query, _), do: query
+
+  def encode(_query, params, _opts), do: params
 
   def decode(_query, %Sqlite.DbConnection.Result{rows: nil} = res, _opts), do: res
 
-  def decode(%Sqlite.DbConnection.Query{decoders: nil, prepared: %{types: types}},
+  def decode(%Sqlite.DbConnection.Query{prepared: %{types: types}},
              %Sqlite.DbConnection.Result{rows: rows, columns: columns} = res,
              opts)
   do
@@ -59,13 +44,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     %{res | rows: decoded_rows}
   end
 
-  ## helpers
-
-  defp encoders(nil, _types), do: {[], nil}
-  defp decoders(nil, _), do: {[], nil}
-
-  defp encode_params(nil, params), do: params
-  defp encode_params(encode_mapper, params), do: Enum.map(params, encode_mapper)
+  ## Helpers
 
   defp decode_row(row, types, column_names, nil) do
     row
@@ -89,12 +68,6 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
 
   defp translate_value({"", "datetime"}), do: nil
 
-  # datetime format is "YYYY-MM-DD HH:MM:SS.FFFFFF"
-  defp translate_value({datetime, "datetime"}) when is_binary(datetime) do
-    [date, time] = String.split(datetime)
-    {to_date(date), to_time(time)}
-  end
-
   defp translate_value({0, "boolean"}), do: false
   defp translate_value({1, "boolean"}), do: true
 
@@ -116,7 +89,6 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
       end)
   end
 
-  defp translate_value({binary, :blob}), do: binary
   defp translate_value({value, _type}), do: value
 
   defp to_date(date) do
@@ -124,12 +96,6 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     {String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}
   end
 
-  defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2)>>) do
-    {String.to_integer(hr), String.to_integer(mi), 0, 0}
-  end
-  defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2)>>) do
-    {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), 0}
-  end
   defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary>>) when byte_size(fr) <= 6 do
     fr = String.to_integer(fr <> String.duplicate("0", 6 - String.length(fr)))
     {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), fr}
