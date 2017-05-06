@@ -16,34 +16,24 @@ defmodule Sqlite.DbConnection.Query do
     name:           iodata,
     statement:      iodata,
     prepared:       reference,
-    param_formats:  [:binary | :text] | nil,
-    encoders:       [Sqlite.DbConnection.Types.oid] | [(term -> iodata)] | nil,
     columns:        [String.t] | nil,
     result_formats: [:binary | :text] | nil,
     decoders:       [Sqlite.DbConnection.Types.oid] | [(binary -> term)] | nil,
     types:          Sqlite.DbConnection.TypeServer.table | nil}
 
-  defstruct [:name, :statement, :prepared, :param_formats, :encoders, :columns,
-    :result_formats, :decoders, :types]
+  defstruct [:name, :statement, :prepared,:columns, :result_formats, :decoders, :types]
 end
 
 defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
-
-  # import Sqlite.DbConnection.BinaryUtils
-
   def parse(query, _), do: query
 
   def describe(query, _) do
-    %Sqlite.DbConnection.Query{encoders: poids, decoders: roids, types: types} = query
-    {pfs, encoders} = encoders(poids, types)
+    %Sqlite.DbConnection.Query{decoders: roids, types: types} = query
     {rfs, decoders} = decoders(roids, types)
-    %Sqlite.DbConnection.Query{query | param_formats: pfs, encoders: encoders,
-                               result_formats: rfs, decoders: decoders}
+    %Sqlite.DbConnection.Query{query | result_formats: rfs, decoders: decoders}
   end
 
-  def encode(%Sqlite.DbConnection.Query{encoders: nil}, params, opts) do
-    encode_params(opts[:encode_mapper], params)
-  end
+  def encode(_query, params, _opts), do: params
 
   def decode(_query, %Sqlite.DbConnection.Result{rows: nil} = res, _opts), do: res
 
@@ -58,12 +48,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
 
   ## helpers
 
-  defp encoders(nil, _types), do: {[], nil}
   defp decoders(nil, _), do: {[], nil}
-
-  defp encode_params(nil, params), do: params
-  defp encode_params(encode_mapper, params), do: Enum.map(params, encode_mapper)
-
   defp decode_row(row, types, column_names, nil) do
     row
     |> Enum.zip(types)
