@@ -7,13 +7,11 @@ end
 defimpl Enumerable, for: Sqlite.DbConnection.Stream do
   alias Sqlite.DbConnection.Query
 
-  def reduce(%Sqlite.DbConnection.Stream{query: %Query{} = _query}, _acc, _fun) do
-    raise "UNIMPLEMENTED"
-  end
   def reduce(%Sqlite.DbConnection.Stream{query: statement,
                                          conn: conn,
                                          params: params,
                                          options: opts}, acc, fun)
+  when is_binary(statement)
   do
     query = %Query{name: "", statement: statement}
     case DBConnection.prepare_execute(conn, query, params, opts) do
@@ -30,11 +28,5 @@ defimpl Enumerable, for: Sqlite.DbConnection.Stream do
 
   def count(_) do
     {:error, __MODULE__}
-  end
-end
-
-defimpl String.Chars, for: Sqlite.DbConnection.Stream do
-  def to_string(%Sqlite.DbConnection.Stream{query: query}) do
-    String.Chars.to_string(query)
   end
 end
