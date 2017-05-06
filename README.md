@@ -34,7 +34,6 @@ If you are willing to live on the bleeding edge, I would welcome any assistance 
 
 **Code quality:**
 
-* Improve code coverage.
 * Look for performance issues and address them. I'm particularly concerned about the temporary triggers used to implement value returns from `INSERT`, `UPDATE`, and `DELETE` queries. Can we avoid using those in some / most cases?
 * Look for errors or other failures under stress.
 
