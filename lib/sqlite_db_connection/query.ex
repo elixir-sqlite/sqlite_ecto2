@@ -1,15 +1,12 @@
 defmodule Sqlite.DbConnection.Query do
   @moduledoc """
-  Query struct returned from a successfully prepared query. Its fields are:
+  Query struct returned from a successfully prepared query.
+
+  Its public fields are:
 
     * `name` - The name of the prepared statement;
     * `statement` - The prepared statement;
-    * `param_formats` - List of formats for each parameters encoded to;
-    * `encoders` - List of anonymous functions to encode each parameter;
     * `columns` - The column names;
-    * `result_formats` - List of formats for each column is decoded from;
-    * `decoders` - List of anonymous functions to decode each column;
-    * `types` - The type serber table to fetch the type information from;
   """
 
   # IMPORTANT: This is closely modeled on Postgrex's query.ex file.
