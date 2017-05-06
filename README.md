@@ -31,6 +31,8 @@ If you are willing to live on the bleeding edge, I would welcome any assistance 
 
 * Newcomers, especially: I'd like feedback on the getting started content. What works and what is confusing? How can we make adopting this library more intuitive?
 * I'd like to have at least one public example application.
+* Review `@moduledoc` and `@doc` comments for accuracy.
+* Add a more formal contribution guide, similar to the one from Ecto.
 
 **Code quality:**
 
@@ -38,6 +40,8 @@ If you are willing to live on the bleeding edge, I would welcome any assistance 
 * Look for errors or other failures under stress.
 
 This is by no means an exhaustive list. If you have other questions or concerns, please file issues or PRs. I do this in my spare time, so it may take me until I have time on an evening or weekend to reply, but I will appreciate any contribution.
+
+When participating in or contributing to this project, please observe the [Elixir Code of Conduct](https://github.com/elixir-lang/elixir/blob/master/CODE_OF_CONDUCT.md).
 
 
 ## A WARNING About OTP 19.0.x
@@ -48,7 +52,7 @@ Note that the Travis configuration for this repo specifically excludes OTP 19.0 
 
 ## Dependencies
 
-This library makes use of [Sqlitex](https://github.com/mmmries/sqlitex) and [esqlite](https://github.com/mmzeeman/esqlite).  Since esqlite uses Erlang NIFs to incorporate SQLite, you will need a valid C compiler to build the library.
+This library makes use of [sqlitex](https://github.com/mmmries/sqlitex) and [esqlite](https://github.com/mmzeeman/esqlite).  Since esqlite uses Erlang NIFs to incorporate SQLite, you will need a valid C compiler to build the library.
 
 ## Example
 
@@ -136,4 +140,6 @@ There are a few Ecto options which `sqlite_ecto2` silently ignores because SQLit
 
 * If we are altering a table to add a `DATETIME` column with a `NOT NULL` constraint, SQLite will require a default value to be provided. The only default value which would make sense in this situation is `CURRENT_TIMESTAMP`; however, when adding a column to a table, defaults must be constant values. Therefore, in this situation the `NOT NULL` constraint will be ignored so that a default value does not need to be provided.
 
-* When creating an index, `comment`, `concurrently`, and `using` values are silently ignored since they do not apply to SQLite.
+* When creating a table or index, the `comment` attribute is silently ignored. There is no reasonable place to store comments in SQLite schema.
+
+* When creating an index, `concurrently` and `using` values are silently ignored since they do not apply to SQLite.
