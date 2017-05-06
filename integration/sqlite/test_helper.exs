@@ -42,6 +42,9 @@ Code.require_file "../../deps/ecto/integration_test/support/repo.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/support/schemas.exs", __DIR__
 Code.require_file "../../deps/ecto/integration_test/support/migration.exs", __DIR__
 
+Code.require_file "../../test/support/schemas.exs", __DIR__
+Code.require_file "../../test/support/migration.exs", __DIR__
+
 # Pool repo for async, safe tests
 alias Ecto.Integration.TestRepo
 
@@ -98,5 +101,6 @@ _   = Sqlite.Ecto2.storage_down(TestRepo.config)
 {:ok, _pid} = PoolRepo.start_link
 
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
+:ok = Ecto.Migrator.up(TestRepo, 1, Sqlite.Ecto2.Test.Migration, log: false)
 Ecto.Adapters.SQL.Sandbox.mode(TestRepo, :manual)
 Process.flag(:trap_exit, true)

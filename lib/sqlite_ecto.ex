@@ -80,12 +80,17 @@ defmodule Sqlite.Ecto2 do
   def dumpers(:binary_id, type), do: [type, Ecto.UUID]
   def dumpers(:boolean, type), do: [type, &bool_encode/1]
   def dumpers({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
+  def dumpers(:time, type), do: [type, &time_encode/1]
   def dumpers(_primitive, type), do: [type]
 
   defp blob_encode(value), do: {:ok, {:blob, value}}
 
   defp bool_encode(false), do: {:ok, 0}
   defp bool_encode(true), do: {:ok, 1}
+
+  defp time_encode(value) do
+    {:ok, value}
+  end
 
   ## Storage API
 

@@ -102,12 +102,6 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     {String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}
   end
 
-  defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2)>>) do
-    {String.to_integer(hr), String.to_integer(mi), 0, 0}
-  end
-  defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2)>>) do
-    {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), 0}
-  end
   defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary>>) when byte_size(fr) <= 6 do
     fr = String.to_integer(fr <> String.duplicate("0", 6 - String.length(fr)))
     {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), fr}
