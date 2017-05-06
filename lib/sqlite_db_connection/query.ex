@@ -68,12 +68,6 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
 
   defp translate_value({"", "datetime"}), do: nil
 
-  # datetime format is "YYYY-MM-DD HH:MM:SS.FFFFFF"
-  defp translate_value({datetime, "datetime"}) when is_binary(datetime) do
-    [date, time] = String.split(datetime)
-    {to_date(date), to_time(time)}
-  end
-
   defp translate_value({0, "boolean"}), do: false
   defp translate_value({1, "boolean"}), do: true
 
