@@ -3,6 +3,15 @@
 This is a major rewrite of the previously-existing [`sqlite_ecto`](https://github.com/jazzyb/sqlite_ecto) that adds support for Ecto 2.1+.
 
 
+## v2.0.0-dev.7
+
+_06 May 2017_
+
+* Improve test coverage (now 98%).
+* Add Dogma to CI build infrastructure to help enforce code format consistency.
+* Remove `Sqlite.DbConnection` module in favor of directly calling `DbConnection` itself.
+
+
 ## v2.0.0-dev.6
 
 _03 May 2017_
