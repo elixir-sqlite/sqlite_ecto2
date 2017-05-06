@@ -7,6 +7,7 @@ defmodule Sqlite.Ecto2.Test do
   alias Ecto.Integration.Post
   alias Ecto.Integration.TestRepo
   alias Ecto.Migration.Table
+  alias Sqlite.DbConnection.Query
   alias Sqlite.Ecto2.Connection, as: SQL
 
   import Ecto.Query
@@ -1186,6 +1187,22 @@ defmodule Sqlite.Ecto2.Test do
   test "datetime_add with microsecond" do
     assert_raise ArgumentError, "SQLite does not support microsecond precision in datetime intervals", fn ->
       TestRepo.all(from p in Post, select: datetime_add(p.inserted_at, 1500, "microsecond"))
+    end
+  end
+
+  test "stream error handling" do
+    opts = [database: ":memory:", backoff_type: :stop]
+    {:ok, pid} = DBConnection.start_link(Sqlite.DbConnection.Protocol, opts)
+
+    query = %Query{name: "", statement: "CREATE TABLE uniques (a int UNIQUE)"}
+    {:ok, _, _} = DBConnection.prepare_execute(pid, query, [])
+
+    query = %Query{name: "", statement: "INSERT INTO uniques VALUES(1)"}
+    {:ok, _, _} = DBConnection.prepare_execute(pid, query, [])
+
+    assert_raise Sqlite.DbConnection.Error, "UNIQUE constraint failed: uniques.a", fn ->
+      Sqlite.Ecto2.Connection.stream(pid, "INSERT INTO uniques VALUES(1)", [], [])
+      |> Enum.to_list
     end
   end
 
