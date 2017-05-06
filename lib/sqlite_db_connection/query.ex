@@ -25,13 +25,12 @@ defmodule Sqlite.DbConnection.Query do
 end
 
 defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
-  def parse(query, _), do: query
-
-  def describe(query, _) do
-    %Sqlite.DbConnection.Query{decoders: roids, types: types} = query
-    {rfs, decoders} = decoders(roids, types)
-    %Sqlite.DbConnection.Query{query | result_formats: rfs, decoders: decoders}
+  def parse(%{name: name} = query, _) do
+    # for query table to match names must be equal
+    %{query | name: IO.iodata_to_binary(name)}
   end
+
+  def describe(query, _), do: query
 
   def encode(_query, params, _opts), do: params
 
