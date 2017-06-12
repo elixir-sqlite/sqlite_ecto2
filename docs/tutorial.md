@@ -16,8 +16,7 @@ def application do
 end
 
 defp deps do
-  [{:db_connection, "~> 1.1.0"},
-   {:sqlite_ecto2, "~> 2.0.0-dev.7"}]
+  [{:sqlite_ecto2, "~> 2.0.0-dev.8"}]
 end
 ```
 
