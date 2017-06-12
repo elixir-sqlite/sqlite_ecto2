@@ -83,7 +83,7 @@ And change the `deps/0` function to set different dependencies depending on envi
 
 ```elixir
   defp deps do
-    [{:sqlite_ecto2, "~> 2.0.0-dev.7", only: :test},
+    [{:sqlite_ecto2, "~> 2.0.0-dev.8", only: :test},
      {:postgrex, ">= 0.0.0", only: :prod},
      {:ecto, "~> 2.1.0"}]
   end
