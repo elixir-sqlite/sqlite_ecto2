@@ -25,13 +25,12 @@ I will add one more: If there is *any* potential that more than one server node 
 
 ## Help Wanted!
 
-If you are willing to live on the bleeding edge, I would welcome any assistance in getting `sqlite_ecto2` to a production quality 2.0.0 release. Some specific areas of concern:
+I would welcome any assistance in improving `sqlite_ecto2`. Some specific areas of concern:
 
 **Documentation:**
 
 * Newcomers, especially: I'd like feedback on the getting started content. What works and what is confusing? How can we make adopting this library more intuitive?
 * I'd like to have at least one public example application.
-* Review `@moduledoc` and `@doc` comments for accuracy.
 * Add a more formal contribution guide, similar to the one from Ecto.
 
 **Code quality:**

@@ -4,28 +4,33 @@ defmodule Sqlite.Ecto2 do
 
   It uses Sqlitex and Esqlite for accessing the SQLite database.
 
-  ## Features
+  ## Configuration Options
 
-  ## Options
+  When creating an `Ecto.Repo` that uses a SQLite database, you should configure
+  it as follows:
 
-  There are a limited number of options available because SQLite is so simple to use.
+  ```elixir
+  # In your config/config.exs file
+  config :my_app, Repo,
+    adapter: Sqlite.Ecto2,
+    database: "ecto_simple.sqlite3"
 
-  ### Compile time options
+  # In your application code
+  defmodule Repo do
+    use Ecto.Repo,
+      otp_app: :my_app,
+      adapter: Sqlite.Ecto2
+  end
+  ```
 
-  These options should be set in the config file and require recompilation in
-  order to make an effect.
+  You may use other options as specified in the `Ecto.Repo` documentation.
 
-    * `:adapter` - The adapter name, in this case, `Sqlite.Ecto2`
-    * `:timeout` - The default timeout to use on queries, defaults to `5000`
+  Note that the `:database` option is passed as the `filename` argument to
+  [`sqlite3_open_v2`](http://sqlite.org/c3ref/open.html). This implies that you
+  may use `:memory:` to create a private, temporary in-memory database.
 
-  ### Connection options
-
-    * `:database` - This option can take the form of a path to the SQLite
-      database file or `":memory:"` for an in-memory database.  See the
-      [SQLite docs](https://sqlite.org/uri.html) for more options such as
-      shared memory caches.
-    * `:after_connect` - A `{mod, fun, args}` to be invoked after a connection is established
-
+  See also [SQLite's interpretation of URI "filenames"](https://sqlite.org/uri.html)
+  for more options such as shared memory caches.
   """
 
   # Inherit all behaviour from Ecto.Adapters.SQL
