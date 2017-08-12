@@ -79,7 +79,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   defp translate_value({float, "decimal(" <> rest}) do
     [precision, scale] =
       rest
-      |> String.trim_trailing(?))
+      |> String.trim_trailing(")")
       |> String.split(",")
       |> Enum.map(&String.to_integer/1)
 
