@@ -72,7 +72,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     end
 
     alias Ecto.Query
-    alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
+    alias Ecto.Query.BooleanExpr
+    alias Ecto.Query.JoinExpr
+    alias Ecto.Query.QueryExpr
 
     def all(%Ecto.Query{lock: lock}) when lock != nil do
       raise ArgumentError, "locks are not supported by SQLite"
@@ -564,7 +566,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     # DDL
 
-    alias Ecto.Migration.{Table, Index, Reference, Constraint}
+    alias Ecto.Migration.Table
+    alias Ecto.Migration.Index
+    alias Ecto.Migration.Reference
+    alias Ecto.Migration.Constraint
 
     @drops [:drop, :drop_if_exists]
 

@@ -306,7 +306,7 @@ defmodule Sqlite.Ecto2.Test do
     assert SQL.all(query) == ~s{SELECT CAST (?1 AS TEXT) FROM "schema" AS s0}
 
     assert_raise ArgumentError, "Array type is not supported by SQLite", fn ->
-      query = Schema |> select([], type(^[1,2,3], {:array, :integer})) |> normalize
+      query = Schema |> select([], type(^[1, 2, 3], {:array, :integer})) |> normalize
       SQL.all(query)
     end
   end
@@ -321,7 +321,7 @@ defmodule Sqlite.Ecto2.Test do
     query = Schema |> select([e], 1 in []) |> normalize
     assert SQL.all(query) == ~s{SELECT 1 IN () FROM "schema" AS s0}
 
-    query = Schema |> select([e], 1 in [1,e.x,3]) |> normalize
+    query = Schema |> select([e], 1 in [1, e.x, 3]) |> normalize
     assert SQL.all(query) == ~s{SELECT 1 IN (1,s0."x",3) FROM "schema" AS s0}
 
     query = Schema |> select([e], 1 in ^[]) |> normalize
