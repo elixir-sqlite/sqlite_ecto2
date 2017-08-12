@@ -2,17 +2,24 @@ language: elixir
 
 elixir:
   - 1.3.4
-  - 1.4.2
+  - 1.4.4
+  - 1.5.1
 
 otp_release:
   - 18.0
-  - 19.1
-  - 19.2
+  - 19.3
+  - 20.0
 
 matrix:
   exclude:
   - elixir: 1.3.4
-    otp_release: 19.2
+    otp_release: 19.3
+  - elixir: 1.3.4
+    otp_release: 20.0
+  - elixir: 1.4.4
+    otp_release: 20.0
+  - elixir: 1.5.1
+    otp_release: 18.0
 
 script:
   - mix deps.get && ./integration/hack_out_incompatible_tests.sh && mix test --cover

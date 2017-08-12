@@ -20,7 +20,7 @@ defmodule Sqlite.DbConnection.Query do
     result_formats: [:binary | :text] | nil,
     types:          Sqlite.DbConnection.TypeServer.table | nil}
 
-  defstruct [:name, :statement, :prepared,:columns, :result_formats, :types]
+  defstruct [:name, :statement, :prepared, :columns, :result_formats, :types]
 end
 
 defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
@@ -79,7 +79,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   defp translate_value({float, "decimal(" <> rest}) do
     [precision, scale] =
       rest
-      |> String.rstrip(?))
+      |> String.trim_trailing(")")
       |> String.split(",")
       |> Enum.map(&String.to_integer/1)
 
@@ -120,7 +120,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   end
   defp string_to_datetime(str) do
     <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2), " ", hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary-size(6)>> = str
-    {{String.to_integer(yr), String.to_integer(mo), String.to_integer(da)},{String.to_integer(hr), String.to_integer(mi), String.to_integer(se), String.to_integer(fr)}}
+    {{String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}, {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), String.to_integer(fr)}}
   end
 end
 
