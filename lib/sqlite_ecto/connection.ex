@@ -65,7 +65,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           {:ok, value} = Ecto.DataType.dump(data_type)
           value
         %{} = value ->
-          json_library().encode!(value)
+          Ecto.Adapter.json_library().encode!(value)
         value ->
           value
       end
@@ -741,11 +741,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       do: [" DEFAULT '", escape_string(literal), ?']
     defp default_expr({:ok, literal}, _type) when is_number(literal) or is_boolean(literal),
       do: [" DEFAULT ", to_string(literal)]
+    defp default_expr({:ok, %{} = map}, :map) do
+      default = Ecto.Adapter.json_library().encode!(map)
+      [" DEFAULT ", single_quote(default)]
+    end
     defp default_expr({:ok, {:fragment, expr}}, _type),
       do: [" DEFAULT ", expr]
     defp default_expr({:ok, expr}, type),
       do: raise(ArgumentError, "unknown default `#{inspect expr}` for type `#{inspect type}`. " <>
-                               ":default may be a string, number, boolean, empty list or a fragment(...)")
+                               ":default may be a string, number, boolean, empty list, map (when type is Map), or a fragment(...)")
     defp default_expr(:error, _),
       do: []
 
@@ -845,6 +849,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       [?", name, ?"]
     end
 
+    defp single_quote(value), do: [?', escape_string(value), ?']
+
     defp intersperse_map(list, separator, mapper, acc \\ [])
     defp intersperse_map([], _separator, _mapper, acc),
       do: acc
@@ -879,8 +885,5 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp error!(query, message) do
       raise Ecto.QueryError, query: query, message: message
     end
-
-    # Use Ecto's JSON library (currently Poison) for embedded JSON datatypes.
-    defp json_library, do: Application.get_env(:ecto, :json_library)
   end
 end
