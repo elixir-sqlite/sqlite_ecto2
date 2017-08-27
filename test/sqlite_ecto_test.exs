@@ -607,7 +607,7 @@ defmodule Sqlite.Ecto2.Test do
     inner = Ecto.Queryable.to_query(Schema2)
     query = from(p in Schema, left_join: c in ^inner, select: {p.id, c.id}) |> normalize()
     assert SQL.all(query) ==
-           "SELECT s0.\"id\", s1.\"id\" FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON 1"
+           "SELECT s0.\"id\", s1.\"id\" FROM \"schema\" AS s0 LEFT JOIN \"schema2\" AS s1 ON 1"
   end
 
   test "lateral join with fragment" do
