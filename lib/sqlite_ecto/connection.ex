@@ -765,6 +765,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # precision regardless of the declared column type. Decimals are the
     # only exception.
     defp column_type(:serial, _opts), do: "INTEGER"
+    defp column_type(:bigserial, _opts), do: "INTEGER"
     defp column_type(:string, _opts), do: "TEXT"
     defp column_type(:map, _opts), do: "TEXT"
     defp column_type({:map, _}, _opts), do: "TEXT"
@@ -794,6 +795,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       do: quote_name(name)
 
     defp reference_column_type(:serial, _opts), do: "INTEGER"
+    defp reference_column_type(:bigserial, _opts), do: "INTEGER"
     defp reference_column_type(type, opts), do: column_type(type, opts)
 
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
