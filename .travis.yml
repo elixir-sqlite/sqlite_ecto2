@@ -28,4 +28,3 @@ script:
 branches:
   only:
     - master
-    - ecto-2.2
