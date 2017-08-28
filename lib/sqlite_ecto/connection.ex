@@ -93,7 +93,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       limit = limit(query, sources)
       offset = offset(query, sources)
 
-      IO.iodata_to_binary([select, from, join, where, group_by, having, order_by, limit, offset])
+      [select, from, join, where, group_by, having, order_by, limit, offset]
     end
 
     def update_all(%Ecto.Query{joins: [_ | _]}) do
@@ -107,7 +107,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       fields = update_fields(query, sources)
       where = where(%{query | wheres: query.wheres}, sources)
 
-      IO.iodata_to_binary([prefix, fields, where | returning(query, sources, :update)])
+      [prefix, fields, where | returning(query, sources, :update)]
     end
 
     def delete_all(%Ecto.Query{joins: [_ | _]}) do
@@ -119,7 +119,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
       where = where(%{query | wheres: query.wheres}, sources)
 
-      IO.iodata_to_binary(["DELETE FROM ", from, where | returning(query, sources, :delete)])
+      ["DELETE FROM ", from, where | returning(query, sources, :delete)]
     end
 
     def insert(prefix, table, header, rows, on_conflict, returning) do
@@ -136,8 +136,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         _ -> raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing"
       end
       returning = returning_clause(prefix, table, returning, "INSERT")
-      IO.iodata_to_binary(["INSERT", on_conflict, " INTO ", quote_table(prefix, table),
-                           values, returning])
+      ["INSERT", on_conflict, " INTO ", quote_table(prefix, table), values, returning]
     end
 
     defp insert_all(rows, counter) do
@@ -168,8 +167,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
       return = returning_clause(prefix, table, returning, "UPDATE")
 
-      IO.iodata_to_binary(["UPDATE ", quote_table(prefix, table), " SET ",
-                           fields, " WHERE ", filters | return])
+      ["UPDATE ", quote_table(prefix, table), " SET ",
+       fields, " WHERE ", filters | return]
     end
 
     def delete(prefix, table, filters, returning) do
@@ -177,8 +176,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         {[quote_name(field), " = ?" | Integer.to_string(acc)], acc + 1}
       end)
 
-      IO.iodata_to_binary(["DELETE FROM ", quote_table(prefix, table), " WHERE ",
-                           filters | returning_clause(prefix, table, returning, "DELETE")])
+      ["DELETE FROM ", quote_table(prefix, table), " WHERE ",
+       filters | returning_clause(prefix, table, returning, "DELETE")]
     end
 
     ## Query generation
@@ -754,7 +753,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       do: []
 
     defp index_expr(literal) when is_binary(literal),
-      do: [?(, literal, ?)]
+      do: literal
     defp index_expr(literal),
       do: quote_name(literal)
 
