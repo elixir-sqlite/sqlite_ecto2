@@ -3,6 +3,13 @@
 This is a major rewrite of the previously-existing [`sqlite_ecto`](https://github.com/jazzyb/sqlite_ecto) that adds support for Ecto 2.1+.
 
 
+## v2.0.3
+
+_28 August 2017_
+
+* Add sqlitex to applications in mix.exs. (Thank you, @obmarg!)
+
+
 ## v2.0.2
 
 _12 August 2017_
