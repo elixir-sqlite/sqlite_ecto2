@@ -664,29 +664,28 @@ defmodule Sqlite.Ecto2.Test do
              ~s{AS s1 ON 1}
     end
 
-    # Disabled for now. Also broken in corresponding Ecto test for Postgres adapter.
-    # test "self join on subquery with fragment" do
-    #   subquery = select(Schema, [r], %{string: fragment("downcase(?)", ^"string")})
-    #   query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
-    #   assert all(query) ==
-    #          ~s{SELECT downcase(?1) FROM "schema" AS s0 INNER JOIN } <>
-    #          ~s{(SELECT downcase(?2) AS "string" FROM "schema" AS s0) } <>
-    #          ~s{AS s1 ON 1}
-    # end
-    #
-    # test "join on subquery with simple select" do
-    #   subquery = select(Schema, [r], %{x: ^999, w: ^888})
-    #   query = Schema
-    #           |> select([r], %{y: ^666})
-    #           |> join(:inner, [c], p in subquery(subquery), true)
-    #           |> where([a, b], a.x == ^111)
-    #           |> normalize
-    #
-    #   assert all(query) ==
-    #          ~s{SELECT ?1 FROM "schema" AS s0 INNER JOIN } <>
-    #          ~s{(SELECT ?2 AS "x", ?3 AS "w" FROM "schema" AS s0) AS s1 ON 1 } <>
-    #          ~s{WHERE (s0."x" = ?4)}
-    # end
+    test "self join on subquery with fragment" do
+      subquery = select(Schema, [r], %{string: fragment("downcase(?)", ^"string")})
+      query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
+      assert all(query) ==
+             ~s{SELECT downcase(?1) FROM "schema" AS s0 INNER JOIN } <>
+             ~s{(SELECT downcase(?2) AS "string" FROM "schema" AS s0) } <>
+             ~s{AS s1 ON 1}
+    end
+
+    test "join on subquery with simple select" do
+      subquery = select(Schema, [r], %{x: ^999, w: ^888})
+      query = Schema
+              |> select([r], %{y: ^666})
+              |> join(:inner, [c], p in subquery(subquery), true)
+              |> where([a, b], a.x == ^111)
+              |> normalize
+
+      assert all(query) ==
+             ~s{SELECT ?1 FROM "schema" AS s0 INNER JOIN } <>
+             ~s{(SELECT ?2 AS "x", ?3 AS "w" FROM "schema" AS s0) AS s1 ON 1 } <>
+             ~s{WHERE (s0."x" = ?4)}
+    end
   end
 
   ## Associations
