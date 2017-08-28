@@ -98,7 +98,8 @@ defmodule Sqlite.Ecto2.Test do
 
   defp normalize(query, operation \\ :all, counter \\ 0) do
     {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Sqlite.Ecto2, counter)
-    Ecto.Query.Planner.normalize(query, operation, Sqlite.Ecto2, counter)
+    {query, _} = Ecto.Query.Planner.normalize(query, operation, Sqlite.Ecto2, counter)
+    query
   end
 
   test "from" do

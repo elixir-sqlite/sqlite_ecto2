@@ -328,13 +328,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       quote_qualified_name(field, sources, idx)
     end
 
-    defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
-      {source, name, schema} = elem(sources, idx)
-      if is_nil(schema) and is_nil(fields) do
-        error!(query, "SQLite does not support selecting all fields from #{source} without a schema. " <>
+    defp expr({:&, _, [idx]}, sources, query) do
+      {source, _name, _schema} = elem(sources, idx)
+      error!(query, "SQLite does not support selecting all fields from #{source} without a schema. " <>
                       "Please specify a schema or specify exactly which fields you want to select")
-      end
-      intersperse_map(fields, ", ", &[name, ?. | quote_name(&1)])
     end
 
     defp expr({:in, _, [left, right]}, sources, query) when is_list(right) do
@@ -363,8 +360,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       ["NOT (", expr(expr, sources, query), ?)]
     end
 
-    defp expr(%Ecto.SubQuery{query: query, fields: fields}, _sources, _query) do
-      query.select.fields |> put_in(fields) |> all()
+    defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
+      all(query)
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
@@ -476,10 +473,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # transaction and trigger. See corresponding code in Sqlitex.
 
     defp returning(%Query{select: nil}, _sources, _cmd), do: []
-    defp returning(%Query{select: %{fields: [{:&, [], [_, fields, _]}]}}, sources, cmd) do
+    defp returning(%Query{select: %{fields: field_tuples}}, sources, cmd) do
       cmd = cmd |> Atom.to_string |> String.upcase
       table = table_from_first_source(sources)
-      fields = Enum.map_join([table | fields], ",", &quote_id/1)
+      fields = Enum.map_join([table | Enum.map(field_tuples, &field_from_field_tuple/1)],
+                             ",", &quote_id/1)
       [@pseudo_returning_statement, cmd, ?\s, fields]
     end
 
@@ -490,6 +488,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       |> IO.iodata_to_binary
       |> String.trim("\"")
     end
+
+    defp field_from_field_tuple({{:., [], [{:&, [], [0]}, f]}, [], []}), do: f
 
     defp returning_clause(_prefix, _table, [], _cmd), do: []
     defp returning_clause(prefix, table, returning, cmd) do
