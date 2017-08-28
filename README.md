@@ -5,16 +5,22 @@
 
 # sqlite_ecto2
 
-`sqlite_ecto2` is an Ecto 2.x adapter that allows you to create and maintain SQLite3 databases.
+`sqlite_ecto2` is an Ecto 2.2.x adapter that allows you to create and maintain SQLite3 databases.
 
 Read [the tutorial](./docs/tutorial.md) for a detailed example of how to setup and use a SQLite repo with Ecto, or just check-out the CliffsNotes in the sections below if you want to get started quickly.
+
+
+## Ecto Version Compatibility
+
+**IMPORTANT:** This release will _only_ work with Ecto 2.2.x. If you need compatibility with older versions of Ecto, please see:
+
+* Ecto 2.1.x -> [`sqlite_ecto2` 2.0.x series](https://github.com/scouten/sqlite_ecto2/tree/v2.0)
+* Ecto 1.x -> [`sqlite_ecto` v1.x series](https://github.com/jazzyb/sqlite_ecto)
 
 
 ## When to Use `sqlite_ecto2`
 
 *(and when not to use it ...)*
-
-If, for some reason, you still need to use Ecto 1.x, please look at [sqlite_ecto](https://github.com/jazzyb/sqlite_ecto), on which this project is based.
 
 I strongly recommend reading [Appropriate Uses for SQLite](https://sqlite.org/whentouse.html) on the SQLite site itself. All of the considerations mentioned there apply to this library as well.
 
