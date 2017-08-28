@@ -20,7 +20,8 @@ ExUnit.start exclude: [:array_type,
                        :map_boolean_in_subquery,
                        :upsert_all,
                        :with_conflict_target,
-                       :without_conflict_target]
+                       :without_conflict_target,
+                       :decimal_type]
 
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :primary_key_type, :id)
