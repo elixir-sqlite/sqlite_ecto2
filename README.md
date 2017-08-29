@@ -103,19 +103,9 @@ Add `sqlite_ecto2` as a dependency in your `mix.exs` file.
 
 ```elixir
 def deps do
-  [{:sqlite_ecto2, "~> 2.0"}]
+  [{:sqlite_ecto2, "~> 2.2"}]
 end
 ```
-
-If you are using Elixir 1.3, you should also update your applications list to include `sqlite_ecto2` and `ecto`:
-
-```elixir
-def application do
-  [applications: [:logger, :sqlite_ecto2, :ecto]]
-end
-```
-
-With Elixir 1.4+, you can do this or rely on application inference.
 
 To use the adapter in your repo:
 
