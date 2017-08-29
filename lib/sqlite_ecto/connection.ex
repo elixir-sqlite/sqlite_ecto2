@@ -65,7 +65,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           {:ok, value} = Ecto.DataType.dump(data_type)
           value
         %{} = value ->
-          json_library().encode!(value)
+          Ecto.Adapter.json_library().encode!(value)
         value ->
           value
       end
@@ -93,7 +93,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       limit = limit(query, sources)
       offset = offset(query, sources)
 
-      IO.iodata_to_binary([select, from, join, where, group_by, having, order_by, limit, offset])
+      [select, from, join, where, group_by, having, order_by, limit, offset]
     end
 
     def update_all(%Ecto.Query{joins: [_ | _]}) do
@@ -107,7 +107,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       fields = update_fields(query, sources)
       where = where(%{query | wheres: query.wheres}, sources)
 
-      IO.iodata_to_binary([prefix, fields, where | returning(query, sources, :update)])
+      [prefix, fields, where | returning(query, sources, :update)]
     end
 
     def delete_all(%Ecto.Query{joins: [_ | _]}) do
@@ -119,7 +119,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
       where = where(%{query | wheres: query.wheres}, sources)
 
-      IO.iodata_to_binary(["DELETE FROM ", from, where | returning(query, sources, :delete)])
+      ["DELETE FROM ", from, where | returning(query, sources, :delete)]
     end
 
     def insert(prefix, table, header, rows, on_conflict, returning) do
@@ -136,8 +136,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         _ -> raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing"
       end
       returning = returning_clause(prefix, table, returning, "INSERT")
-      IO.iodata_to_binary(["INSERT", on_conflict, " INTO ", quote_table(prefix, table),
-                           values, returning])
+      ["INSERT", on_conflict, " INTO ", quote_table(prefix, table), values, returning]
     end
 
     defp insert_all(rows, counter) do
@@ -168,8 +167,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
       return = returning_clause(prefix, table, returning, "UPDATE")
 
-      IO.iodata_to_binary(["UPDATE ", quote_table(prefix, table), " SET ",
-                           fields, " WHERE ", filters | return])
+      ["UPDATE ", quote_table(prefix, table), " SET ",
+       fields, " WHERE ", filters | return]
     end
 
     def delete(prefix, table, filters, returning) do
@@ -177,8 +176,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         {[quote_name(field), " = ?" | Integer.to_string(acc)], acc + 1}
       end)
 
-      IO.iodata_to_binary(["DELETE FROM ", quote_table(prefix, table), " WHERE ",
-                           filters | returning_clause(prefix, table, returning, "DELETE")])
+      ["DELETE FROM ", quote_table(prefix, table), " WHERE ",
+       filters | returning_clause(prefix, table, returning, "DELETE")]
     end
 
     ## Query generation
@@ -328,13 +327,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       quote_qualified_name(field, sources, idx)
     end
 
-    defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
-      {source, name, schema} = elem(sources, idx)
-      if is_nil(schema) and is_nil(fields) do
-        error!(query, "SQLite does not support selecting all fields from #{source} without a schema. " <>
+    defp expr({:&, _, [idx]}, sources, query) do
+      {source, _name, _schema} = elem(sources, idx)
+      error!(query, "SQLite does not support selecting all fields from #{source} without a schema. " <>
                       "Please specify a schema or specify exactly which fields you want to select")
-      end
-      intersperse_map(fields, ", ", &[name, ?. | quote_name(&1)])
     end
 
     defp expr({:in, _, [left, right]}, sources, query) when is_list(right) do
@@ -363,8 +359,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       ["NOT (", expr(expr, sources, query), ?)]
     end
 
-    defp expr(%Ecto.SubQuery{query: query, fields: fields}, _sources, _query) do
-      query.select.fields |> put_in(fields) |> all()
+    defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
+      all(query)
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
@@ -476,10 +472,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # transaction and trigger. See corresponding code in Sqlitex.
 
     defp returning(%Query{select: nil}, _sources, _cmd), do: []
-    defp returning(%Query{select: %{fields: [{:&, [], [_, fields, _]}]}}, sources, cmd) do
+    defp returning(%Query{select: %{fields: field_tuples}}, sources, cmd) do
       cmd = cmd |> Atom.to_string |> String.upcase
       table = table_from_first_source(sources)
-      fields = Enum.map_join([table | fields], ",", &quote_id/1)
+      fields = Enum.map_join([table | Enum.map(field_tuples, &field_from_field_tuple/1)],
+                             ",", &quote_id/1)
       [@pseudo_returning_statement, cmd, ?\s, fields]
     end
 
@@ -490,6 +487,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       |> IO.iodata_to_binary
       |> String.trim("\"")
     end
+
+    defp field_from_field_tuple({{:., [], [{:&, [], [0]}, f]}, [], []}), do: f
 
     defp returning_clause(_prefix, _table, [], _cmd), do: []
     defp returning_clause(prefix, table, returning, cmd) do
@@ -741,11 +740,15 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       do: [" DEFAULT '", escape_string(literal), ?']
     defp default_expr({:ok, literal}, _type) when is_number(literal) or is_boolean(literal),
       do: [" DEFAULT ", to_string(literal)]
+    defp default_expr({:ok, %{} = map}, :map) do
+      default = Ecto.Adapter.json_library().encode!(map)
+      [" DEFAULT ", single_quote(default)]
+    end
     defp default_expr({:ok, {:fragment, expr}}, _type),
       do: [" DEFAULT ", expr]
     defp default_expr({:ok, expr}, type),
       do: raise(ArgumentError, "unknown default `#{inspect expr}` for type `#{inspect type}`. " <>
-                               ":default may be a string, number, boolean, empty list or a fragment(...)")
+                               ":default may be a string, number, boolean, empty list, map (when type is Map), or a fragment(...)")
     defp default_expr(:error, _),
       do: []
 
@@ -765,6 +768,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     # precision regardless of the declared column type. Decimals are the
     # only exception.
     defp column_type(:serial, _opts), do: "INTEGER"
+    defp column_type(:bigserial, _opts), do: "INTEGER"
     defp column_type(:string, _opts), do: "TEXT"
     defp column_type(:map, _opts), do: "TEXT"
     defp column_type({:map, _}, _opts), do: "TEXT"
@@ -794,6 +798,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       do: quote_name(name)
 
     defp reference_column_type(:serial, _opts), do: "INTEGER"
+    defp reference_column_type(:bigserial, _opts), do: "INTEGER"
     defp reference_column_type(type, opts), do: column_type(type, opts)
 
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
@@ -843,6 +848,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       [?", name, ?"]
     end
 
+    defp single_quote(value), do: [?', escape_string(value), ?']
+
     defp intersperse_map(list, separator, mapper, acc \\ [])
     defp intersperse_map([], _separator, _mapper, acc),
       do: acc
@@ -877,8 +884,5 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp error!(query, message) do
       raise Ecto.QueryError, query: query, message: message
     end
-
-    # Use Ecto's JSON library (currently Poison) for embedded JSON datatypes.
-    defp json_library, do: Application.get_env(:ecto, :json_library)
   end
 end

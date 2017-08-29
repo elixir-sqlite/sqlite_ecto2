@@ -3,9 +3,9 @@ defmodule Sqlite.Ecto2.Mixfile do
 
   def project do
     [app: :sqlite_ecto2,
-     version: "2.0.3",
+     version: "2.2.0",
      name: "Sqlite.Ecto2",
-     elixir: "~> 1.3.4 or ~> 1.4",
+     elixir: "~> 1.4",
      elixirc_options: [warnings_as_errors: true],
      deps: deps(),
      elixirc_paths: elixirc_paths(Mix.env),
@@ -38,9 +38,9 @@ defmodule Sqlite.Ecto2.Mixfile do
      {:decimal, "~> 1.2"},
      {:dogma, "~> 0.1", only: :dev},
      {:esqlite, "~> 0.2.3"},
-     {:ex_doc, "~> 0.15", only: :dev},
-     {:ecto, "~> 2.1.0"},
-     {:poison, "~> 2.2", optional: true},
+     {:ex_doc, "~> 0.16", only: :dev},
+     {:ecto, "~> 2.2.0"},
+     {:poison, "~> 2.2 or ~> 3.0", optional: true},
      {:postgrex, "~> 0.13.0", optional: true},
      {:sbroker, "~> 1.0"},
      {:sqlitex, "~> 1.3.2 or ~> 1.4"}]
