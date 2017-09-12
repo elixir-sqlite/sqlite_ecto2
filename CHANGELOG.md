@@ -1,5 +1,12 @@
 # Changelog for v2.2.x Series
 
+## v2.2.1
+
+_11 September 2017_
+
+* Update tests to work with Ecto 2.2.2.
+
+
 ## v2.2.0
 
 _28 August 2017_
