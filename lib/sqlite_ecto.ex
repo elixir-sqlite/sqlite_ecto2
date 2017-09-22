@@ -153,4 +153,14 @@ defmodule Sqlite.Ecto2 do
 
   @doc false
   def supports_ddl_transaction?, do: true
+
+  # Since SQLite doesn't have locks, we use this version of lock_for_migrations
+  # to disable the lock behavior and fall back to single-threaded migration.
+  # See https://github.com/elixir-ecto/ecto/pull/2215#issuecomment-332497229.
+  def lock_for_migrations(repo, query, _opts, fun) do
+    query
+    |> Map.put(:lock, nil)
+    |> repo.all()
+    |> fun.()
+  end
 end

@@ -43,7 +43,7 @@ defmodule Sqlite.Ecto2.Mixfile do
      {:decimal, "~> 1.5"},
      {:excoveralls, "~> 0.9", only: :test},
      {:ex_doc, "~> 0.18", runtime: false, only: :docs},
-     {:ecto, github: "elixir-ecto/ecto", ref: "6da19b7033cec7382aa798f282b4e8205f08b09b"},
+     {:ecto, github: "elixir-ecto/ecto", ref: "d28aebac6c3b8203750bd23e965a7ba19d42bda6"},
      {:poison, "~> 2.2 or ~> 3.0", optional: true},
      {:postgrex, "~> 0.13", optional: true},
      {:sbroker, "~> 1.0"},
