@@ -12,12 +12,32 @@ defmodule Sqlite.Ecto2.Test do
 
   import Ecto.Query
 
-  test "storage up (twice)" do
-    tmp = [database: tempfilename()]
-    assert Sqlite.Ecto2.storage_up(tmp) == :ok
-    assert File.exists? tmp[:database]
-    assert Sqlite.Ecto2.storage_up(tmp) == {:error, :already_up}
-    File.rm(tmp[:database])
+  describe "storage_up" do
+    test "fails with :already_up on second call" do
+      tmp = [database: tempfilename()]
+      assert Sqlite.Ecto2.storage_up(tmp) == :ok
+      assert File.exists? tmp[:database]
+      assert Sqlite.Ecto2.storage_up(tmp) == {:error, :already_up}
+      File.rm(tmp[:database])
+    end
+
+    test "fails with helpful error message if no database specified" do
+      assert_raise ArgumentError,
+        """
+        No SQLite database path specified. Please check the configuration for your Repo.
+        Your config/*.exs file should have something like this in it:
+
+          config :my_app, MyApp.Repo,
+            adapter: Sqlite.Ecto2,
+            database: "/path/to/sqlite/database"
+
+        Options provided were:
+
+        [mumble: "no database here"]
+
+        """,
+        fn -> Sqlite.Ecto2.storage_up([mumble: "no database here"]) == :ok end
+    end
   end
 
   test "storage down (twice)" do

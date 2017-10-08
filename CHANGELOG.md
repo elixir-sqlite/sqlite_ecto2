@@ -1,5 +1,12 @@
 # Changelog for v2.2.x Series
 
+## v2.2.2
+
+_8 October 2017_
+
+* Better error message if no database path provided. Fixes #200.
+
+
 ## v2.2.1
 
 _11 September 2017_
