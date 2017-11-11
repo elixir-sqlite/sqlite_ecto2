@@ -58,7 +58,7 @@ defmodule Blog do
     import Supervisor.Spec, warn: false
 
     children = [
-      worker(Blog.Repo, [])
+      Blog.Repo,
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
@@ -67,6 +67,15 @@ defmodule Blog do
     Supervisor.start_link(children, opts)
   end
 end
+```
+
+If `Elixir < 1.5.0`:
+```elixir
+...
+    children = [
+      worker(Blog.Repo, [])
+    ]
+...
 ```
 
 Run `mix ecto.create`.  Verify that the SQLite database has been created at `blog.sqlite3` or wherever you have configured your database to be written.
