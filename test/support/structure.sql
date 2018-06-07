@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS "test" (
+CREATE TABLE "test" (
     "id" INTEGER PRIMARY KEY,
     "name" TEXT
 );

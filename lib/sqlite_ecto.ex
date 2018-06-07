@@ -156,20 +156,58 @@ defmodule Sqlite.Ecto2 do
   def supports_ddl_transaction?, do: true
 
   def structure_load(default, opts) do
-    database = Keyword.fetch!(opts, :database)
+    path = opts[:dump_path] || Path.join(default, "structure.sql")
 
-    run_cmd("sqlite3 #{database} < #{default}/structure.sql")
+    case run_cmd(opts[:database], "< #{default}/structure.sql") do
+      {"", 0} -> {:ok, path}
+      {out, _} -> {:error, out}
+    end
   end
 
   def structure_dump(default, opts) do
-    database = Keyword.fetch!(opts, :database)
+    table = opts[:migration_source] || "schema_migrations"
+    path  = opts[:dump_path] || Path.join(default, "structure.sql")
 
-    run_cmd("sqlite3 #{database} .schema > #{default}/structure.sql")
+    with {:ok, versions} <- select_versions(table, opts[:database]),
+         {"", 0} <- run_cmd(opts[:database], ".schema > #{default}/structure.sql"),
+         :ok <- append_versions(table, path, versions) do
+      {:ok, path}
+    else
+      result -> raise RuntimeError, "#{inspect result}"
+    end
   end
 
-  defp run_cmd(str) do
-    str
-    |> String.to_charlist()
-    |> :os.cmd()
+  defp select_versions(table, database) do
+    case Sqlitex.with_db(database, fn db ->
+      Sqlitex.query(db, "SELECT version FROM #{table} ORDER BY version")
+    end) do
+      {:ok, versions} -> {:ok, versions}
+      {:error, {:sqlite_error, 'no such table: schema_migrations'}} ->
+        {:ok, []}
+      {:error, error} ->
+        {:error, "#{inspect error}"}
+    end
+  end
+
+  defp append_versions(_, _, []), do: :ok
+  defp append_versions(table, path, versions) do
+    content = File.read!(path)
+
+    insert =
+      versions
+      |> Enum.map(fn version -> version[:version] end)
+      |> Enum.join(", ")
+      |> String.replace_prefix("", "\n\nINSERT INTO #{table} (version) VALUES (")
+      |> String.replace_suffix("", ");\n\n")
+
+    File.write!(path, content <> insert)
+  end
+
+  defp run_cmd(database, str) do
+    unless System.find_executable("sqlite3") do
+      raise "The executable for sqlite3 could not be found"
+    end
+
+    System.cmd("/bin/sh", ["-c", "sqlite3 #{database} #{str}"])
   end
 end

@@ -1320,7 +1320,7 @@ defmodule Sqlite.Ecto2.Test do
 
     test "can be dumped" do
       Sqlite.Ecto2.structure_load("./test/support", database: "./test.sqlite3")
-      Sqlite.Ecto2.structure_dump("./", database: "test.sqlite3")
+      Sqlite.Ecto2.structure_dump("./", database: "./test.sqlite3")
 
       assert File.read!("./test/support/structure.sql") == File.read!("./structure.sql")
 
