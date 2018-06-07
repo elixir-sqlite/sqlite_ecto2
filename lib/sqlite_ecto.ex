@@ -40,6 +40,7 @@ defmodule Sqlite.Ecto2 do
 
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
+  @behaviour Ecto.Adapter.Structure
 
   ## Custom SQLite Types
 
@@ -153,4 +154,22 @@ defmodule Sqlite.Ecto2 do
 
   @doc false
   def supports_ddl_transaction?, do: true
+
+  def structure_load(default, opts) do
+    database = Keyword.fetch!(opts, :database)
+
+    run_cmd("sqlite3 #{database} < #{default}/structure.sql")
+  end
+
+  def structure_dump(default, opts) do
+    database = Keyword.fetch!(opts, :database)
+
+    run_cmd("sqlite3 #{database} .schema > #{default}/structure.sql")
+  end
+
+  defp run_cmd(str) do
+    str
+    |> String.to_charlist()
+    |> :os.cmd()
+  end
 end

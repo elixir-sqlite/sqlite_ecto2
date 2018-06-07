@@ -1306,6 +1306,29 @@ defmodule Sqlite.Ecto2.Test do
     end
   end
 
+  describe "structure" do
+    test "can be loaded" do
+      Sqlite.Ecto2.structure_load("test/support", database: "test.sqlite3")
+      {:ok, result} = Sqlitex.with_db("test.sqlite3", fn db ->
+        Sqlitex.query(db, "select name from sqlite_master where type = \"table\"")
+      end)
+
+      assert [[name: "test"]] == result
+
+      File.rm! "test.sqlite3"
+    end
+
+    test "can be dumped" do
+      Sqlite.Ecto2.structure_load("./test/support", database: "./test.sqlite3")
+      Sqlite.Ecto2.structure_dump("./", database: "test.sqlite3")
+
+      assert File.read!("./test/support/structure.sql") == File.read!("./structure.sql")
+
+      File.rm! "./test.sqlite3"
+      File.rm! "./structure.sql"
+    end
+  end
+
   defp remove_newlines(string) do
     string |> String.trim |> String.replace("\n", " ")
   end
