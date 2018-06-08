@@ -173,7 +173,7 @@ defmodule Sqlite.Ecto2 do
          :ok <- append_versions(table, path, versions) do
       {:ok, path}
     else
-      result -> raise RuntimeError, "#{inspect result}"
+      result -> raise RuntimeError, inspect(result)
     end
   end
 
@@ -185,7 +185,7 @@ defmodule Sqlite.Ecto2 do
       {:error, {:sqlite_error, 'no such table: schema_migrations'}} ->
         {:ok, []}
       {:error, error} ->
-        {:error, "#{inspect error}"}
+        {:error, inspect(error)}
     end
   end
 
