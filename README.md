@@ -10,6 +10,13 @@
 Read [the tutorial](./docs/tutorial.md) for a detailed example of how to setup and use a SQLite repo with Ecto, or just check-out the CliffsNotes in the sections below if you want to get started quickly.
 
 
+## SEEKING NEW MAINTAINER
+
+My sincere apologies, but I must step down from maintaining this project. Some life events have conspired to leave me without the time I would need to devote to properly continue the development of this project. If you are interested in giving it the love it needs (especially, following the changes for Ecto 3.0), please file an issue or contact me at <eric@scouten.com> to discuss taking ownership of this module.
+
+I'll review PRs from time to time if they can be merged easily, but I do not have the ability to review or attempt to fix unsolved issues.
+
+
 ## Ecto Version Compatibility
 
 **IMPORTANT:** This release will _only_ work with Ecto 2.2.x. If you need compatibility with older versions of Ecto, please see:
