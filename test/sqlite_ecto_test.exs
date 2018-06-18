@@ -1313,12 +1313,12 @@ defmodule Sqlite.Ecto2.Test do
         Sqlitex.query(db, "select name from sqlite_master where type = \"table\"")
       end)
 
-      assert [[name: "test"]] == result
+      assert [[name: "test"], [name: "schema_migrations"]] == result
 
       File.rm! "./test.sqlite3"
     end
 
-    test "can be dumped" do
+    test "can be dumped with version table appended" do
       Sqlite.Ecto2.structure_load("./test/support", database: "./test.sqlite3")
       Sqlite.Ecto2.structure_dump("./", database: "./test.sqlite3")
 

@@ -182,7 +182,7 @@ defmodule Sqlite.Ecto2 do
       Sqlitex.query(db, "SELECT version FROM #{table} ORDER BY version")
     end) do
       {:ok, versions} -> {:ok, versions}
-      {:error, {:sqlite_error, 'no such table: schema_migrations'}} ->
+      {:error, {:sqlite_error, 'no such table: '}} ->
         {:ok, []}
       {:error, error} ->
         {:error, inspect(error)}
@@ -195,10 +195,10 @@ defmodule Sqlite.Ecto2 do
 
     insert =
       versions
-      |> Enum.map(fn version -> version[:version] end)
-      |> Enum.join(", ")
-      |> String.replace_prefix("", "\n\nINSERT INTO #{table} (version) VALUES (")
-      |> String.replace_suffix("", ");\n\n")
+      |> Enum.map(fn version -> "    \"#{version[:version]}\"\n" end)
+      |> Enum.join("), (\n")
+      |> String.replace_prefix("", "INSERT INTO \"#{table}\" (\"version\") VALUES (\n")
+      |> String.replace_suffix("", ");\n")
 
     File.write!(path, content <> insert)
   end
