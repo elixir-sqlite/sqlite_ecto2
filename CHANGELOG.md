@@ -1,5 +1,15 @@
 # Changelog for v2.2.x Series
 
+## v2.2.3
+
+_17 June 2018_
+
+* Seeking new maintainer. (#210)
+* Minor syntax change to keep up with new Elixir version (#203, thanks @anuragpeshne).
+* Update tutorial.md (#205, thanks @progsmile).
+* Fix README example schema (#207, thanks @leifg).
+
+
 ## v2.2.2
 
 _8 October 2017_
