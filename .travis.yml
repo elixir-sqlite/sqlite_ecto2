@@ -18,7 +18,7 @@ matrix:
 
 script:
   - mix deps.get && ./integration/hack_out_incompatible_tests.sh && mix test --cover
-  - mix dogma
+  - mix format --check-formatted
 
 branches:
   only:
