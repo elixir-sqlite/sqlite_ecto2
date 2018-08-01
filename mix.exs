@@ -13,7 +13,13 @@ defmodule Sqlite.Ecto2.Mixfile do
      # testing
      build_per_environment: false,
      test_paths: test_paths(),
-     test_coverage: [tool: Coverex.Task, coveralls: true],
+     test_coverage: [tool: ExCoveralls],
+     preferred_cli_env: [
+       coveralls: :test,
+       "coveralls.detail": :test,
+       "coveralls.html": :test,
+       "coveralls.circle": :test
+     ],
 
      # hex
      description: description(),
@@ -32,11 +38,11 @@ defmodule Sqlite.Ecto2.Mixfile do
   # Dependencies
   defp deps do
     [{:connection, "~> 1.0.3"},
-     {:coverex, "~> 1.4.11", only: :test},
      {:credo, "~> 0.10", only: [:dev, :test]},
      {:db_connection, "~> 1.1.0"},
      {:decimal, "~> 1.5"},
      {:esqlite, github: "Sqlite-Ecto/esqlite", override: true},
+     {:excoveralls, "~> 0.9", only: :test},
      {:ex_doc, "~> 0.18", runtime: false, only: :docs},
      {:ecto, "~> 2.2"},
      {:poison, "~> 2.2 or ~> 3.0", optional: true},
@@ -48,9 +54,9 @@ defmodule Sqlite.Ecto2.Mixfile do
   defp description, do: "SQLite3 adapter for Ecto2"
 
   defp package do
-    [maintainers: ["Eric Scouten", "Jason M Barnes"],
+    [maintainers: ["Eric Scouten", "Jason M Barnes", "Connor Rigby"],
       licenses: ["MIT"],
-      links: %{"Github" => "https://github.com/scouten/sqlite_ecto2"}]
+      links: %{"Github" => "https://github.com/Sqlite-Ecto/sqlite_ecto2"}]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/sqlite_db_connection/support"]
