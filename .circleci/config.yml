@@ -14,6 +14,7 @@ jobs:
       - run: mix deps.compile
       - run: mix compile
       - run: ./integration/hack_out_incompatible_tests.sh
+      - run: mix credo --strict
       - run: mix coveralls.circle
       - save_cache:
           key: v2-dependency-cache-{{ checksum "mix.lock" }}
