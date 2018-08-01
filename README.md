@@ -1,7 +1,6 @@
-[![Build Status](https://travis-ci.org/scouten/sqlite_ecto2.svg?branch=master "Build Status")](https://travis-ci.org/scouten/sqlite_ecto2)
+[![CircleCI](https://circleci.com/gh/Sqlite-Ecto/sqlite_ecto2.svg?style=svg)](https://circleci.com/gh/Sqlite-Ecto/sqlite_ecto2)
 [![Hex.pm](https://img.shields.io/hexpm/v/sqlite_ecto2.svg)](https://hex.pm/packages/sqlite_ecto2)
-[![Ebert](https://ebertapp.io/github/scouten/sqlite_ecto2.svg)](https://ebertapp.io/github/scouten/sqlite_ecto2)
-[![Coverage Status](https://coveralls.io/repos/github/scouten/sqlite_ecto2/badge.svg?branch=master)](https://coveralls.io/github/scouten/sqlite_ecto2?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/Sqlite-Ecto/sqlite_ecto2/badge.svg?branch=master)](https://coveralls.io/github/Sqlite-Ecto/sqlite_ecto2?branch=master)
 
 # sqlite_ecto2
 
@@ -21,7 +20,7 @@ I'll review PRs from time to time if they can be merged easily, but I do not hav
 
 **IMPORTANT:** This release will _only_ work with Ecto 2.2.x. If you need compatibility with older versions of Ecto, please see:
 
-* Ecto 2.1.x -> [`sqlite_ecto2` 2.0.x series](https://github.com/scouten/sqlite_ecto2/tree/v2.0)
+* Ecto 2.1.x -> [`sqlite_ecto2` 2.0.x series](https://github.com/Sqlite-Ecto/sqlite_ecto2/tree/v2.0)
 * Ecto 1.x -> [`sqlite_ecto` v1.x series](https://github.com/jazzyb/sqlite_ecto)
 
 
@@ -62,7 +61,8 @@ Note that the Travis configuration for this repo specifically excludes OTP 19.0 
 
 ## Dependencies
 
-This library makes use of [sqlitex](https://github.com/mmmries/sqlitex) and [esqlite](https://github.com/mmzeeman/esqlite).  Since esqlite uses Erlang NIFs to incorporate SQLite, you will need a valid C compiler to build the library.
+This library makes use of [sqlite3](https://github.com/Sqlite-Ecto/sqlitex)
+Since esqlite uses Erlang NIFs to incorporate SQLite, you will need a valid C compiler to build the library.
 
 ## Example
 
