@@ -31,7 +31,7 @@ defmodule Sqlite.Ecto2.Mixfile do
 
   # Configuration for the OTP application
   def application do
-    [applications: [:db_connection, :ecto, :logger, :sqlitex],
+    [extra_applications: [:logger],
      mod: {Sqlite.DbConnection.App, []}]
   end
 
@@ -41,7 +41,6 @@ defmodule Sqlite.Ecto2.Mixfile do
      {:credo, "~> 0.10", only: [:dev, :test]},
      {:db_connection, "~> 1.1.0"},
      {:decimal, "~> 1.5"},
-     {:esqlite, github: "Sqlite-Ecto/esqlite", override: true},
      {:excoveralls, "~> 0.9", only: :test},
      {:ex_doc, "~> 0.18", runtime: false, only: :docs},
      {:ecto, "~> 2.2"},
