@@ -10,9 +10,10 @@ defmodule Sqlite.DbConnection.Protocol do
 
   @spec connect(Keyword.t) :: {:ok, state}
   def connect(opts) do
-    {db_path, _opts} = Keyword.pop(opts, :database)
+    db_path = Keyword.fetch!(opts, :database)
+    db_timeout = Keyword.get(opts, :db_timeout, 5000)
 
-    {:ok, db} = Sqlitex.Server.start_link(db_path)
+    {:ok, db} = Sqlitex.Server.start_link(db_path, db_timeout: db_timeout)
     :ok = Sqlitex.Server.exec(db, "PRAGMA foreign_keys = ON")
     {:ok, [[foreign_keys: 1]]} = Sqlitex.Server.query(db, "PRAGMA foreign_keys")
 
@@ -81,7 +82,7 @@ defmodule Sqlite.DbConnection.Protocol do
       :transaction -> "BEGIN"
       :savepoint   -> "SAVEPOINT sqlite_ecto_savepoint"
     end
-    handle_transaction(sql, s)
+    handle_transaction(sql, [timeout: Keyword.get(opts, :timeout, 5000)], s)
   end
 
   @spec handle_commit(Keyword.t, state) ::
@@ -91,7 +92,7 @@ defmodule Sqlite.DbConnection.Protocol do
       :transaction -> "COMMIT"
       :savepoint   -> "RELEASE SAVEPOINT sqlite_ecto_savepoint"
     end
-    handle_transaction(sql, s)
+    handle_transaction(sql, [timeout: Keyword.get(opts, :timeout, 5000)], s)
   end
 
   @spec handle_rollback(Keyword.t, state) ::
@@ -101,7 +102,7 @@ defmodule Sqlite.DbConnection.Protocol do
       :transaction -> "ROLLBACK"
       :savepoint   -> "ROLLBACK TO SAVEPOINT sqlite_ecto_savepoint"
     end
-    handle_transaction(sql, s)
+    handle_transaction(sql, [timeout: Keyword.get(opts, :timeout, 5000)], s)
   end
 
   defp refined_info(prepared_info) do
@@ -125,10 +126,10 @@ defmodule Sqlite.DbConnection.Protocol do
   defp maybe_atom_to_lc_string(nil), do: nil
   defp maybe_atom_to_lc_string(item), do: item |> to_string |> String.downcase
 
-  defp handle_execute(%Query{statement: sql}, params, _sync, _opts, s) do
+  defp handle_execute(%Query{statement: sql}, params, _sync, opts, s) do
     # Note that we rely on Sqlitex.Server to cache the prepared statement,
     # so we can simply refer to the original SQL statement here.
-    case run_stmt(sql, params, s) do
+    case run_stmt(sql, params, opts, s) do
       {:ok, result} ->
         {:ok, result, s}
       other ->
@@ -145,10 +146,16 @@ defmodule Sqlite.DbConnection.Protocol do
                                         message: to_string(message)}, s}
   end
 
-  defp run_stmt(query, params, s) do
-    opts = [decode: :manual, types: true, bind: params]
+  defp run_stmt(query, params, opts, s) do
+    query_opts = [
+      timeout: Keyword.get(opts, :timeout, 5000),
+      decode: :manual,
+      types: true,
+      bind: params
+    ]
+
     command = command_from_sql(query)
-    case query_rows(s.db, to_string(query), opts) do
+    case query_rows(s.db, to_string(query), query_opts) do
       {:ok, %{rows: raw_rows, columns: raw_column_names}} ->
         {rows, num_rows, column_names} = case {raw_rows, raw_column_names} do
           {_, []} -> {nil, get_changes_count(s.db, command), nil}
@@ -160,6 +167,8 @@ defmodule Sqlite.DbConnection.Protocol do
                                           command: command}}
       {:error, {_sqlite_errcode, _message}} = err ->
         sqlite_error(err, s)
+      {:error, %Sqlite.DbConnection.Error{} = err} ->
+        {:error, err, s}
       {:error, :args_wrong_length} ->
         {:error,
          %ArgumentError{message: "parameters must match number of placeholders in query"},
@@ -193,8 +202,8 @@ defmodule Sqlite.DbConnection.Protocol do
     String.to_atom(List.first(words))
   end
 
-  defp handle_transaction(stmt, s) do
-    {:ok, _rows} = query_rows(s.db, stmt, into: :raw_list)
+  defp handle_transaction(stmt, opts, s) do
+    {:ok, _rows} = query_rows(s.db, stmt, Keyword.merge(opts, [into: :raw_list]))
     command = command_from_sql(stmt)
     result = %Sqlite.DbConnection.Result{rows: nil,
                                          num_rows: nil,
@@ -207,8 +216,10 @@ defmodule Sqlite.DbConnection.Protocol do
     try do
       Sqlitex.Server.query_rows(db, stmt, opts)
     catch
-      :exit, _ ->
-        {:raise, %Sqlite.DbConnection.Error{message: "Disconnected"}}
+      :exit, {:timeout, _gen_server_call} ->
+        {:error, %Sqlite.DbConnection.Error{message: "Timeout"}}
+      :exit, _ex ->
+        {:error, %Sqlite.DbConnection.Error{message: "Disconnected"}}
     end
   end
 end
