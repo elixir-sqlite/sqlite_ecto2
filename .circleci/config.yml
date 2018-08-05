@@ -13,7 +13,6 @@ jobs:
       - run: mix deps.get
       - run: mix deps.compile
       - run: mix compile
-      - run: ./integration/hack_out_incompatible_tests.sh
       - run: mix credo --strict
       - run: mix coveralls.circle
       - save_cache:
