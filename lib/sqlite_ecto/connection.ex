@@ -565,10 +565,10 @@ if Code.ensure_loaded?(Sqlitex.Server) do
 
     # DDL
 
-    alias Ecto.Migration.Table
+    alias Ecto.Migration.Constraint
     alias Ecto.Migration.Index
     alias Ecto.Migration.Reference
-    alias Ecto.Migration.Constraint
+    alias Ecto.Migration.Table
 
     @drops [:drop, :drop_if_exists]
 

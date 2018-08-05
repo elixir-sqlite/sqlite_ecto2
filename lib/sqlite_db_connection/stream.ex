@@ -29,4 +29,8 @@ defimpl Enumerable, for: Sqlite.DbConnection.Stream do
   def count(_) do
     {:error, __MODULE__}
   end
+
+  def slice(_) do
+    {:error, __MODULE__}
+  end
 end
