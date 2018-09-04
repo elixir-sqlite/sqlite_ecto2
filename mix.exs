@@ -3,10 +3,10 @@ defmodule Sqlite.Ecto2.Mixfile do
 
   def project do
     [app: :sqlite_ecto2,
-     version: "2.2.4",
+     version: "2.2.5",
      name: "Sqlite.Ecto2",
      elixir: "~> 1.4",
-     elixirc_options: [warnings_as_errors: true],
+     elixirc_options: [warnings_as_errors: Mix.env() == :prod],
      deps: deps(),
      elixirc_paths: elixirc_paths(Mix.env),
 
@@ -37,18 +37,17 @@ defmodule Sqlite.Ecto2.Mixfile do
 
   # Dependencies
   defp deps do
-    [{:connection, "~> 1.0.3"},
+    [{:connection, "~> 1.0"},
      {:credo, "~> 0.10", only: [:dev, :test]},
-     {:db_connection, "~> 1.1.0"},
+     {:db_connection, "~> 1.1"},
      {:decimal, "~> 1.5"},
      {:excoveralls, "~> 0.9", only: :test},
-     {:ex_doc, "~> 0.18", runtime: false, only: :docs},
-     {:ecto, "~> 2.2"},
-     {:inch_ex, "~> 1.0", only: :test},
+     {:ex_doc, "~> 0.19", runtime: false, only: :docs},
+     {:ecto, "2.2.9"},
      {:poison, "~> 2.2 or ~> 3.0", optional: true},
      {:postgrex, "~> 0.13", optional: true},
      {:sbroker, "~> 1.0"},
-     {:sqlitex, "~> 1.3.2 or ~> 1.4"}]
+     {:sqlitex, "~> 1.4"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto2"
