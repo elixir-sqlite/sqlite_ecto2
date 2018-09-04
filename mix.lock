@@ -26,6 +26,6 @@
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], [], "hexpm"},
   "postgrex": {:hex, :postgrex, "0.13.5", "3d931aba29363e1443da167a4b12f06dcd171103c424de15e5f3fc2ba3e6d9c5", [:mix], [{:connection, "~> 1.0", [hex: :connection, repo: "hexpm", optional: false]}, {:db_connection, "~> 1.1", [hex: :db_connection, repo: "hexpm", optional: false]}, {:decimal, "~> 1.0", [hex: :decimal, repo: "hexpm", optional: false]}], "hexpm"},
   "sbroker": {:hex, :sbroker, "1.0.0", "28ff1b5e58887c5098539f236307b36fe1d3edaa2acff9d6a3d17c2dcafebbd0", [:rebar3], [], "hexpm"},
-  "sqlitex": {:hex, :sqlitex, "1.4.2", "b18f2b53cefbc9cca0bd17d51386f9caa7cf341144cb314e5cd9fd2a1f9b0845", [:mix], [{:decimal, "~> 1.1", [hex: :decimal, repo: "hexpm", optional: false]}, {:esqlite, "~> 0.2.4", [hex: :esqlite, repo: "hexpm", optional: false]}], "hexpm"},
+  "sqlitex": {:hex, :sqlitex, "1.4.3", "a50f12d6aeb25f4ebb128453386c09bbba8f5abd3c7713dc5eaa92f359926ac5", [:mix], [{:decimal, "~> 1.5", [hex: :decimal, repo: "hexpm", optional: false]}, {:esqlite, "~> 0.2.4", [hex: :esqlite, repo: "hexpm", optional: false]}], "hexpm"},
   "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.1", "28a4d65b7f59893bc2c7de786dec1e1555bd742d336043fe644ae956c3497fbe", [:make, :rebar], [], "hexpm"},
 }
