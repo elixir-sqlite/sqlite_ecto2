@@ -6,7 +6,6 @@ defmodule Sqlite.Ecto2.Mixfile do
      version: "2.2.5",
      name: "Sqlite.Ecto2",
      elixir: "~> 1.4",
-     elixirc_options: [warnings_as_errors: Mix.env() == :prod],
      deps: deps(),
      elixirc_paths: elixirc_paths(Mix.env),
 
