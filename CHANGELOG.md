@@ -1,4 +1,10 @@
 # Changelog for v2.2.x Series
+## v2.3.0
+
+_17 October 2018_
+
+* Allow {:array, :map} via JSON library.
+* Update error messages for clarity.
 
 ## v2.2.3
 

@@ -165,6 +165,7 @@ defmodule Sqlite.DbConnection.Protocol do
                                           num_rows: num_rows,
                                           columns: atoms_to_strings(column_names),
                                           command: command}}
+      {:error, :wrong_type} -> {:error, %ArgumentError{message: "Wrong type"}, s}
       {:error, {_sqlite_errcode, _message}} = err ->
         sqlite_error(err, s)
       {:error, %Sqlite.DbConnection.Error{} = err} ->
@@ -218,8 +219,8 @@ defmodule Sqlite.DbConnection.Protocol do
     catch
       :exit, {:timeout, _gen_server_call} ->
         {:error, %Sqlite.DbConnection.Error{message: "Timeout"}}
-      :exit, _ex ->
-        {:error, %Sqlite.DbConnection.Error{message: "Disconnected"}}
+      :exit, ex ->
+        {:error, %Sqlite.DbConnection.Error{message: inspect(ex)}}
     end
   end
 end
