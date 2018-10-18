@@ -66,6 +66,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           value
         %{} = value ->
           Ecto.Adapter.json_library().encode!(value)
+        value when is_list(value) ->
+          Ecto.Adapter.json_library().encode!(value)
         value ->
           value
       end
@@ -496,7 +498,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       [@pseudo_returning_statement, cmd, ?\s, fields]
     end
 
-    defp ecto_to_db({:array, _}) do
+    defp ecto_to_db({:array, _data}) do
       raise ArgumentError, "Array type is not supported by SQLite"
     end
 
@@ -772,7 +774,7 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp column_type(:string, _opts), do: "TEXT"
     defp column_type(:map, _opts), do: "TEXT"
     defp column_type({:map, _}, _opts), do: "TEXT"
-    defp column_type({:array, _}, _opts), do: raise(ArgumentError, "Array type is not supported by SQLite")
+    defp column_type({:array, _}, _opts), do: "TEXT"
     defp column_type(:decimal, opts) do
       # We only store precision and scale for DECIMAL.
       precision = Keyword.get(opts, :precision)

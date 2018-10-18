@@ -864,9 +864,9 @@ defmodule Sqlite.Ecto2.Test do
     create = {:create, table(:posts),
                [{:add, :name, {:array, :numeric}, []}]}
 
-    assert_raise ArgumentError, ~r"Array type is not supported by SQLite", fn ->
-      execute_ddl(create)
-    end
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "posts" ("name" TEXT)
+    """ |> remove_newlines()]
   end
 
   test "create table illegal options" do
