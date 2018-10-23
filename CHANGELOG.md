@@ -1,4 +1,10 @@
 # Changelog for v2.2.x Series
+## v2.3.1
+
+__23 October 2018_
+
+* Fix bug in array loading.
+
 ## v2.3.0
 
 _17 October 2018_

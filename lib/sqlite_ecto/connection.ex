@@ -773,8 +773,8 @@ if Code.ensure_loaded?(Sqlitex.Server) do
     defp column_type(:bigserial, _opts), do: "INTEGER"
     defp column_type(:string, _opts), do: "TEXT"
     defp column_type(:map, _opts), do: "TEXT"
-    defp column_type({:map, _}, _opts), do: "TEXT"
-    defp column_type({:array, _}, _opts), do: "TEXT"
+    defp column_type({:map, _}, _opts), do: "JSON"
+    defp column_type({:array, _}, _opts), do: "JSON"
     defp column_type(:decimal, opts) do
       # We only store precision and scale for DECIMAL.
       precision = Keyword.get(opts, :precision)
