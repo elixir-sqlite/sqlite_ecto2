@@ -51,6 +51,7 @@ defmodule Sqlite.Ecto2 do
     do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
   def loaders(:map, type), do: [&json_decode/1, type]
   def loaders({:map, _}, type), do: [&json_decode/1, type]
+  def loaders({:array, _}, type), do: [&json_decode/1, type]
   def loaders(:float, type), do: [&float_decode/1, type]
   def loaders(_primitive, type), do: [type]
 

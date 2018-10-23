@@ -865,7 +865,7 @@ defmodule Sqlite.Ecto2.Test do
                [{:add, :name, {:array, :numeric}, []}]}
 
     assert execute_ddl(create) == ["""
-    CREATE TABLE "posts" ("name" TEXT)
+    CREATE TABLE "posts" ("name" JSON)
     """ |> remove_newlines()]
   end
 
