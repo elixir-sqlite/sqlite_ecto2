@@ -140,11 +140,14 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       do: []
     defp on_conflict({:nothing, _, targets}),
       do: [" ON CONFLICT ", conflict_target(targets) | "DO NOTHING"]
+    defp on_conflict({:replace_all, _, _}),
+      do: raise ArgumentError, "Upsert in SQLite does not support on_conflict: :replace_all"
     defp on_conflict({fields, _, targets}) when is_list(fields),
       do: [" ON CONFLICT ", conflict_target(targets), "DO " | replace(fields)]
     defp on_conflict({query, _, targets}),
       do: [" ON CONFLICT ", conflict_target(targets), "DO " | update_all(query, "UPDATE SET ")]
 
+    defp conflict_target([]), do: ""
     defp conflict_target(targets),
       do: [?(, intersperse_map(targets, ?,, &quote_name/1), ?), ?\s]
 
