@@ -132,13 +132,28 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           [?\s, ?(, intersperse_map(header, ?,, &quote_name/1), ") VALUES " | insert_all(rows, 1)]
         end
 
-      on_conflict = case on_conflict do
-        {:raise, [], []} -> ""
-        {:nothing, [], []} -> " OR IGNORE"
-        _ -> raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing"
-      end
       returning = returning_clause(prefix, table, returning, "INSERT")
-      ["INSERT", on_conflict, " INTO ", quote_table(prefix, table), values, returning]
+      ["INSERT INTO ", quote_table(prefix, table), values, on_conflict(on_conflict), returning]
+    end
+
+    defp on_conflict({:raise, _, []}),
+      do: []
+    defp on_conflict({:nothing, _, targets}),
+      do: [" ON CONFLICT ", conflict_target(targets) | "DO NOTHING"]
+    defp on_conflict({fields, _, targets}) when is_list(fields),
+      do: [" ON CONFLICT ", conflict_target(targets), "DO " | replace(fields)]
+    defp on_conflict({query, _, targets}),
+      do: [" ON CONFLICT ", conflict_target(targets), "DO " | update_all(query, "UPDATE SET ")]
+
+    defp conflict_target(targets),
+      do: [?(, intersperse_map(targets, ?,, &quote_name/1), ?), ?\s]
+
+    defp replace(fields) do
+      ["UPDATE SET " |
+        intersperse_map(fields, ?,, fn field ->
+          quoted = quote_name(field)
+          [quoted, " = ", "EXCLUDED." | quoted]
+        end)]
     end
 
     defp insert_all(rows, counter) do
