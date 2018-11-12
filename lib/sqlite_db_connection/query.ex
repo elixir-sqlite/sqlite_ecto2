@@ -13,12 +13,13 @@ defmodule Sqlite.DbConnection.Query do
   # We strive to avoid structural differences between that file and this one.
 
   @type t :: %__MODULE__{
-    name:           iodata,
-    statement:      iodata,
-    prepared:       reference,
-    columns:        [String.t] | nil,
-    result_formats: [:binary | :text] | nil,
-    types:          Sqlite.DbConnection.TypeServer.table | nil}
+          name: iodata,
+          statement: iodata,
+          prepared: reference,
+          columns: [String.t()] | nil,
+          result_formats: [:binary | :text] | nil,
+          types: Sqlite.DbConnection.TypeServer.table() | nil
+        }
 
   defstruct [:name, :statement, :prepared, :columns, :result_formats, :types]
 end
@@ -35,12 +36,13 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
 
   def decode(_query, %Sqlite.DbConnection.Result{rows: nil} = res, _opts), do: res
 
-  def decode(%Sqlite.DbConnection.Query{prepared: %{types: types}},
-             %Sqlite.DbConnection.Result{rows: rows, columns: columns} = res,
-             opts)
-  do
+  def decode(
+        %Sqlite.DbConnection.Query{prepared: %{types: types}},
+        %Sqlite.DbConnection.Result{rows: rows, columns: columns} = res,
+        opts
+      ) do
     mapper = opts[:decode_mapper]
-    decoded_rows = Enum.map(rows, &(decode_row(&1, types, columns, mapper)))
+    decoded_rows = Enum.map(rows, &decode_row(&1, types, columns, mapper))
     %{res | rows: decoded_rows}
   end
 
@@ -53,6 +55,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     |> Enum.zip(column_names)
     |> cast_any_datetimes
   end
+
   defp decode_row(row, types, column_names, mapper) do
     mapper.(decode_row(row, types, column_names, nil))
   end
@@ -71,11 +74,13 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   defp translate_value({0, "boolean"}), do: false
   defp translate_value({1, "boolean"}), do: true
 
-  defp translate_value({int, type = <<"decimal", _ :: binary>>}) when is_integer(int) do
-    {result, _} = int |> Integer.to_string |> Float.parse
+  defp translate_value({int, type = <<"decimal", _::binary>>}) when is_integer(int) do
+    {result, _} = int |> Integer.to_string() |> Float.parse()
     translate_value({result, type})
   end
+
   defp translate_value({float, "decimal"}), do: Decimal.new(float)
+
   defp translate_value({float, "decimal(" <> rest}) do
     [precision, scale] =
       rest
@@ -83,10 +88,12 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
       |> String.split(",")
       |> Enum.map(&String.to_integer/1)
 
-    Decimal.with_context(%Decimal.Context{precision: precision, rounding: :down},
+    Decimal.with_context(
+      %Decimal.Context{precision: precision, rounding: :down},
       fn ->
-        float |> Float.round(scale) |> Decimal.new |> Decimal.plus
-      end)
+        float |> Float.round(scale) |> Decimal.new() |> Decimal.plus()
+      end
+    )
   end
 
   defp translate_value({value, _type}), do: value
@@ -96,7 +103,10 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     {String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}
   end
 
-  defp to_time(<<hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary>>) when byte_size(fr) <= 6 do
+  defp to_time(
+         <<hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary>>
+       )
+       when byte_size(fr) <= 6 do
     fr = String.to_integer(fr <> String.duplicate("0", 6 - String.length(fr)))
     {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), fr}
   end
@@ -106,21 +116,28 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
   # datetime string. When we get here, we look for a CAST function as a signal
   # to convert that back to Elixir date types.
   defp cast_any_datetimes(row) do
-    Enum.map row, fn {value, column_name} ->
+    Enum.map(row, fn {value, column_name} ->
       if String.contains?(column_name, "CAST (") && String.contains?(column_name, "TEXT_DATE") do
         string_to_datetime(value)
       else
         value
       end
-    end
+    end)
   end
 
-  defp string_to_datetime(<<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2)>>) do
+  defp string_to_datetime(
+         <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2)>>
+       ) do
     {String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}
   end
+
   defp string_to_datetime(str) do
-    <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2), " ", hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".", fr::binary-size(6)>> = str
-    {{String.to_integer(yr), String.to_integer(mo), String.to_integer(da)}, {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), String.to_integer(fr)}}
+    <<yr::binary-size(4), "-", mo::binary-size(2), "-", da::binary-size(2), " ",
+      hr::binary-size(2), ":", mi::binary-size(2), ":", se::binary-size(2), ".",
+      fr::binary-size(6)>> = str
+
+    {{String.to_integer(yr), String.to_integer(mo), String.to_integer(da)},
+     {String.to_integer(hr), String.to_integer(mi), String.to_integer(se), String.to_integer(fr)}}
   end
 end
 

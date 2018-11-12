@@ -47,8 +47,10 @@ defmodule Sqlite.Ecto2 do
   def loaders(:binary_id, type), do: [Ecto.UUID, type]
   def loaders(:utc_datetime, type), do: [&date_decode/1, type]
   def loaders(:naive_datetime, type), do: [&date_decode/1, type]
+
   def loaders({:embed, _} = type, _),
     do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
+
   def loaders(:map, type), do: [&json_decode/1, type]
   def loaders({:map, _}, type), do: [&json_decode/1, type]
   def loaders({:array, _}, type), do: [&json_decode/1, type]
@@ -59,27 +61,25 @@ defmodule Sqlite.Ecto2 do
   defp bool_decode(1), do: {:ok, true}
   defp bool_decode(x), do: {:ok, x}
 
-  defp date_decode(<<year :: binary-size(4), "-",
-                     month :: binary-size(2), "-",
-                     day :: binary-size(2)>>)
-  do
+  defp date_decode(<<year::binary-size(4), "-", month::binary-size(2), "-", day::binary-size(2)>>) do
     {:ok, {to_integer(year), to_integer(month), to_integer(day)}}
   end
-  defp date_decode(<<year :: binary-size(4), "-",
-                     month :: binary-size(2), "-",
-                     day :: binary-size(2), " ",
-                     hour :: binary-size(2), ":",
-                     minute :: binary-size(2), ":",
-                     second :: binary-size(2), ".",
-                     microsecond :: binary-size(6)>>)
-  do
-    {:ok, {{to_integer(year), to_integer(month), to_integer(day)},
-           {to_integer(hour), to_integer(minute), to_integer(second), to_integer(microsecond)}}}
+
+  defp date_decode(
+         <<year::binary-size(4), "-", month::binary-size(2), "-", day::binary-size(2), " ",
+           hour::binary-size(2), ":", minute::binary-size(2), ":", second::binary-size(2), ".",
+           microsecond::binary-size(6)>>
+       ) do
+    {:ok,
+     {{to_integer(year), to_integer(month), to_integer(day)},
+      {to_integer(hour), to_integer(minute), to_integer(second), to_integer(microsecond)}}}
   end
+
   defp date_decode(x), do: {:ok, x}
 
   defp json_decode(x) when is_binary(x),
     do: {:ok, Application.get_env(:ecto, :json_library).decode!(x)}
+
   defp json_decode(x),
     do: {:ok, x}
 
@@ -111,26 +111,26 @@ defmodule Sqlite.Ecto2 do
 
   defp storage_up_with_path(nil, opts) do
     raise ArgumentError,
-      """
-      No SQLite database path specified. Please check the configuration for your Repo.
-      Your config/*.exs file should have something like this in it:
+          """
+          No SQLite database path specified. Please check the configuration for your Repo.
+          Your config/*.exs file should have something like this in it:
 
-        config :my_app, MyApp.Repo,
-          adapter: Sqlite.Ecto2,
-          database: "/path/to/sqlite/database"
+            config :my_app, MyApp.Repo,
+              adapter: Sqlite.Ecto2,
+              database: "/path/to/sqlite/database"
 
-      Options provided were:
+          Options provided were:
 
-      #{inspect opts, pretty: true}
+          #{inspect(opts, pretty: true)}
 
-      """
+          """
   end
 
   defp storage_up_with_path(database, _opts) do
     if File.exists?(database) do
       {:error, :already_up}
     else
-      database |> Path.dirname |> File.mkdir_p!
+      database |> Path.dirname() |> File.mkdir_p!()
       {:ok, db} = Sqlitex.open(database)
       :ok = Sqlitex.exec(db, "PRAGMA journal_mode = WAL")
       {:ok, [[journal_mode: "wal"]]} = Sqlitex.query(db, "PRAGMA journal_mode")
@@ -142,11 +142,14 @@ defmodule Sqlite.Ecto2 do
   @doc false
   def storage_down(opts) do
     database = Keyword.get(opts, :database)
+
     case File.rm(database) do
       {:error, :enoent} ->
         {:error, :already_down}
+
       result ->
-        File.rm(database <> "-shm") # ignore results for these files
+        # ignore results for these files
+        File.rm(database <> "-shm")
         File.rm(database <> "-wal")
         result
     end

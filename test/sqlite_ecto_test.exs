@@ -16,27 +16,27 @@ defmodule Sqlite.Ecto2.Test do
     test "fails with :already_up on second call" do
       tmp = [database: tempfilename()]
       assert Sqlite.Ecto2.storage_up(tmp) == :ok
-      assert File.exists? tmp[:database]
+      assert File.exists?(tmp[:database])
       assert Sqlite.Ecto2.storage_up(tmp) == {:error, :already_up}
       File.rm(tmp[:database])
     end
 
     test "fails with helpful error message if no database specified" do
       assert_raise ArgumentError,
-        """
-        No SQLite database path specified. Please check the configuration for your Repo.
-        Your config/*.exs file should have something like this in it:
+                   """
+                   No SQLite database path specified. Please check the configuration for your Repo.
+                   Your config/*.exs file should have something like this in it:
 
-          config :my_app, MyApp.Repo,
-            adapter: Sqlite.Ecto2,
-            database: "/path/to/sqlite/database"
+                     config :my_app, MyApp.Repo,
+                       adapter: Sqlite.Ecto2,
+                       database: "/path/to/sqlite/database"
 
-        Options provided were:
+                   Options provided were:
 
-        [mumble: "no database here"]
+                   [mumble: "no database here"]
 
-        """,
-        fn -> Sqlite.Ecto2.storage_up([mumble: "no database here"]) == :ok end
+                   """,
+                   fn -> Sqlite.Ecto2.storage_up(mumble: "no database here") == :ok end
     end
   end
 
@@ -44,13 +44,13 @@ defmodule Sqlite.Ecto2.Test do
     tmp = [database: tempfilename()]
     assert Sqlite.Ecto2.storage_up(tmp) == :ok
     assert Sqlite.Ecto2.storage_down(tmp) == :ok
-    refute File.exists? tmp[:database]
+    refute File.exists?(tmp[:database])
     assert Sqlite.Ecto2.storage_down(tmp) == {:error, :already_down}
   end
 
   test "storage up creates directory" do
     dir = "/tmp/my_sqlite_ecto_directory/"
-    File.rm_rf! dir
+    File.rm_rf!(dir)
     tmp = [database: dir <> tempfilename()]
     :ok = Sqlite.Ecto2.storage_up(tmp)
     assert File.exists?(dir <> "tmp/") && File.dir?(dir <> "tmp/")
@@ -59,9 +59,9 @@ defmodule Sqlite.Ecto2.Test do
   # return a unique temporary filename
   defp tempfilename do
     1..10
-    |> Enum.map(fn(_) -> :rand.uniform(10) - 1 end)
-    |> Enum.join
-    |> (fn(name) -> "/tmp/test_" <> name <> ".db" end).()
+    |> Enum.map(fn _ -> :rand.uniform(10) - 1 end)
+    |> Enum.join()
+    |> (fn name -> "/tmp/test_" <> name <> ".db" end).()
   end
 
   import Ecto.Query
@@ -72,16 +72,19 @@ defmodule Sqlite.Ecto2.Test do
     use Ecto.Schema
 
     schema "schema" do
-      field :x, :integer
-      field :y, :integer
-      field :z, :integer
+      field(:x, :integer)
+      field(:y, :integer)
+      field(:z, :integer)
 
-      has_many :comments, Sqlite.Ecto2.Test.Schema2,
+      has_many(:comments, Sqlite.Ecto2.Test.Schema2,
         references: :x,
         foreign_key: :z
-      has_one :permalink, Sqlite.Ecto2.Test.Schema3,
+      )
+
+      has_one(:permalink, Sqlite.Ecto2.Test.Schema3,
         references: :y,
         foreign_key: :id
+      )
     end
   end
 
@@ -89,10 +92,10 @@ defmodule Sqlite.Ecto2.Test do
     use Ecto.Schema
 
     schema "schema" do
-      field :x, :integer
-      field :y, :integer
-      field :z, :integer
-      field :w, {:array, :integer}
+      field(:x, :integer)
+      field(:y, :integer)
+      field(:z, :integer)
+      field(:w, {:array, :integer})
     end
   end
 
@@ -100,9 +103,10 @@ defmodule Sqlite.Ecto2.Test do
     use Ecto.Schema
 
     schema "schema2" do
-      belongs_to :post, Sqlite.Ecto2.Test.Schema,
+      belongs_to(:post, Sqlite.Ecto2.Test.Schema,
         references: :x,
         foreign_key: :z
+      )
     end
   end
 
@@ -110,9 +114,9 @@ defmodule Sqlite.Ecto2.Test do
     use Ecto.Schema
 
     schema "schema3" do
-      field :list1, {:array, :string}
-      field :list2, {:array, :integer}
-      field :binary, :binary
+      field(:list1, {:array, :string})
+      field(:list2, {:array, :integer})
+      field(:binary, :binary)
     end
   end
 
@@ -122,21 +126,21 @@ defmodule Sqlite.Ecto2.Test do
     query
   end
 
-  defp all(query), do: query |> SQL.all |> IO.iodata_to_binary()
-  defp update_all(query), do: query |> SQL.update_all |> IO.iodata_to_binary()
-  defp delete_all(query), do: query |> SQL.delete_all |> IO.iodata_to_binary()
-  defp execute_ddl(query), do: query |> SQL.execute_ddl |> Enum.map(&IO.iodata_to_binary/1)
+  defp all(query), do: query |> SQL.all() |> IO.iodata_to_binary()
+  defp update_all(query), do: query |> SQL.update_all() |> IO.iodata_to_binary()
+  defp delete_all(query), do: query |> SQL.delete_all() |> IO.iodata_to_binary()
+  defp execute_ddl(query), do: query |> SQL.execute_ddl() |> Enum.map(&IO.iodata_to_binary/1)
 
   defp insert(prefx, table, header, rows, on_conflict, returning) do
-    IO.iodata_to_binary SQL.insert(prefx, table, header, rows, on_conflict, returning)
+    IO.iodata_to_binary(SQL.insert(prefx, table, header, rows, on_conflict, returning))
   end
 
   defp update(prefx, table, fields, filter, returning) do
-    IO.iodata_to_binary SQL.update(prefx, table, fields, filter, returning)
+    IO.iodata_to_binary(SQL.update(prefx, table, fields, filter, returning))
   end
 
   defp delete(prefx, table, filter, returning) do
-    IO.iodata_to_binary SQL.delete(prefx, table, filter, returning)
+    IO.iodata_to_binary(SQL.delete(prefx, table, filter, returning))
   end
 
   test "from" do
@@ -151,17 +155,23 @@ defmodule Sqlite.Ecto2.Test do
     query = "posts" |> select([:x]) |> normalize
     assert all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
 
-    assert_raise Ecto.QueryError, ~r"SQLite does not support selecting all fields from \"posts\" without a schema", fn ->
-      all from(p in "posts", select: p) |> normalize()
-    end
+    assert_raise Ecto.QueryError,
+                 ~r"SQLite does not support selecting all fields from \"posts\" without a schema",
+                 fn ->
+                   all from(p in "posts", select: p) |> normalize()
+                 end
   end
 
   test "from with subquery" do
     query = subquery("posts" |> select([r], %{x: r.x, y: r.y})) |> select([r], r.x) |> normalize
-    assert all(query) == ~s{SELECT s0."x" FROM (SELECT p0."x" AS "x", p0."y" AS "y" FROM "posts" AS p0) AS s0}
+
+    assert all(query) ==
+             ~s{SELECT s0."x" FROM (SELECT p0."x" AS "x", p0."y" AS "y" FROM "posts" AS p0) AS s0}
 
     query = subquery("posts" |> select([r], %{x: r.x, z: r.y})) |> select([r], r) |> normalize
-    assert all(query) == ~s{SELECT s0."x", s0."z" FROM (SELECT p0."x" AS "x", p0."y" AS "z" FROM "posts" AS p0) AS s0}
+
+    assert all(query) ==
+             ~s{SELECT s0."x", s0."z" FROM (SELECT p0."x" AS "x", p0."y" AS "z" FROM "posts" AS p0) AS s0}
   end
 
   test "select" do
@@ -219,22 +229,46 @@ defmodule Sqlite.Ecto2.Test do
 
   test "distinct with order by" do
     assert_raise ArgumentError, "DISTINCT with multiple columns is not supported by SQLite", fn ->
-      query = Schema |> order_by([r], [r.y]) |> distinct([r], desc: r.x) |> select([r], r.x) |> normalize
+      query =
+        Schema
+        |> order_by([r], [r.y])
+        |> distinct([r], desc: r.x)
+        |> select([r], r.x)
+        |> normalize
+
       all(query)
     end
   end
 
   test "where" do
-    query = Schema |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
-    assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 WHERE (s0."x" = 42) AND (s0."y" != 43)}
+    query =
+      Schema |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
+
+    assert all(query) ==
+             ~s{SELECT s0."x" FROM "schema" AS s0 WHERE (s0."x" = 42) AND (s0."y" != 43)}
   end
 
   test "or_where" do
-    query = Schema |> or_where([r], r.x == 42) |> or_where([r], r.y != 43) |> select([r], r.x) |> normalize
-    assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 WHERE (s0."x" = 42) OR (s0."y" != 43)}
+    query =
+      Schema
+      |> or_where([r], r.x == 42)
+      |> or_where([r], r.y != 43)
+      |> select([r], r.x)
+      |> normalize
 
-    query = Schema |> or_where([r], r.x == 42) |> or_where([r], r.y != 43) |> where([r], r.z == 44) |> select([r], r.x) |> normalize
-    assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 WHERE ((s0."x" = 42) OR (s0."y" != 43)) AND (s0."z" = 44)}
+    assert all(query) ==
+             ~s{SELECT s0."x" FROM "schema" AS s0 WHERE (s0."x" = 42) OR (s0."y" != 43)}
+
+    query =
+      Schema
+      |> or_where([r], r.x == 42)
+      |> or_where([r], r.y != 43)
+      |> where([r], r.z == 44)
+      |> select([r], r.x)
+      |> normalize
+
+    assert all(query) ==
+             ~s{SELECT s0."x" FROM "schema" AS s0 WHERE ((s0."x" = 42) OR (s0."y" != 43)) AND (s0."z" = 44)}
   end
 
   test "order by" do
@@ -244,7 +278,7 @@ defmodule Sqlite.Ecto2.Test do
     query = Schema |> order_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
     assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 ORDER BY s0."x", s0."y"}
 
-    query = Schema |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
+    query = Schema |> order_by([r], asc: r.x, desc: r.y) |> select([r], r.x) |> normalize
     assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 ORDER BY s0."x", s0."y" DESC}
 
     query = Schema |> order_by([r], []) |> select([r], r.x) |> normalize
@@ -314,9 +348,12 @@ defmodule Sqlite.Ecto2.Test do
     assert all(query) == ~s{SELECT ltrim(s0."x", ?1) FROM "schema" AS s0}
 
     query = Schema |> select([], fragment(title: 2)) |> normalize
-    assert_raise Ecto.QueryError, ~r"SQLite adapter does not support keyword or interpolated fragments", fn ->
-      all(query)
-    end
+
+    assert_raise Ecto.QueryError,
+                 ~r"SQLite adapter does not support keyword or interpolated fragments",
+                 fn ->
+                   all(query)
+                 end
   end
 
   test "literals" do
@@ -340,7 +377,9 @@ defmodule Sqlite.Ecto2.Test do
   end
 
   test "tagged type" do
-    query = Schema |> select([], type(^"601d74e4-a8d3-4b6e-8365-eddb4c893327", Ecto.UUID)) |> normalize
+    query =
+      Schema |> select([], type(^"601d74e4-a8d3-4b6e-8365-eddb4c893327", Ecto.UUID)) |> normalize
+
     assert all(query) == ~s{SELECT CAST (?1 AS TEXT) FROM "schema" AS s0}
 
     assert_raise ArgumentError, "Array type is not supported by SQLite", fn ->
@@ -351,7 +390,7 @@ defmodule Sqlite.Ecto2.Test do
 
   test "nested expressions" do
     z = 123
-    query = from(r in Schema, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
+    query = from(r in Schema, []) |> select([r], (r.x > 0 and r.y > ^(-z)) or true) |> normalize
     assert all(query) == ~s{SELECT ((s0."x" > 0) AND (s0."y" > ?1)) OR 1 FROM "schema" AS s0}
   end
 
@@ -389,16 +428,30 @@ defmodule Sqlite.Ecto2.Test do
     query = Schema |> having([p], p.x == p.x) |> select([], true) |> normalize
     assert all(query) == ~s{SELECT 1 FROM "schema" AS s0 HAVING (s0."x" = s0."x")}
 
-    query = Schema |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], true) |> normalize
-    assert all(query) == ~s{SELECT 1 FROM "schema" AS s0 HAVING (s0."x" = s0."x") AND (s0."y" = s0."y")}
+    query =
+      Schema
+      |> having([p], p.x == p.x)
+      |> having([p], p.y == p.y)
+      |> select([], true)
+      |> normalize
+
+    assert all(query) ==
+             ~s{SELECT 1 FROM "schema" AS s0 HAVING (s0."x" = s0."x") AND (s0."y" = s0."y")}
   end
 
   test "or_having" do
     query = Schema |> or_having([p], p.x == p.x) |> select([], true) |> normalize
     assert all(query) == ~s{SELECT 1 FROM "schema" AS s0 HAVING (s0."x" = s0."x")}
 
-    query = Schema |> or_having([p], p.x == p.x) |> or_having([p], p.y == p.y) |> select([], true) |> normalize
-    assert all(query) == ~s{SELECT 1 FROM "schema" AS s0 HAVING (s0."x" = s0."x") OR (s0."y" = s0."y")}
+    query =
+      Schema
+      |> or_having([p], p.x == p.x)
+      |> or_having([p], p.y == p.y)
+      |> select([], true)
+      |> normalize
+
+    assert all(query) ==
+             ~s{SELECT 1 FROM "schema" AS s0 HAVING (s0."x" = s0."x") OR (s0."y" = s0."y")}
   end
 
   test "group by" do
@@ -428,56 +481,63 @@ defmodule Sqlite.Ecto2.Test do
   end
 
   test "interpolated values" do
-    query = "schema"
-            |> select([m], {m.id, ^true})
-            |> join(:inner, [], Schema2, fragment("?", ^true))
-            |> join(:inner, [], Schema2, fragment("?", ^false))
-            |> where([], fragment("?", ^true))
-            |> where([], fragment("?", ^false))
-            |> having([], fragment("?", ^true))
-            |> having([], fragment("?", ^false))
-            |> group_by([], fragment("?", ^1))
-            |> group_by([], fragment("?", ^2))
-            |> order_by([], fragment("?", ^3))
-            |> order_by([], ^:x)
-            |> limit([], ^4)
-            |> offset([], ^5)
-            |> normalize
+    query =
+      "schema"
+      |> select([m], {m.id, ^true})
+      |> join(:inner, [], Schema2, fragment("?", ^true))
+      |> join(:inner, [], Schema2, fragment("?", ^false))
+      |> where([], fragment("?", ^true))
+      |> where([], fragment("?", ^false))
+      |> having([], fragment("?", ^true))
+      |> having([], fragment("?", ^false))
+      |> group_by([], fragment("?", ^1))
+      |> group_by([], fragment("?", ^2))
+      |> order_by([], fragment("?", ^3))
+      |> order_by([], ^:x)
+      |> limit([], ^4)
+      |> offset([], ^5)
+      |> normalize
 
-    result = remove_newlines """
-    SELECT s0."id", ?1 FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON ?2
-    INNER JOIN "schema2" AS s2 ON ?3 WHERE (?4) AND (?5)
-    GROUP BY ?6, ?7 HAVING (?8) AND (?9)
-    ORDER BY ?10, s0."x" LIMIT ?11 OFFSET ?12
-    """
+    result =
+      remove_newlines("""
+      SELECT s0."id", ?1 FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON ?2
+      INNER JOIN "schema2" AS s2 ON ?3 WHERE (?4) AND (?5)
+      GROUP BY ?6, ?7 HAVING (?8) AND (?9)
+      ORDER BY ?10, s0."x" LIMIT ?11 OFFSET ?12
+      """)
 
     assert all(query) == result
   end
 
   test "fragments and types" do
     query =
-      normalize from(e in "schema",
-        where: fragment("extract(? from ?) = ?", ^"month", e.start_time, type(^"4", :integer)),
-        where: fragment("extract(? from ?) = ?", ^"year", e.start_time, type(^"2015", :integer)),
-        select: true)
+      normalize(
+        from(e in "schema",
+          where: fragment("extract(? from ?) = ?", ^"month", e.start_time, type(^"4", :integer)),
+          where:
+            fragment("extract(? from ?) = ?", ^"year", e.start_time, type(^"2015", :integer)),
+          select: true
+        )
+      )
 
     result =
       "SELECT 1 FROM \"schema\" AS s0 " <>
-      "WHERE (extract(?1 from s0.\"start_time\") = ?2) " <>
-      "AND (extract(?3 from s0.\"start_time\") = ?4)"
+        "WHERE (extract(?1 from s0.\"start_time\") = ?2) " <>
+        "AND (extract(?3 from s0.\"start_time\") = ?4)"
 
     assert all(query) == String.trim(result)
   end
 
   test "fragments allow ? to be escaped with backslash" do
     query =
-      normalize from(e in "schema",
-        where: fragment("? = \"query\\?\"", e.start_time),
-        select: true)
+      normalize(
+        from(e in "schema",
+          where: fragment("? = \"query\\?\"", e.start_time),
+          select: true
+        )
+      )
 
-    result =
-      "SELECT 1 FROM \"schema\" AS s0 " <>
-      "WHERE (s0.\"start_time\" = \"query?\")"
+    result = "SELECT 1 FROM \"schema\" AS s0 " <> "WHERE (s0.\"start_time\" = \"query?\")"
 
     assert all(query) == String.trim(result)
   end
@@ -486,39 +546,50 @@ defmodule Sqlite.Ecto2.Test do
 
   test "update all" do
     query = from(m in Schema, update: [set: [x: 0]]) |> normalize(:update_all)
-    assert update_all(query) ==
-           ~s{UPDATE "schema" SET "x" = 0}
+    assert update_all(query) == ~s{UPDATE "schema" SET "x" = 0}
 
     query = from(m in Schema, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
+
     assert update_all(query) ==
-           ~s{UPDATE "schema" SET "x" = 0, "y" = "schema"."y" + 1, "z" = "schema"."z" + -3}
+             ~s{UPDATE "schema" SET "x" = 0, "y" = "schema"."y" + 1, "z" = "schema"."z" + -3}
 
     query = from(e in Schema, where: e.x == 123, update: [set: [x: 0]]) |> normalize(:update_all)
-    assert update_all(query) ==
-           ~s{UPDATE "schema" SET "x" = 0 WHERE ("schema"."x" = 123)}
+    assert update_all(query) == ~s{UPDATE "schema" SET "x" = 0 WHERE ("schema"."x" = 123)}
 
     query = from(m in Schema, update: [set: [x: ^0]]) |> normalize(:update_all)
-    assert update_all(query) ==
-           ~s{UPDATE "schema" SET "x" = ?1}
+    assert update_all(query) == ~s{UPDATE "schema" SET "x" = ?1}
 
     assert_raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite", fn ->
-      query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z)
-                    |> update([_], set: [x: 0]) |> normalize(:update_all)
+      query =
+        Schema
+        |> join(:inner, [p], q in Schema2, p.x == q.z)
+        |> update([_], set: [x: 0])
+        |> normalize(:update_all)
+
       update_all(query)
     end
 
     assert_raise ArgumentError, "JOINS are not supported on UPDATE statements by SQLite", fn ->
-      query = from(e in Schema, where: e.x == 123, update: [set: [x: 0]],
-                               join: q in Schema2, on: e.x == q.z) |> normalize(:update_all)
+      query =
+        from(e in Schema,
+          where: e.x == 123,
+          update: [set: [x: 0]],
+          join: q in Schema2,
+          on: e.x == q.z
+        )
+        |> normalize(:update_all)
+
       update_all(query)
     end
   end
 
   test "update all with returning" do
     query = from(m in Schema, update: [set: [x: 0]]) |> select([m], m) |> normalize(:update_all)
+
     assert update_all(query) ==
-           ~s{UPDATE "schema" SET "x" = 0 ;--RETURNING ON UPDATE "schema","id","x","y","z"}
-           # diff SQLite syntax
+             ~s{UPDATE "schema" SET "x" = 0 ;--RETURNING ON UPDATE "schema","id","x","y","z"}
+
+    # diff SQLite syntax
   end
 
   test "update all array ops" do
@@ -533,19 +604,18 @@ defmodule Sqlite.Ecto2.Test do
     end
   end
 
-  test "update all with prefix" do # new don't know what to expect
+  # new don't know what to expect
+  test "update all with prefix" do
     query = from(m in Schema, update: [set: [x: 0]]) |> normalize(:update_all)
-    assert update_all(%{query | prefix: "prefix"}) ==
-           ~s{UPDATE "prefix"."schema" SET "x" = 0}
+    assert update_all(%{query | prefix: "prefix"}) == ~s{UPDATE "prefix"."schema" SET "x" = 0}
   end
 
   test "delete all" do
-    query = Schema |> Queryable.to_query |> normalize
+    query = Schema |> Queryable.to_query() |> normalize
     assert delete_all(query) == ~s{DELETE FROM "schema"}
 
     query = from(e in Schema, where: e.x == 123) |> normalize
-    assert delete_all(query) ==
-           ~s{DELETE FROM "schema" WHERE ("schema"."x" = 123)}
+    assert delete_all(query) == ~s{DELETE FROM "schema" WHERE ("schema"."x" = 123)}
 
     assert_raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite", fn ->
       query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z) |> normalize
@@ -553,23 +623,30 @@ defmodule Sqlite.Ecto2.Test do
     end
 
     assert_raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite", fn ->
-      query = from(e in Schema, where: e.x == 123, join: q in Schema2, on: e.x == q.z) |> normalize
+      query =
+        from(e in Schema, where: e.x == 123, join: q in Schema2, on: e.x == q.z) |> normalize
+
       delete_all(query)
     end
 
     assert_raise ArgumentError, "JOINS are not supported on DELETE statements by SQLite", fn ->
-      query = from(e in Schema, where: e.x == 123, join: assoc(e, :comments), join: assoc(e, :permalink)) |> normalize
+      query =
+        from(e in Schema, where: e.x == 123, join: assoc(e, :comments), join: assoc(e, :permalink))
+        |> normalize
+
       delete_all(query)
     end
   end
 
   test "delete all with returning" do
-    query = Schema |> Queryable.to_query |> select([m], m) |> normalize
-    assert delete_all(query) == ~s{DELETE FROM "schema" ;--RETURNING ON DELETE "schema","id","x","y","z"}
+    query = Schema |> Queryable.to_query() |> select([m], m) |> normalize
+
+    assert delete_all(query) ==
+             ~s{DELETE FROM "schema" ;--RETURNING ON DELETE "schema","id","x","y","z"}
   end
 
   test "delete all with prefix" do
-    query = Schema |> Queryable.to_query |> normalize
+    query = Schema |> Queryable.to_query() |> normalize
     assert delete_all(%{query | prefix: "prefix"}) == ~s{DELETE FROM "prefix"."schema"}
   end
 
@@ -577,84 +654,121 @@ defmodule Sqlite.Ecto2.Test do
 
   test "join" do
     query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z) |> select([], true) |> normalize
-    assert all(query) ==
-           ~s{SELECT 1 FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON s0."x" = s1."z"}
 
-    query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z)
-                  |> join(:inner, [], Schema, true) |> select([], true) |> normalize
     assert all(query) ==
-           ~s{SELECT 1 FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON s0."x" = s1."z" } <>
-           ~s{INNER JOIN "schema" AS s2 ON 1}
+             ~s{SELECT 1 FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON s0."x" = s1."z"}
+
+    query =
+      Schema
+      |> join(:inner, [p], q in Schema2, p.x == q.z)
+      |> join(:inner, [], Schema, true)
+      |> select([], true)
+      |> normalize
+
+    assert all(query) ==
+             ~s{SELECT 1 FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON s0."x" = s1."z" } <>
+               ~s{INNER JOIN "schema" AS s2 ON 1}
   end
 
   test "join with nothing bound" do
     query = Schema |> join(:inner, [], q in Schema2, q.z == q.z) |> select([], true) |> normalize
+
     assert all(query) ==
-           ~s{SELECT 1 FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON s1."z" = s1."z"}
+             ~s{SELECT 1 FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON s1."z" = s1."z"}
   end
 
   test "join without schema" do
-    query = "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], true) |> normalize
+    query =
+      "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], true) |> normalize
+
     assert all(query) ==
-           ~s{SELECT 1 FROM "posts" AS p0 INNER JOIN "comments" AS c1 ON p0."x" = c1."z"}
+             ~s{SELECT 1 FROM "posts" AS p0 INNER JOIN "comments" AS c1 ON p0."x" = c1."z"}
   end
 
   test "join with subquery" do
     posts = subquery("posts" |> where(title: ^"hello") |> select([r], %{x: r.x, y: r.y}))
-    query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p.x) |> normalize
+
+    query =
+      "comments"
+      |> join(:inner, [c], p in subquery(posts), true)
+      |> select([_, p], p.x)
+      |> normalize
+
     assert all(query) ==
-           ~s{SELECT s1."x" FROM "comments" AS c0 } <>
-           ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "y" FROM "posts" AS p0 WHERE (p0."title" = ?1)) AS s1 ON 1}
+             ~s{SELECT s1."x" FROM "comments" AS c0 } <>
+               ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "y" FROM "posts" AS p0 WHERE (p0."title" = ?1)) AS s1 ON 1}
 
     posts = subquery("posts" |> where(title: ^"hello") |> select([r], %{x: r.x, z: r.y}))
-    query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p) |> normalize
+
+    query =
+      "comments"
+      |> join(:inner, [c], p in subquery(posts), true)
+      |> select([_, p], p)
+      |> normalize
+
     assert all(query) ==
-           ~s{SELECT s1."x", s1."z" FROM "comments" AS c0 } <>
-           ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "z" FROM "posts" AS p0 WHERE (p0."title" = ?1)) AS s1 ON 1}
+             ~s{SELECT s1."x", s1."z" FROM "comments" AS c0 } <>
+               ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "z" FROM "posts" AS p0 WHERE (p0."title" = ?1)) AS s1 ON 1}
   end
 
   test "join with prefix" do
     query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z) |> select([], true) |> normalize
+
     assert all(%{query | prefix: "prefix"}) ==
-           ~s{SELECT 1 FROM "prefix"."schema" AS s0 INNER JOIN "prefix"."schema2" AS s1 ON s0."x" = s1."z"}
+             ~s{SELECT 1 FROM "prefix"."schema" AS s0 INNER JOIN "prefix"."schema2" AS s1 ON s0."x" = s1."z"}
   end
 
   test "join with fragment" do
-    query = Schema
-            |> join(:inner, [p], q in fragment("SELECT * FROM schema2 AS s2 WHERE s2.id = ? AND s2.field = ?", p.x, ^10))
-            |> select([p], {p.id, ^0})
-            |> where([p], p.id > 0 and p.id < ^100)
-            |> normalize
+    query =
+      Schema
+      |> join(
+        :inner,
+        [p],
+        q in fragment("SELECT * FROM schema2 AS s2 WHERE s2.id = ? AND s2.field = ?", p.x, ^10)
+      )
+      |> select([p], {p.id, ^0})
+      |> where([p], p.id > 0 and p.id < ^100)
+      |> normalize
+
     assert all(query) ==
-      ~s{SELECT s0."id", ?1 FROM "schema" AS s0 INNER JOIN } <>
-      ~s{(SELECT * FROM schema2 AS s2 WHERE s2.id = s0."x" AND s2.field = ?2) AS f1 ON 1 } <>
-      ~s{WHERE ((s0."id" > 0) AND (s0."id" < ?3))}
+             ~s{SELECT s0."id", ?1 FROM "schema" AS s0 INNER JOIN } <>
+               ~s{(SELECT * FROM schema2 AS s2 WHERE s2.id = s0."x" AND s2.field = ?2) AS f1 ON 1 } <>
+               ~s{WHERE ((s0."id" > 0) AND (s0."id" < ?3))}
   end
 
   test "join with fragment and on defined" do
-    query = Schema
-            |> join(:inner, [p], q in fragment("SELECT * FROM schema2"), q.id == p.id)
-            |> select([p], {p.id, ^0})
-            |> normalize
+    query =
+      Schema
+      |> join(:inner, [p], q in fragment("SELECT * FROM schema2"), q.id == p.id)
+      |> select([p], {p.id, ^0})
+      |> normalize
+
     assert all(query) ==
-           ~s{SELECT s0."id", ?1 FROM "schema" AS s0 INNER JOIN } <>
-           ~s{(SELECT * FROM schema2) AS f1 ON f1."id" = s0."id"}
+             ~s{SELECT s0."id", ?1 FROM "schema" AS s0 INNER JOIN } <>
+               ~s{(SELECT * FROM schema2) AS f1 ON f1."id" = s0."id"}
   end
 
   test "join with query interpolation" do
     inner = Ecto.Queryable.to_query(Schema2)
     query = from(p in Schema, left_join: c in ^inner, select: {p.id, c.id}) |> normalize()
+
     assert all(query) ==
-           "SELECT s0.\"id\", s1.\"id\" FROM \"schema\" AS s0 LEFT JOIN \"schema2\" AS s1 ON 1"
+             "SELECT s0.\"id\", s1.\"id\" FROM \"schema\" AS s0 LEFT JOIN \"schema2\" AS s1 ON 1"
   end
 
   test "lateral join with fragment" do
     assert_raise ArgumentError, "join `:inner_lateral` not supported by SQLite", fn ->
-      query = Schema
-              |> join(:inner_lateral, [p], q in fragment("SELECT * FROM schema2 AS s2 WHERE s2.id = ? AND s2.field = ?", p.x, ^10))
-              |> select([p, q], {p.id, q.z})
-              |> where([p], p.id > 0 and p.id < ^100)
-              |> normalize
+      query =
+        Schema
+        |> join(
+          :inner_lateral,
+          [p],
+          q in fragment("SELECT * FROM schema2 AS s2 WHERE s2.id = ? AND s2.field = ?", p.x, ^10)
+        )
+        |> select([p, q], {p.id, q.z})
+        |> where([p], p.id > 0 and p.id < ^100)
+        |> normalize
+
       all(query)
     end
   end
@@ -670,41 +784,44 @@ defmodule Sqlite.Ecto2.Test do
     query = from(p in Schema, join: c in Schema2, on: true)
     query = from(p in query, join: c in Schema2, on: true, select: {p.id, c.id})
     query = normalize(query)
+
     assert all(query) ==
-           "SELECT s0.\"id\", s2.\"id\" FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON 1 INNER JOIN \"schema2\" AS s2 ON 1"
+             "SELECT s0.\"id\", s2.\"id\" FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON 1 INNER JOIN \"schema2\" AS s2 ON 1"
   end
 
   describe "query interpolation parameters" do
     test "self join on subquery" do
       subquery = select(Schema, [r], %{x: r.x, y: r.y})
       query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
+
       assert all(query) ==
-             ~s{SELECT s0."x", s0."y" FROM "schema" AS s0 INNER JOIN } <>
-             ~s{(SELECT s0."x" AS "x", s0."y" AS "y" FROM "schema" AS s0) } <>
-             ~s{AS s1 ON 1}
+               ~s{SELECT s0."x", s0."y" FROM "schema" AS s0 INNER JOIN } <>
+                 ~s{(SELECT s0."x" AS "x", s0."y" AS "y" FROM "schema" AS s0) } <> ~s{AS s1 ON 1}
     end
 
     test "self join on subquery with fragment" do
       subquery = select(Schema, [r], %{string: fragment("downcase(?)", ^"string")})
       query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
+
       assert all(query) ==
-             ~s{SELECT downcase(?1) FROM "schema" AS s0 INNER JOIN } <>
-             ~s{(SELECT downcase(?2) AS "string" FROM "schema" AS s0) } <>
-             ~s{AS s1 ON 1}
+               ~s{SELECT downcase(?1) FROM "schema" AS s0 INNER JOIN } <>
+                 ~s{(SELECT downcase(?2) AS "string" FROM "schema" AS s0) } <> ~s{AS s1 ON 1}
     end
 
     test "join on subquery with simple select" do
       subquery = select(Schema, [r], %{x: ^999, w: ^888})
-      query = Schema
-              |> select([r], %{y: ^666})
-              |> join(:inner, [c], p in subquery(subquery), true)
-              |> where([a, b], a.x == ^111)
-              |> normalize
+
+      query =
+        Schema
+        |> select([r], %{y: ^666})
+        |> join(:inner, [c], p in subquery(subquery), true)
+        |> where([a, b], a.x == ^111)
+        |> normalize
 
       assert all(query) ==
-             ~s{SELECT ?1 FROM "schema" AS s0 INNER JOIN } <>
-             ~s{(SELECT ?2 AS "x", ?3 AS "w" FROM "schema" AS s0) AS s1 ON 1 } <>
-             ~s{WHERE (s0."x" = ?4)}
+               ~s{SELECT ?1 FROM "schema" AS s0 INNER JOIN } <>
+                 ~s{(SELECT ?2 AS "x", ?3 AS "w" FROM "schema" AS s0) AS s1 ON 1 } <>
+                 ~s{WHERE (s0."x" = ?4)}
     end
   end
 
@@ -712,31 +829,39 @@ defmodule Sqlite.Ecto2.Test do
 
   test "association join belongs_to" do
     query = Schema2 |> join(:inner, [c], p in assoc(c, :post)) |> select([], true) |> normalize
+
     assert all(query) ==
-           "SELECT 1 FROM \"schema2\" AS s0 INNER JOIN \"schema\" AS s1 ON s1.\"x\" = s0.\"z\""
+             "SELECT 1 FROM \"schema2\" AS s0 INNER JOIN \"schema\" AS s1 ON s1.\"x\" = s0.\"z\""
   end
 
   test "association join has_many" do
     query = Schema |> join(:inner, [p], c in assoc(p, :comments)) |> select([], true) |> normalize
+
     assert all(query) ==
-           "SELECT 1 FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON s1.\"z\" = s0.\"x\""
+             "SELECT 1 FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON s1.\"z\" = s0.\"x\""
   end
 
   test "association join has_one" do
-    query = Schema |> join(:inner, [p], pp in assoc(p, :permalink)) |> select([], true) |> normalize
+    query =
+      Schema |> join(:inner, [p], pp in assoc(p, :permalink)) |> select([], true) |> normalize
+
     assert all(query) ==
-           "SELECT 1 FROM \"schema\" AS s0 INNER JOIN \"schema3\" AS s1 ON s1.\"id\" = s0.\"y\""
+             "SELECT 1 FROM \"schema\" AS s0 INNER JOIN \"schema3\" AS s1 ON s1.\"id\" = s0.\"y\""
   end
 
   # Schema based
 
   test "insert" do
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {:raise, [], []}, [:id])
-    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ;--RETURNING ON INSERT "schema","id"}
 
-    assert_raise ArgumentError, "Cell-wise default values are not supported on INSERT statements by SQLite", fn ->
-      insert(nil, "schema", [:x, :y], [[:x, :y], [nil, :z]], {:raise, [], []}, [:id])
-    end
+    assert query ==
+             ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ;--RETURNING ON INSERT "schema","id"}
+
+    assert_raise ArgumentError,
+                 "Cell-wise default values are not supported on INSERT statements by SQLite",
+                 fn ->
+                   insert(nil, "schema", [:x, :y], [[:x, :y], [nil, :z]], {:raise, [], []}, [:id])
+                 end
 
     query = insert(nil, "schema", [], [[]], {:raise, [], []}, [:id])
     assert query == ~s{INSERT INTO "schema" DEFAULT VALUES ;--RETURNING ON INSERT "schema","id"}
@@ -745,7 +870,9 @@ defmodule Sqlite.Ecto2.Test do
     assert query == ~s{INSERT INTO "schema" DEFAULT VALUES}
 
     query = insert("prefix", "schema", [], [[]], {:raise, [], []}, [:id])
-    assert query == ~s{INSERT INTO "prefix"."schema" DEFAULT VALUES ;--RETURNING ON INSERT "prefix"."schema","id"}
+
+    assert query ==
+             ~s{INSERT INTO "prefix"."schema" DEFAULT VALUES ;--RETURNING ON INSERT "prefix"."schema","id"}
 
     query = insert("prefix", "schema", [], [[]], {:raise, [], []}, [])
     assert query == ~s{INSERT INTO "prefix"."schema" DEFAULT VALUES}
@@ -765,7 +892,9 @@ defmodule Sqlite.Ecto2.Test do
     end
 
     assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      update = from("schema", update: [set: [z: ^"foo"]], where: [w: true]) |> normalize(:update_all, 2)
+      update =
+        from("schema", update: [set: [z: ^"foo"]], where: [w: true]) |> normalize(:update_all, 2)
+
       insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
     end
 
@@ -775,7 +904,9 @@ defmodule Sqlite.Ecto2.Test do
     end
 
     assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      update = normalize(from("schema", update: [set: [z: ^"foo"]], where: [w: true]), :update_all, 2)
+      update =
+        normalize(from("schema", update: [set: [z: ^"foo"]], where: [w: true]), :update_all, 2)
+
       insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
     end
 
@@ -794,10 +925,14 @@ defmodule Sqlite.Ecto2.Test do
     assert query == ~s{UPDATE "schema" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3}
 
     query = update(nil, "schema", [:x, :y], [:id], [:z])
-    assert query == ~s{UPDATE "schema" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "schema","z"}
+
+    assert query ==
+             ~s{UPDATE "schema" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "schema","z"}
 
     query = update("prefix", "schema", [:x, :y], [:id], [:x, :z])
-    assert query == ~s{UPDATE "prefix"."schema" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "prefix"."schema","x","z"}
+
+    assert query ==
+             ~s{UPDATE "prefix"."schema" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3 ;--RETURNING ON UPDATE "prefix"."schema","x","z"}
 
     query = update("prefix", "schema", [:x, :y], [:id], [])
     assert query == ~s{UPDATE "prefix"."schema" SET "x" = ?1, "y" = ?2 WHERE "id" = ?3}
@@ -808,10 +943,14 @@ defmodule Sqlite.Ecto2.Test do
     assert query == ~s{DELETE FROM "schema" WHERE "x" = ?1 AND "y" = ?2}
 
     query = delete(nil, "schema", [:x, :y], [:z])
-    assert query == ~s{DELETE FROM "schema" WHERE "x" = ?1 AND "y" = ?2 ;--RETURNING ON DELETE "schema","z"}
+
+    assert query ==
+             ~s{DELETE FROM "schema" WHERE "x" = ?1 AND "y" = ?2 ;--RETURNING ON DELETE "schema","z"}
 
     query = delete("prefix", "schema", [:x, :y], [:z])
-    assert query == ~s{DELETE FROM "prefix"."schema" WHERE "x" = ?1 AND "y" = ?2 ;--RETURNING ON DELETE "prefix"."schema","z"}
+
+    assert query ==
+             ~s{DELETE FROM "prefix"."schema" WHERE "x" = ?1 AND "y" = ?2 ;--RETURNING ON DELETE "prefix"."schema","z"}
 
     query = delete(nil, "schema", [:x, :y], [])
     assert query == ~s{DELETE FROM "schema" WHERE "x" = ?1 AND "y" = ?2}
@@ -823,8 +962,9 @@ defmodule Sqlite.Ecto2.Test do
   # DDL
 
   alias Ecto.Migration.Reference
-  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3,
-                                constraint: 2, constraint: 3]
+
+  import Ecto.Migration,
+    only: [table: 1, table: 2, index: 2, index: 3, constraint: 2, constraint: 3]
 
   test "executing a string during migration" do
     assert execute_ddl("example") == ["example"]
@@ -837,23 +977,28 @@ defmodule Sqlite.Ecto2.Test do
   end
 
   test "create table" do
-    create = {:create, table(:posts),
-               [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
-                {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
-                {:add, :on_hand, :integer, [default: 0, null: true]},
-                {:add, :is_active, :boolean, [default: true]}]}
+    create =
+      {:create, table(:posts),
+       [
+         {:add, :name, :string, [default: "Untitled", size: 20, null: false]},
+         {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
+         {:add, :on_hand, :integer, [default: 0, null: true]},
+         {:add, :is_active, :boolean, [default: true]}
+       ]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL,
-    "price" NUMERIC DEFAULT expr,
-    "on_hand" INTEGER DEFAULT 0,
-    "is_active" BOOLEAN DEFAULT 1)
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [
+             """
+             CREATE TABLE "posts" ("name" TEXT DEFAULT 'Untitled' NOT NULL,
+             "price" NUMERIC DEFAULT expr,
+             "on_hand" INTEGER DEFAULT 0,
+             "is_active" BOOLEAN DEFAULT 1)
+             """
+             |> remove_newlines
+           ]
   end
 
   test "create table invalid default" do
-    create = {:create, table(:posts),
-               [{:add, :name, :string, [default: :atoms_not_allowed]}]}
+    create = {:create, table(:posts), [{:add, :name, :string, [default: :atoms_not_allowed]}]}
 
     assert_raise ArgumentError, ~r"unknown default `:atoms_not_allowed` for type `:string`", fn ->
       execute_ddl(create)
@@ -861,194 +1006,259 @@ defmodule Sqlite.Ecto2.Test do
   end
 
   test "create table array type" do
-    create = {:create, table(:posts),
-               [{:add, :name, {:array, :numeric}, []}]}
+    create = {:create, table(:posts), [{:add, :name, {:array, :numeric}, []}]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts" ("name" JSON)
-    """ |> remove_newlines()]
+    assert execute_ddl(create) == [
+             """
+             CREATE TABLE "posts" ("name" JSON)
+             """
+             |> remove_newlines()
+           ]
   end
 
   test "create table illegal options" do
-    create = {:create, table(:posts, options: [allowed: :not]),
-               [{:add, :name, :string}]}
+    create = {:create, table(:posts, options: [allowed: :not]), [{:add, :name, :string}]}
 
-    assert_raise ArgumentError, ~r"SQLite adapter does not support keyword lists in :options", fn ->
-      execute_ddl(create)
-    end
+    assert_raise ArgumentError,
+                 ~r"SQLite adapter does not support keyword lists in :options",
+                 fn ->
+                   execute_ddl(create)
+                 end
   end
 
   test "create table if not exists" do
-    create = {:create_if_not_exists, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :title, :string, []},
-                {:add, :price, :decimal, [precision: 10, scale: 2]},
-                {:add, :created_at, :datetime, []}]}
+    create =
+      {:create_if_not_exists, table(:posts),
+       [
+         {:add, :id, :serial, [primary_key: true]},
+         {:add, :title, :string, []},
+         {:add, :price, :decimal, [precision: 10, scale: 2]},
+         {:add, :created_at, :datetime, []}
+       ]}
+
     query = execute_ddl(create)
-    assert query == ["""
-    CREATE TABLE IF NOT EXISTS "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "title" TEXT,
-    "price" DECIMAL(10,2),
-    "created_at" DATETIME)
-    """ |> remove_newlines]
+
+    assert query == [
+             """
+             CREATE TABLE IF NOT EXISTS "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
+             "title" TEXT,
+             "price" DECIMAL(10,2),
+             "created_at" DATETIME)
+             """
+             |> remove_newlines
+           ]
   end
 
   test "create table with prefix" do
-    create = {:create, table(:posts, prefix: :foo),
-               [{:add, :category_0, %Reference{table: :categories}, []}]}
+    create =
+      {:create, table(:posts, prefix: :foo),
+       [{:add, :category_0, %Reference{table: :categories}, []}]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "foo"."posts"
-    ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"))
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [
+             """
+             CREATE TABLE "foo"."posts"
+             ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"))
+             """
+             |> remove_newlines
+           ]
   end
 
   test "create table with comment on columns and table" do
-    create = {:create, table(:posts, comment: "comment"),
-              [
-                {:add, :category_0, %Reference{table: :categories}, [comment: "column comment"]},
-                {:add, :created_at, :timestamp, []},
-                {:add, :updated_at, :timestamp, [comment: "column comment 2"]}
-              ]}
-    assert execute_ddl(create) == [remove_newlines("""
-    CREATE TABLE "posts"
-    ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"), "created_at" TIMESTAMP, "updated_at" TIMESTAMP)
-    """)]
-      # NOTE: Comments are not supported by SQLite. DDL query generator will ignore them.
+    create =
+      {:create, table(:posts, comment: "comment"),
+       [
+         {:add, :category_0, %Reference{table: :categories}, [comment: "column comment"]},
+         {:add, :created_at, :timestamp, []},
+         {:add, :updated_at, :timestamp, [comment: "column comment 2"]}
+       ]}
+
+    assert execute_ddl(create) == [
+             remove_newlines("""
+             CREATE TABLE "posts"
+             ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"), "created_at" TIMESTAMP, "updated_at" TIMESTAMP)
+             """)
+           ]
+
+    # NOTE: Comments are not supported by SQLite. DDL query generator will ignore them.
   end
 
   test "create table with comment on table" do
-    create = {:create, table(:posts, comment: "table comment"),
-              [{:add, :category_0, %Reference{table: :categories}, []}]}
-    assert execute_ddl(create) == [remove_newlines("""
-    CREATE TABLE "posts"
-    ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"))
-    """)]
-      # NOTE: Comments are not supported by SQLite. DDL query generator will ignore them.
+    create =
+      {:create, table(:posts, comment: "table comment"),
+       [{:add, :category_0, %Reference{table: :categories}, []}]}
+
+    assert execute_ddl(create) == [
+             remove_newlines("""
+             CREATE TABLE "posts"
+             ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"))
+             """)
+           ]
+
+    # NOTE: Comments are not supported by SQLite. DDL query generator will ignore them.
   end
 
   test "create table with comment on columns" do
-    create = {:create, table(:posts),
-              [
-                {:add, :category_0, %Reference{table: :categories}, [comment: "column comment"]},
-                {:add, :created_at, :timestamp, []},
-                {:add, :updated_at, :timestamp, [comment: "column comment 2"]}
-              ]}
-    assert execute_ddl(create) == [remove_newlines("""
-    CREATE TABLE "posts"
-    ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"), "created_at" TIMESTAMP, "updated_at" TIMESTAMP)
-    """)]
-      # NOTE: Comments are not supported by SQLite. DDL query generator will ignore them.
+    create =
+      {:create, table(:posts),
+       [
+         {:add, :category_0, %Reference{table: :categories}, [comment: "column comment"]},
+         {:add, :created_at, :timestamp, []},
+         {:add, :updated_at, :timestamp, [comment: "column comment 2"]}
+       ]}
+
+    assert execute_ddl(create) == [
+             remove_newlines("""
+             CREATE TABLE "posts"
+             ("category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"), "created_at" TIMESTAMP, "updated_at" TIMESTAMP)
+             """)
+           ]
+
+    # NOTE: Comments are not supported by SQLite. DDL query generator will ignore them.
   end
 
   test "create table with references" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_0, %Reference{table: :categories}, []},
-                {:add, :category_1, %Reference{table: :categories, name: :foo_bar}, []},
-                {:add, :category_2, %Reference{table: :categories, on_delete: :nothing}, []},
-                {:add, :category_3, %Reference{table: :categories, on_delete: :delete_all}, [null: false]},
-                {:add, :category_4, %Reference{table: :categories, on_delete: :nilify_all}, []},
-                {:add, :category_5, %Reference{table: :categories, on_update: :nothing}, []},
-                {:add, :category_6, %Reference{table: :categories, on_update: :update_all}, [null: false]},
-                {:add, :category_7, %Reference{table: :categories, on_update: :nilify_all}, []},
-                {:add, :category_8, %Reference{table: :categories, on_delete: :nilify_all, on_update: :update_all}, [null: false]}]}
+    create =
+      {:create, table(:posts),
+       [
+         {:add, :id, :serial, [primary_key: true]},
+         {:add, :category_0, %Reference{table: :categories}, []},
+         {:add, :category_1, %Reference{table: :categories, name: :foo_bar}, []},
+         {:add, :category_2, %Reference{table: :categories, on_delete: :nothing}, []},
+         {:add, :category_3, %Reference{table: :categories, on_delete: :delete_all},
+          [null: false]},
+         {:add, :category_4, %Reference{table: :categories, on_delete: :nilify_all}, []},
+         {:add, :category_5, %Reference{table: :categories, on_update: :nothing}, []},
+         {:add, :category_6, %Reference{table: :categories, on_update: :update_all},
+          [null: false]},
+         {:add, :category_7, %Reference{table: :categories, on_update: :nilify_all}, []},
+         {:add, :category_8,
+          %Reference{table: :categories, on_delete: :nilify_all, on_update: :update_all},
+          [null: false]}
+       ]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"),
-    "category_1" INTEGER CONSTRAINT "foo_bar" REFERENCES "categories"("id"),
-    "category_2" INTEGER CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"),
-    "category_3" INTEGER NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "categories"("id") ON DELETE CASCADE,
-    "category_4" INTEGER CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL,
-    "category_5" INTEGER CONSTRAINT "posts_category_5_fkey" REFERENCES "categories"("id"),
-    "category_6" INTEGER NOT NULL CONSTRAINT "posts_category_6_fkey" REFERENCES "categories"("id") ON UPDATE CASCADE,
-    "category_7" INTEGER CONSTRAINT "posts_category_7_fkey" REFERENCES "categories"("id") ON UPDATE SET NULL,
-    "category_8" INTEGER NOT NULL CONSTRAINT "posts_category_8_fkey" REFERENCES "categories"("id") ON DELETE SET NULL ON UPDATE CASCADE)
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [
+             """
+             CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
+             "category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"),
+             "category_1" INTEGER CONSTRAINT "foo_bar" REFERENCES "categories"("id"),
+             "category_2" INTEGER CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"),
+             "category_3" INTEGER NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "categories"("id") ON DELETE CASCADE,
+             "category_4" INTEGER CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL,
+             "category_5" INTEGER CONSTRAINT "posts_category_5_fkey" REFERENCES "categories"("id"),
+             "category_6" INTEGER NOT NULL CONSTRAINT "posts_category_6_fkey" REFERENCES "categories"("id") ON UPDATE CASCADE,
+             "category_7" INTEGER CONSTRAINT "posts_category_7_fkey" REFERENCES "categories"("id") ON UPDATE SET NULL,
+             "category_8" INTEGER NOT NULL CONSTRAINT "posts_category_8_fkey" REFERENCES "categories"("id") ON DELETE SET NULL ON UPDATE CASCADE)
+             """
+             |> remove_newlines
+           ]
   end
 
   test "create table with references including prefixes" do
-    create = {:create, table(:posts, prefix: :foo),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_0, %Reference{table: :categories}, []},
-                {:add, :category_1, %Reference{table: :categories, name: :foo_bar}, []},
-                {:add, :category_2, %Reference{table: :categories, on_delete: :nothing}, []},
-                {:add, :category_3, %Reference{table: :categories, on_delete: :delete_all}, [null: false]},
-                {:add, :category_4, %Reference{table: :categories, on_delete: :nilify_all}, []}]}
+    create =
+      {:create, table(:posts, prefix: :foo),
+       [
+         {:add, :id, :serial, [primary_key: true]},
+         {:add, :category_0, %Reference{table: :categories}, []},
+         {:add, :category_1, %Reference{table: :categories, name: :foo_bar}, []},
+         {:add, :category_2, %Reference{table: :categories, on_delete: :nothing}, []},
+         {:add, :category_3, %Reference{table: :categories, on_delete: :delete_all},
+          [null: false]},
+         {:add, :category_4, %Reference{table: :categories, on_delete: :nilify_all}, []}
+       ]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "foo"."posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"),
-    "category_1" INTEGER CONSTRAINT "foo_bar" REFERENCES "foo"."categories"("id"),
-    "category_2" INTEGER CONSTRAINT "posts_category_2_fkey" REFERENCES "foo"."categories"("id"),
-    "category_3" INTEGER NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "foo"."categories"("id") ON DELETE CASCADE,
-    "category_4" INTEGER CONSTRAINT "posts_category_4_fkey" REFERENCES "foo"."categories"("id") ON DELETE SET NULL)
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [
+             """
+             CREATE TABLE "foo"."posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT,
+             "category_0" INTEGER CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"),
+             "category_1" INTEGER CONSTRAINT "foo_bar" REFERENCES "foo"."categories"("id"),
+             "category_2" INTEGER CONSTRAINT "posts_category_2_fkey" REFERENCES "foo"."categories"("id"),
+             "category_3" INTEGER NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "foo"."categories"("id") ON DELETE CASCADE,
+             "category_4" INTEGER CONSTRAINT "posts_category_4_fkey" REFERENCES "foo"."categories"("id") ON DELETE SET NULL)
+             """
+             |> remove_newlines
+           ]
   end
 
   test "create table with options" do
-    create = {:create, table(:posts, options: "WITHOUT ROWID"),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :created_at, :datetime, []}]}
+    create =
+      {:create, table(:posts, options: "WITHOUT ROWID"),
+       [{:add, :id, :serial, [primary_key: true]}, {:add, :created_at, :datetime, []}]}
+
     assert execute_ddl(create) ==
-           [~s|CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "created_at" DATETIME) WITHOUT ROWID|]
+             [
+               ~s|CREATE TABLE "posts" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "created_at" DATETIME) WITHOUT ROWID|
+             ]
   end
 
   test "create table with composite key" do
-    create = {:create, table(:posts),
-               [{:add, :a, :integer, [primary_key: true]},
-                {:add, :b, :integer, [primary_key: true]},
-                {:add, :name, :string, []}]}
+    create =
+      {:create, table(:posts),
+       [
+         {:add, :a, :integer, [primary_key: true]},
+         {:add, :b, :integer, [primary_key: true]},
+         {:add, :name, :string, []}
+       ]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts" ("a" INTEGER, "b" INTEGER, "name" TEXT, PRIMARY KEY ("a", "b"))
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [
+             """
+             CREATE TABLE "posts" ("a" INTEGER, "b" INTEGER, "name" TEXT, PRIMARY KEY ("a", "b"))
+             """
+             |> remove_newlines
+           ]
   end
 
   test "create table with bad table name" do
     assert_raise ArgumentError, "bad table name \"po\\\"sts\"", fn ->
-      create = {:create, table(:"po\"sts"),
-                 [{:add, :id, :serial, [primary_key: true]},
-                  {:add, :created_at, :datetime, []}]}
+      create =
+        {:create, table(:"po\"sts"),
+         [{:add, :id, :serial, [primary_key: true]}, {:add, :created_at, :datetime, []}]}
+
       execute_ddl(create)
     end
   end
 
   test "create table with bad column name" do
     assert_raise ArgumentError, "bad field name \"crea\\\"ted_at\"", fn ->
-      create = {:create, table(:"posts"),
-                 [{:add, :id, :serial, [primary_key: true]},
-                  {:add, :"crea\"ted_at", :datetime, []}]}
+      create =
+        {:create, table(:posts),
+         [{:add, :id, :serial, [primary_key: true]}, {:add, :"crea\"ted_at", :datetime, []}]}
+
       execute_ddl(create)
     end
   end
 
   test "create table with a map column, and an empty map default" do
-    create = {:create, table(:posts),
-              [
-                {:add, :a, :map, [default: %{}]}
-              ]
-            }
+    create =
+      {:create, table(:posts),
+       [
+         {:add, :a, :map, [default: %{}]}
+       ]}
+
     assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("a" TEXT DEFAULT '{}')|]
   end
 
   test "create table with a map column, and a map default with values" do
-    create = {:create, table(:posts),
-              [
-                {:add, :a, :map, [default: %{foo: "bar", baz: "boom"}]}
-              ]
-            }
-    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("a" TEXT DEFAULT '{"foo":"bar","baz":"boom"}')|]
+    create =
+      {:create, table(:posts),
+       [
+         {:add, :a, :map, [default: %{foo: "bar", baz: "boom"}]}
+       ]}
+
+    assert execute_ddl(create) == [
+             ~s|CREATE TABLE "posts" ("a" TEXT DEFAULT '{"foo":"bar","baz":"boom"}')|
+           ]
   end
 
   test "create table with a map column, and a string default" do
-    create = {:create, table(:posts),
-              [
-                {:add, :a, :map, [default: ~s|{"foo":"bar","baz":"boom"}|]}
-              ]
-            }
-    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("a" TEXT DEFAULT '{"foo":"bar","baz":"boom"}')|]
+    create =
+      {:create, table(:posts),
+       [
+         {:add, :a, :map, [default: ~s|{"foo":"bar","baz":"boom"}|]}
+       ]}
+
+    assert execute_ddl(create) == [
+             ~s|CREATE TABLE "posts" ("a" TEXT DEFAULT '{"foo":"bar","baz":"boom"}')|
+           ]
   end
 
   test "drop table" do
@@ -1057,7 +1267,9 @@ defmodule Sqlite.Ecto2.Test do
   end
 
   test "drop table if exists" do
-    assert execute_ddl({:drop_if_exists, %Table{name: "posts"}}) == [~s|DROP TABLE IF EXISTS "posts"|]
+    assert execute_ddl({:drop_if_exists, %Table{name: "posts"}}) == [
+             ~s|DROP TABLE IF EXISTS "posts"|
+           ]
   end
 
   test "drop table with prefix" do
@@ -1066,35 +1278,60 @@ defmodule Sqlite.Ecto2.Test do
   end
 
   test "alter table" do
-    alter = {:alter, table(:posts),
-               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:add, :author_id, %Reference{table: :author}, []}]}
+    alter =
+      {:alter, table(:posts),
+       [
+         {:add, :title, :string, [default: "Untitled", size: 100, null: false]},
+         {:add, :author_id, %Reference{table: :author}, []}
+       ]}
+
     assert execute_ddl(alter) == [
-      remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL|),
-      remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")|)]
+             remove_newlines(
+               ~s|ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL|
+             ),
+             remove_newlines(
+               ~s|ALTER TABLE "posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "author"("id")|
+             )
+           ]
   end
 
   test "alter table with datetime not null" do
-    alter = {:alter, table(:posts),
-               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:add, :when, :utc_datetime, [null: false]}]}
+    alter =
+      {:alter, table(:posts),
+       [
+         {:add, :title, :string, [default: "Untitled", size: 100, null: false]},
+         {:add, :when, :utc_datetime, [null: false]}
+       ]}
+
     assert execute_ddl(alter) == [
-      remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL|),
-      remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "when" UTC_DATETIME|)]
+             remove_newlines(
+               ~s|ALTER TABLE "posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL|
+             ),
+             remove_newlines(~s|ALTER TABLE "posts" ADD COLUMN "when" UTC_DATETIME|)
+           ]
   end
 
   test "alter table with prefix" do
-    alter = {:alter, table(:posts, prefix: :foo),
-               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:add, :author_id, %Reference{table: :author}, []}]}
+    alter =
+      {:alter, table(:posts, prefix: :foo),
+       [
+         {:add, :title, :string, [default: "Untitled", size: 100, null: false]},
+         {:add, :author_id, %Reference{table: :author}, []}
+       ]}
 
     assert execute_ddl(alter) == [
-      remove_newlines(~s|ALTER TABLE "foo"."posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL|),
-      remove_newlines(~s|ALTER TABLE "foo"."posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id")|)]
+             remove_newlines(
+               ~s|ALTER TABLE "foo"."posts" ADD COLUMN "title" TEXT DEFAULT 'Untitled' NOT NULL|
+             ),
+             remove_newlines(
+               ~s|ALTER TABLE "foo"."posts" ADD COLUMN "author_id" INTEGER CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id")|
+             )
+           ]
   end
 
   test "alter column errors for :modify column" do
     alter = {:alter, table(:posts), [{:modify, :price, :numeric, [precision: 8, scale: 2]}]}
+
     assert_raise ArgumentError, "ALTER COLUMN not supported by SQLite", fn ->
       execute_ddl(alter)
     end
@@ -1102,96 +1339,126 @@ defmodule Sqlite.Ecto2.Test do
 
   test "alter column errors for :remove column" do
     alter = {:alter, table(:posts), [{:remove, :price, :numeric, [precision: 8, scale: 2]}]}
+
     assert_raise ArgumentError, "ALTER COLUMN not supported by SQLite", fn ->
       execute_ddl(alter)
     end
   end
 
   test "alter table with primary key" do
-    alter = {:alter, table(:posts),
-             [{:add, :my_pk, :serial, [primary_key: true]}]}
+    alter = {:alter, table(:posts), [{:add, :my_pk, :serial, [primary_key: true]}]}
 
-    assert execute_ddl(alter) == ["""
-    ALTER TABLE "posts"
-    ADD COLUMN "my_pk" INTEGER PRIMARY KEY AUTOINCREMENT
-    """ |> remove_newlines]
+    assert execute_ddl(alter) == [
+             """
+             ALTER TABLE "posts"
+             ADD COLUMN "my_pk" INTEGER PRIMARY KEY AUTOINCREMENT
+             """
+             |> remove_newlines
+           ]
   end
 
   test "create index" do
     create = {:create, index(:posts, [:category_id, :permalink])}
+
     assert execute_ddl(create) ==
-           [~s|CREATE INDEX "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|]
+             [
+               ~s|CREATE INDEX "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|
+             ]
 
     create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main")}
-    assert execute_ddl(create) ==
-           [~s|CREATE INDEX "posts$main" ON "posts" (lower(permalink))|]
+    assert execute_ddl(create) == [~s|CREATE INDEX "posts$main" ON "posts" (lower(permalink))|]
   end
 
   test "create index if not exists" do
     create = {:create_if_not_exists, index(:posts, [:category_id, :permalink])}
     query = execute_ddl(create)
-    assert query == [~s|CREATE INDEX IF NOT EXISTS "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|]
+
+    assert query == [
+             ~s|CREATE INDEX IF NOT EXISTS "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|
+           ]
   end
 
   test "create index with prefix" do
     create = {:create, index(:posts, [:category_id, :permalink], prefix: :foo)}
+
     assert execute_ddl(create) ==
-           [~s|CREATE INDEX "posts_category_id_permalink_index" ON "foo"."posts" ("category_id", "permalink")|]
+             [
+               ~s|CREATE INDEX "posts_category_id_permalink_index" ON "foo"."posts" ("category_id", "permalink")|
+             ]
 
     create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main", prefix: :foo)}
+
     assert execute_ddl(create) ==
-           [~s|CREATE INDEX "posts$main" ON "foo"."posts" (lower(permalink))|]
+             [~s|CREATE INDEX "posts$main" ON "foo"."posts" (lower(permalink))|]
   end
 
   test "create index with comment" do
-    create = {:create, index(:posts, [:category_id, :permalink], prefix: :foo, comment: "comment")}
-    assert execute_ddl(create) == [remove_newlines("""
-    CREATE INDEX "posts_category_id_permalink_index" ON "foo"."posts" ("category_id", "permalink")
-    """)]
-      # NOTE: Comments are not supported by SQLite. DDL query generator will ignore them.
+    create =
+      {:create, index(:posts, [:category_id, :permalink], prefix: :foo, comment: "comment")}
+
+    assert execute_ddl(create) == [
+             remove_newlines("""
+             CREATE INDEX "posts_category_id_permalink_index" ON "foo"."posts" ("category_id", "permalink")
+             """)
+           ]
+
+    # NOTE: Comments are not supported by SQLite. DDL query generator will ignore them.
   end
 
   test "create unique index" do
     create = {:create, index(:posts, [:permalink], unique: true)}
+
     assert execute_ddl(create) ==
-           [~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")|]
+             [~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")|]
   end
 
   test "create unique index if not exists" do
     create = {:create_if_not_exists, index(:posts, [:permalink], unique: true)}
     query = execute_ddl(create)
-    assert query == [~s|CREATE UNIQUE INDEX IF NOT EXISTS "posts_permalink_index" ON "posts" ("permalink")|]
+
+    assert query == [
+             ~s|CREATE UNIQUE INDEX IF NOT EXISTS "posts_permalink_index" ON "posts" ("permalink")|
+           ]
   end
 
   test "create unique index with condition" do
     create = {:create, index(:posts, [:permalink], unique: true, where: "public IS 1")}
+
     assert execute_ddl(create) ==
-           [~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public IS 1|]
+             [
+               ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public IS 1|
+             ]
 
     create = {:create, index(:posts, [:permalink], unique: true, where: :public)}
+
     assert execute_ddl(create) ==
-           [~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public|]
+             [
+               ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink") WHERE public|
+             ]
   end
 
   test "create index concurrently" do
     # NOTE: SQLite doesn't support CONCURRENTLY, so this isn't included in generated SQL.
     create = {:create, index(:posts, [:permalink], concurrently: true)}
+
     assert execute_ddl(create) ==
-           [~s|CREATE INDEX "posts_permalink_index" ON "posts" ("permalink")|]
+             [~s|CREATE INDEX "posts_permalink_index" ON "posts" ("permalink")|]
   end
 
   test "create unique index concurrently" do
     # NOTE: SQLite doesn't support CONCURRENTLY, so this isn't included in generated SQL.
     create = {:create, index(:posts, [:permalink], concurrently: true, unique: true)}
+
     assert execute_ddl(create) ==
-           [~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")|]
+             [~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")|]
   end
 
   test "create an index using a different type" do
     # NOTE: SQLite doesn't support USING, so this isn't included in generated SQL.
     create = {:create, index(:posts, [:permalink], using: :hash)}
+
     assert execute_ddl(create) ==
-           [~s|CREATE INDEX "posts_permalink_index" ON "posts" ("permalink")|]
+             [~s|CREATE INDEX "posts_permalink_index" ON "posts" ("permalink")|]
   end
 
   test "drop index" do
@@ -1217,18 +1484,27 @@ defmodule Sqlite.Ecto2.Test do
 
   test "create check constraint" do
     create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0")}
+
     assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
       execute_ddl(create)
     end
 
-    create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo")}
+    create =
+      {:create,
+       constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo")}
+
     assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
       execute_ddl(create)
     end
   end
 
   test "create exclusion constraint" do
-    create = {:create, constraint(:products, "price_must_be_positive", exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)}
+    create =
+      {:create,
+       constraint(:products, "price_must_be_positive",
+         exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|
+       )}
+
     assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
       execute_ddl(create)
     end
@@ -1236,18 +1512,27 @@ defmodule Sqlite.Ecto2.Test do
 
   test "create constraint with comment" do
     assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
-      create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo", comment: "comment")}
+      create =
+        {:create,
+         constraint(:products, "price_must_be_positive",
+           check: "price > 0",
+           prefix: "foo",
+           comment: "comment"
+         )}
+
       execute_ddl(create)
     end
   end
 
   test "drop constraint" do
     drop = {:drop, constraint(:products, "price_must_be_positive")}
+
     assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
       execute_ddl(drop)
     end
 
     drop = {:drop, constraint(:products, "price_must_be_positive", prefix: "foo")}
+
     assert_raise ArgumentError, "ALTER TABLE with constraints not supported by SQLite", fn ->
       execute_ddl(drop)
     end
@@ -1265,6 +1550,7 @@ defmodule Sqlite.Ecto2.Test do
 
   test "rename column" do
     rename = {:rename, table(:posts), :given_name, :first_name}
+
     assert_raise ArgumentError, "RENAME COLUMN not supported by SQLite", fn ->
       execute_ddl(rename)
     end
@@ -1272,6 +1558,7 @@ defmodule Sqlite.Ecto2.Test do
 
   test "rename column in prefixed table" do
     rename = {:rename, table(:posts, prefix: :foo), :given_name, :first_name}
+
     assert_raise ArgumentError, "RENAME COLUMN not supported by SQLite", fn ->
       execute_ddl(rename)
     end
@@ -1279,15 +1566,20 @@ defmodule Sqlite.Ecto2.Test do
 
   test "drop column errors" do
     alter = {:alter, table(:posts), [{:remove, :summary}]}
+
     assert_raise ArgumentError, "DROP COLUMN not supported by SQLite", fn ->
       execute_ddl(alter)
     end
   end
 
   test "datetime_add with microsecond" do
-    assert_raise ArgumentError, "SQLite does not support microsecond precision in datetime intervals", fn ->
-      TestRepo.all(from p in Post, select: datetime_add(p.inserted_at, 1500, "microsecond"))
-    end
+    assert_raise ArgumentError,
+                 "SQLite does not support microsecond precision in datetime intervals",
+                 fn ->
+                   TestRepo.all(
+                     from(p in Post, select: datetime_add(p.inserted_at, 1500, "microsecond"))
+                   )
+                 end
   end
 
   test "stream error handling" do
@@ -1302,11 +1594,11 @@ defmodule Sqlite.Ecto2.Test do
 
     assert_raise Sqlite.DbConnection.Error, "UNIQUE constraint failed: uniques.a", fn ->
       Sqlite.Ecto2.Connection.stream(pid, "INSERT INTO uniques VALUES(1)", [], [])
-      |> Enum.to_list
+      |> Enum.to_list()
     end
   end
 
   defp remove_newlines(string) do
-    string |> String.trim |> String.replace("\n", " ")
+    string |> String.trim() |> String.replace("\n", " ")
   end
 end

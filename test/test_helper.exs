@@ -1,4 +1,4 @@
-IO.puts """
+IO.puts("""
 IMPORTANT: If you see many tests fail with a warning about cell-wise
 default values not being supported in SQLite, please run the script
 
@@ -6,6 +6,6 @@ default values not being supported in SQLite, please run the script
 
 and then run `mix test` again.
 
-"""
+""")
 
 ExUnit.start()

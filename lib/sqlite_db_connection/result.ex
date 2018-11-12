@@ -14,10 +14,11 @@ defmodule Sqlite.DbConnection.Result do
   # We strive to avoid structural differences between that file and this one.
 
   @type t :: %__MODULE__{
-    command:  atom,
-    columns:  [String.t] | nil,
-    rows:     [[term] | term] | nil,
-    num_rows: integer}
+          command: atom,
+          columns: [String.t()] | nil,
+          rows: [[term] | term] | nil,
+          num_rows: integer
+        }
 
-  defstruct [command: nil, columns: nil, rows: nil, num_rows: nil]
+  defstruct command: nil, columns: nil, rows: nil, num_rows: nil
 end

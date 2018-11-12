@@ -7,16 +7,18 @@ end
 defimpl Enumerable, for: Sqlite.DbConnection.Stream do
   alias Sqlite.DbConnection.Query
 
-  def reduce(%Sqlite.DbConnection.Stream{query: statement,
-                                         conn: conn,
-                                         params: params,
-                                         options: opts}, acc, fun)
-  when is_binary(statement)
-  do
+  def reduce(
+        %Sqlite.DbConnection.Stream{query: statement, conn: conn, params: params, options: opts},
+        acc,
+        fun
+      )
+      when is_binary(statement) do
     query = %Query{name: "", statement: statement}
+
     case DBConnection.prepare_execute(conn, query, params, opts) do
       {:ok, _, %{rows: _rows} = result} ->
         Enumerable.reduce([result], acc, fun)
+
       {:error, err} ->
         raise err
     end

@@ -23,8 +23,11 @@ defmodule ConnectionTest do
   test "prepare failure case", %{pid: pid} do
     query = %Query{name: "test", statement: "huh"}
     assert {:error, err} = DBConnection.prepare(pid, query)
-    assert %Sqlite.DbConnection.Error{message: "near \"huh\": syntax error",
-                                      sqlite: %{code: :sqlite_error}} = err
+
+    assert %Sqlite.DbConnection.Error{
+             message: "near \"huh\": syntax error",
+             sqlite: %{code: :sqlite_error}
+           } = err
   end
 
   test "prepare, execute and close", %{pid: pid} do
@@ -42,7 +45,9 @@ defmodule ConnectionTest do
 
     query = %Query{name: "value", statement: "SELECT ?1"}
     assert {:ok, query} = DBConnection.prepare(pid, query)
-    assert {:error, %ArgumentError{message: "parameters must match number of placeholders in query"}} =
-      DBConnection.execute(pid, query, [])
+
+    assert {:error,
+            %ArgumentError{message: "parameters must match number of placeholders in query"}} =
+             DBConnection.execute(pid, query, [])
   end
 end

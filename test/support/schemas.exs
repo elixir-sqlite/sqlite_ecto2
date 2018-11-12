@@ -5,9 +5,9 @@ defmodule Sqlite.Ecto2.Test.MiscTypes do
   import Ecto.Changeset
 
   schema "misc_types" do
-    field :name, :string
-    field :start_time, :time
-    field :cost, :decimal
+    field(:name, :string)
+    field(:start_time, :time)
+    field(:cost, :decimal)
   end
 
   def changeset(schema, params) do
