@@ -1,4 +1,33 @@
 # Changelog for v2.2.x Series
+## v2.3.1
+
+__23 October 2018_
+
+* Fix bug in array loading.
+
+## v2.3.0
+
+_17 October 2018_
+
+* Allow {:array, :map} via JSON library.
+* Update error messages for clarity.
+
+## v2.2.3
+
+_17 June 2018_
+
+* Seeking new maintainer. (#210)
+* Minor syntax change to keep up with new Elixir version (#203, thanks @anuragpeshne).
+* Update tutorial.md (#205, thanks @progsmile).
+* Fix README example schema (#207, thanks @leifg).
+
+
+## v2.2.2
+
+_8 October 2017_
+
+* Better error message if no database path provided. Fixes #200.
+
 
 ## v2.2.1
 
