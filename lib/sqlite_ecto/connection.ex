@@ -905,6 +905,11 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       [" DEFAULT ", single_quote(default)]
     end
 
+    defp default_expr({:ok, l}, {:array, _}) when is_list(l) do
+      default = Ecto.Adapter.json_library().encode!(l)
+      [" DEFAULT ", single_quote(default)]
+    end
+
     defp default_expr({:ok, {:fragment, expr}}, _type),
       do: [" DEFAULT ", expr]
 

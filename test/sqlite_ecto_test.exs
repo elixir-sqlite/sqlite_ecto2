@@ -1245,7 +1245,7 @@ defmodule Sqlite.Ecto2.Test do
        ]}
 
     assert execute_ddl(create) == [
-             ~s|CREATE TABLE "posts" ("a" TEXT DEFAULT '{"foo":"bar","baz":"boom"}')|
+             ~s|CREATE TABLE "posts" ("a" TEXT DEFAULT '{"baz":"boom","foo":"bar"}')|
            ]
   end
 
