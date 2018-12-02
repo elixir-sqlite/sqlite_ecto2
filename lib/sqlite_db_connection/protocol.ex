@@ -1,10 +1,10 @@
 defmodule Sqlite.DbConnection.Protocol do
   @moduledoc false
 
-  alias Sqlite.DbConnection.Query
+  alias Sqlite.DbConnection.{Query, RegistryWorker}
   use DBConnection
 
-  defstruct [db: nil, path: nil, checked_out?: false]
+  defstruct [db: nil, path: nil, checked_out?: false, registry_worker: nil]
 
   @type state :: %__MODULE__{db: pid, path: String.t, checked_out?: boolean}
 
@@ -16,8 +16,15 @@ defmodule Sqlite.DbConnection.Protocol do
     {:ok, db} = Sqlitex.Server.start_link(db_path, db_timeout: db_timeout)
     :ok = Sqlitex.Server.exec(db, "PRAGMA foreign_keys = ON")
     {:ok, [[foreign_keys: 1]]} = Sqlitex.Server.query(db, "PRAGMA foreign_keys")
+    state = %__MODULE__{db: db, path: db_path, checked_out?: false}
 
-    {:ok, %__MODULE__{db: db, path: db_path, checked_out?: false}}
+    if Keyword.get(opts, :notifications, false) do
+      {:ok, registry_worker} = RegistryWorker.start_link(opts)
+      :ok = Sqlitex.Server.set_update_hook(db, registry_worker)
+      {:ok, %{state | registry_worker: registry_worker}}
+    else
+      {:ok, state}
+    end
   end
 
   @spec disconnect(Exception.t, state) :: :ok

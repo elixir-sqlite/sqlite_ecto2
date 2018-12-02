@@ -5,7 +5,7 @@ defmodule Sqlite.Ecto2.Mixfile do
     [app: :sqlite_ecto2,
      version: "2.3.1",
      name: "Sqlite.Ecto2",
-     elixir: "~> 1.4",
+     elixir: "~> 1.5",
      deps: deps(),
      elixirc_paths: elixirc_paths(Mix.env),
 
@@ -46,7 +46,7 @@ defmodule Sqlite.Ecto2.Mixfile do
      {:poison, "~> 2.2 or ~> 3.0", optional: true},
      {:postgrex, "~> 0.13", optional: true},
      {:sbroker, "~> 1.0"},
-     {:sqlitex, "~> 1.4"}]
+     {:sqlitex, "1.5.0"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto2"
