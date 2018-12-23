@@ -1,5 +1,5 @@
-[![CircleCI](https://circleci.com/gh/Sqlite-Ecto/sqlite_ecto2.svg?style=svg)](https://circleci.com/gh/Sqlite-Ecto/sqlite_ecto2)
-[![Coverage Status](https://coveralls.io/repos/github/Sqlite-Ecto/sqlite_ecto2/badge.svg?branch=master)](https://coveralls.io/github/Sqlite-Ecto/sqlite_ecto2?branch=master)
+[![CircleCI](https://circleci.com/gh/elixir-sqlite/sqlite_ecto2.svg?style=svg)](https://circleci.com/gh/elixir-sqlite/sqlite_ecto2)
+[![Coverage Status](https://coveralls.io/repos/github/elixir-sqlite/sqlite_ecto2/badge.svg?branch=master)](https://coveralls.io/github/elixir-sqlite/sqlite_ecto2?branch=master)
 [![Hex.pm](https://img.shields.io/hexpm/v/sqlite_ecto2.svg)](https://hex.pm/packages/sqlite_ecto2)
 [![Hex.pm](https://img.shields.io/hexpm/dt/sqlite_ecto2.svg)](https://hex.pm/packages/sqlite_ecto2)
 

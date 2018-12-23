@@ -46,15 +46,14 @@ defmodule Sqlite.Ecto2.Mixfile do
      {:poison, "~> 2.2 or ~> 3.0", optional: true},
      {:postgrex, "~> 0.13", optional: true},
      {:sbroker, "~> 1.0"},
-     {:sqlitex, "~> 1.4"}]
+     {:sqlitex, "~> 1.5"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto2"
 
   defp package do
-    [maintainers: ["Eric Scouten", "Jason M Barnes", "Connor Rigby"],
-      licenses: ["MIT"],
-      links: %{"Github" => "https://github.com/Sqlite-Ecto/sqlite_ecto2"}]
+    [licenses: ["MIT"],
+      links: %{"Github" => "https://github.com/Elixir-Sqlite/sqlite_ecto2"}]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/sqlite_db_connection/support"]
