@@ -1270,7 +1270,7 @@ defmodule Sqlite.Ecto2.Test do
 
   test "rename column in prefixed table" do
     rename = {:rename, table(:posts, prefix: :foo), :given_name, :first_name}
-    assert execute_ddl(rename) == [~s|ALTER TABLE "foo"."posts" RENAME COLUMN "given_name" to "first_name"|]
+    assert execute_ddl(rename) == [~s|ALTER TABLE "foo"."posts" RENAME COLUMN "given_name" TO "first_name"|]
   end
 
   test "drop column errors" do
