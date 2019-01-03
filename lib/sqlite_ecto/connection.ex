@@ -632,8 +632,9 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         " RENAME TO ", quote_table(nil, new_table.name)]]
     end
 
-    def execute_ddl({:rename, %Table{}, _old_col, _new_col}) do
-      raise ArgumentError, "RENAME COLUMN not supported by SQLite"
+    def execute_ddl({:rename, %Table{} = current_table, old_col, new_col}) do
+      [["ALTER TABLE ", quote_table(current_table.prefix, current_table.name),
+        " RENAME COLUMN ", quote_name(old_col), " TO ", quote_name(new_col)]]
     end
 
     def execute_ddl({command, %Constraint{}})
