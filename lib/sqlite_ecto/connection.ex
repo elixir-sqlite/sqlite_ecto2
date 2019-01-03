@@ -14,6 +14,13 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       DBConnection.child_spec(Sqlite.DbConnection.Protocol, opts)
     end
 
+    def to_constraints(%Sqlite.DbConnection.Error{sqlite: %{code: :constraint}, message: message}) do
+      case :binary.split(message, " constraint failed: ") do
+        ["UNIQUE", field] -> [unique: String.replace(field, ".", "_") <> "_index"]
+        _ -> []
+      end
+    end
+
     def to_constraints(_), do: []
 
     ## Query
