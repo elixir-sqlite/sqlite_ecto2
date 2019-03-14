@@ -772,7 +772,7 @@ defmodule Sqlite.Ecto2.Test do
     assert query = ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("x","y") DO UPDATE SET "z" = 'foo' ;--RETURNING ON INSERT "schema","z"}
 
     update = normalize(from("schema", update: [set: [z: ^"foo"]], where: [w: true]), :update_all, 2)
-    insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z]) |> IO.puts
+    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
     assert query = ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("x","y") DO UPDATE SET "z" = ?3 WHERE ("schema"."w" = 1) ;--RETURNING ON INSERT "schema","z"}
 
     assert_raise ArgumentError, "Upsert in SQLite does not support on_conflict: :replace_all", fn ->

@@ -46,7 +46,6 @@ defmodule Sqlite.Ecto2.Mixfile do
      {:poison, "~> 2.2 or ~> 3.0", optional: true},
      {:postgrex, "~> 0.13", optional: true},
      {:sbroker, "~> 1.0"},
-     {:esqlite, github: "mmzeeman/esqlite", branch: "master", override: true},
      {:sqlitex, "~> 1.4"}]
   end
 
