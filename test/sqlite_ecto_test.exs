@@ -752,41 +752,44 @@ defmodule Sqlite.Ecto2.Test do
   end
 
   test "insert with on conflict" do
+    # These tests are adapted from the Postgres Adaptor
+
+    # For :nothing
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], []}, [])
-    assert query == ~s{INSERT OR IGNORE INTO "schema" ("x","y") VALUES (?1,?2)}
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT DO NOTHING}
 
-    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], [:x, :y]}, [])
-    end
+    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], [:x, :y]}, [])
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("x","y") DO NOTHING}
 
-    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      update = from("schema", update: [set: [z: "foo"]]) |> normalize(:update_all)
-      insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
-    end
+    # For :update
+    update = from("schema", update: [set: [z: "foo"]]) |> normalize(:update_all)
+    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("x","y") DO UPDATE SET "z" = 'foo' ;--RETURNING ON INSERT "schema","z"}
 
-    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      update = from("schema", update: [set: [z: ^"foo"]], where: [w: true]) |> normalize(:update_all, 2)
-      insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
-    end
+    update = from("schema", update: [set: [z: ^"foo"]], where: [w: true]) |> normalize(:update_all, 2)
+    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
+    assert query =  ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("x","y") DO UPDATE SET "z" = ?3 WHERE ("schema"."w" = 1) ;--RETURNING ON INSERT "schema","z"}
 
-    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      update = normalize(from("schema", update: [set: [z: "foo"]]), :update_all)
-      insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
-    end
+    update = normalize(from("schema", update: [set: [z: "foo"]]), :update_all)
+    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
+    assert query = ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("x","y") DO UPDATE SET "z" = 'foo' ;--RETURNING ON INSERT "schema","z"}
 
-    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      update = normalize(from("schema", update: [set: [z: ^"foo"]], where: [w: true]), :update_all, 2)
-      insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
-    end
+    update = normalize(from("schema", update: [set: [z: ^"foo"]], where: [w: true]), :update_all, 2)
+    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
+    assert query = ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("x","y") DO UPDATE SET "z" = ?3 WHERE ("schema"."w" = 1) ;--RETURNING ON INSERT "schema","z"}
 
     # For :replace_all
-    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], [:id]}, [])
+    assert_raise ArgumentError, "Upsert in SQLite requires :conflict_target", fn ->
+      conflict_target = []
+      insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], conflict_target}, [])
     end
 
-    assert_raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing", fn ->
-      insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], []}, [])
+    assert_raise ArgumentError, "Upsert in SQLite does not support ON CONSTRAINT", fn ->
+      insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], {:constraint, :foo}}, [])
     end
+
+    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], [:id]}, [])
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("id") DO UPDATE SET "x" = EXCLUDED."x","y" = EXCLUDED."y"}
   end
 
   test "update" do

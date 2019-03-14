@@ -132,13 +132,36 @@ if Code.ensure_loaded?(Sqlitex.Server) do
           [?\s, ?(, intersperse_map(header, ?,, &quote_name/1), ") VALUES " | insert_all(rows, 1)]
         end
 
-      on_conflict = case on_conflict do
-        {:raise, [], []} -> ""
-        {:nothing, [], []} -> " OR IGNORE"
-        _ -> raise ArgumentError, "Upsert in SQLite must use on_conflict: :nothing"
-      end
       returning = returning_clause(prefix, table, returning, "INSERT")
-      ["INSERT", on_conflict, " INTO ", quote_table(prefix, table), values, returning]
+      ["INSERT INTO ", quote_table(prefix, table), values, on_conflict(on_conflict, header), returning]
+    end
+
+    #
+    # on_conflict, conflict_target, and replace taken from Ecto.Adapters.Postgres.Connection
+    #
+    defp on_conflict({:raise, _, []}, _header),
+      do: []
+    defp on_conflict({:nothing, _, targets}, _header),
+      do: [" ON CONFLICT ", conflict_target(targets) | "DO NOTHING"]
+    defp on_conflict({:replace_all, _, []}, _header),
+      do: raise ArgumentError, "Upsert in SQLite requires :conflict_target"
+    defp on_conflict({:replace_all, _, {:constraint, _}}, _header),
+      do: raise ArgumentError, "Upsert in SQLite does not support ON CONSTRAINT"
+    defp on_conflict({:replace_all, _, targets}, header),
+      do: [" ON CONFLICT ", conflict_target(targets), "DO " | replace_all(header)]
+    defp on_conflict({query, _, targets}, _header),
+      do: [" ON CONFLICT ", conflict_target(targets), "DO " | update_all(query, "UPDATE SET ")]
+
+    defp conflict_target([]), do: ""
+    defp conflict_target(targets),
+      do: [?(, intersperse_map(targets, ?,, &quote_name/1), ?), ?\s]
+
+    defp replace_all(header) do
+      ["UPDATE SET " |
+      intersperse_map(header, ?,, fn field ->
+          quoted = quote_name(field)
+          [quoted, " = ", "EXCLUDED." | quoted]
+        end)]
     end
 
     defp insert_all(rows, counter) do
