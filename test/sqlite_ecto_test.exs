@@ -752,13 +752,16 @@ defmodule Sqlite.Ecto2.Test do
   end
 
   test "insert with on conflict" do
+    # These tests are adapted from the Postgres Adaptor
+
+    # For :nothing
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], []}, [])
     assert query == ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT DO NOTHING}
 
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], [:x, :y]}, [])
     assert query == ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("x","y") DO NOTHING}
 
-
+    # For :update
     update = from("schema", update: [set: [z: "foo"]]) |> normalize(:update_all)
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
     assert query == ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("x","y") DO UPDATE SET "z" = 'foo' ;--RETURNING ON INSERT "schema","z"}
@@ -775,9 +778,18 @@ defmodule Sqlite.Ecto2.Test do
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
     assert query = ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("x","y") DO UPDATE SET "z" = ?3 WHERE ("schema"."w" = 1) ;--RETURNING ON INSERT "schema","z"}
 
-    assert_raise ArgumentError, "Upsert in SQLite does not support on_conflict: :replace_all", fn ->
-      insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], [:id]}, [])
+    # For :replace_all
+    assert_raise ArgumentError, "Upsert in SQLite requires :conflict_target", fn ->
+      conflict_target = []
+      insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], conflict_target}, [])
     end
+
+    assert_raise ArgumentError, "Upsert in SQLite does not support ON CONSTRAINT", fn ->
+      insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], {:constraint, :foo}}, [])
+    end
+
+    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], [:id]}, [])
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES (?1,?2) ON CONFLICT ("id") DO UPDATE SET "x" = EXCLUDED."x","y" = EXCLUDED."y"}
   end
 
   test "update" do

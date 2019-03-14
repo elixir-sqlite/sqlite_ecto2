@@ -133,27 +133,32 @@ if Code.ensure_loaded?(Sqlitex.Server) do
         end
 
       returning = returning_clause(prefix, table, returning, "INSERT")
-      ["INSERT INTO ", quote_table(prefix, table), values, on_conflict(on_conflict), returning]
+      ["INSERT INTO ", quote_table(prefix, table), values, on_conflict(on_conflict, header), returning]
     end
 
-    defp on_conflict({:raise, _, []}),
+    #
+    # on_conflict, conflict_target, and replace taken from Ecto.Adapters.Postgres.Connection
+    #
+    defp on_conflict({:raise, _, []}, _header),
       do: []
-    defp on_conflict({:nothing, _, targets}),
+    defp on_conflict({:nothing, _, targets}, _header),
       do: [" ON CONFLICT ", conflict_target(targets) | "DO NOTHING"]
-    defp on_conflict({:replace_all, _, _}),
-      do: raise ArgumentError, "Upsert in SQLite does not support on_conflict: :replace_all"
-    defp on_conflict({fields, _, targets}) when is_list(fields),
-      do: [" ON CONFLICT ", conflict_target(targets), "DO " | replace(fields)]
-    defp on_conflict({query, _, targets}),
+    defp on_conflict({:replace_all, _, []}, _header),
+      do: raise ArgumentError, "Upsert in SQLite requires :conflict_target"
+    defp on_conflict({:replace_all, _, {:constraint, _}}, _header),
+      do: raise ArgumentError, "Upsert in SQLite does not support ON CONSTRAINT"
+    defp on_conflict({:replace_all, _, targets}, header),
+      do: [" ON CONFLICT ", conflict_target(targets), "DO " | replace_all(header)]
+    defp on_conflict({query, _, targets}, _header),
       do: [" ON CONFLICT ", conflict_target(targets), "DO " | update_all(query, "UPDATE SET ")]
 
     defp conflict_target([]), do: ""
     defp conflict_target(targets),
       do: [?(, intersperse_map(targets, ?,, &quote_name/1), ?), ?\s]
 
-    defp replace(fields) do
+    defp replace_all(header) do
       ["UPDATE SET " |
-        intersperse_map(fields, ?,, fn field ->
+      intersperse_map(header, ?,, fn field ->
           quoted = quote_name(field)
           [quoted, " = ", "EXCLUDED." | quoted]
         end)]
