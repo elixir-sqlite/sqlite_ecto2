@@ -42,7 +42,7 @@ defmodule Sqlite.Ecto2.Mixfile do
      {:decimal, "~> 1.5"},
      {:excoveralls, "~> 0.9", only: :test},
      {:ex_doc, "~> 0.20", runtime: false, only: :docs},
-     {:ecto, "2.2.10"},
+     {:ecto, "2.2.11"},
      {:poison, "~> 2.2 or ~> 3.0", optional: true},
      {:postgrex, "~> 0.13", optional: true},
      {:sbroker, "~> 1.0"},
