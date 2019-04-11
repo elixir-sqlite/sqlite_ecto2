@@ -24,7 +24,7 @@ defmodule Sqlite.Ecto2.RepoTest do
 
   test "preserves decimal without precision" do
     TestRepo.insert!(%MiscTypes{name: "hello", start_time: ~T(09:33:51.130422), cost: 3.1415})
-    pi_ish = Decimal.new(3.1415)
+    pi_ish = Decimal.from_float(3.1415)
     assert [%MiscTypes{name: "hello", cost: ^pi_ish}] =
       TestRepo.all from mt in MiscTypes
   end

@@ -75,7 +75,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
     {result, _} = int |> Integer.to_string |> Float.parse
     translate_value({result, type})
   end
-  defp translate_value({float, "decimal"}), do: Decimal.new(float)
+  defp translate_value({float, "decimal"}), do: Decimal.from_float(float)
   defp translate_value({float, "decimal(" <> rest}) do
     [precision, scale] =
       rest
@@ -85,7 +85,7 @@ defimpl DBConnection.Query, for: Sqlite.DbConnection.Query do
 
     Decimal.with_context(%Decimal.Context{precision: precision, rounding: :down},
       fn ->
-        float |> Float.round(scale) |> Decimal.new |> Decimal.plus
+        float |> Float.round(scale) |> Decimal.from_float |> Decimal.plus
       end)
   end
 
