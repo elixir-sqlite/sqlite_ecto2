@@ -3,7 +3,7 @@ defmodule Sqlite.Ecto2.Mixfile do
 
   def project do
     [app: :sqlite_ecto2,
-     version: "2.3.1",
+     version: "2.4.0",
      name: "Sqlite.Ecto2",
      elixir: "~> 1.4",
      deps: deps(),

@@ -1,7 +1,14 @@
 # Changelog for v2.2.x Series
+
+## v2.4.0
+
+_11 April 2019_
+
+* Update to sqlitex 1.6.0
+
 ## v2.3.1
 
-__23 October 2018_
+_23 October 2018_
 
 * Fix bug in array loading.
 
