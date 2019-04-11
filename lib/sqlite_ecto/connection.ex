@@ -276,12 +276,16 @@ if Code.ensure_loaded?(Sqlitex.Server) do
       [?\s | intersperse_map(joins, ?\s, fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
           {join, name} = get_source(query, sources, ix, source)
-          [join_qual(qual), join, " AS ", name, " ON " | expr(expr, sources, query)]
+          [join_qual(qual), join, " AS ", name, join_on(qual, expr, sources, query)]
       end)]
     end
 
+    defp join_on(:cross, true, _sources, _query), do: []
+    defp join_on(_qual, expr, sources, query), do: [" ON " | expr(expr, sources, query)]
+
     defp join_qual(:inner), do: "INNER JOIN "
     defp join_qual(:left), do: "LEFT JOIN "
+    defp join_qual(:cross), do: "CROSS JOIN "
     defp join_qual(mode), do: raise ArgumentError, "join `#{inspect mode}` not supported by SQLite"
 
     defp where(%Query{wheres: wheres} = query, sources) do

@@ -660,10 +660,9 @@ defmodule Sqlite.Ecto2.Test do
   end
 
   test "cross join" do
-    assert_raise ArgumentError, "join `:cross` not supported by SQLite", fn ->
-      query = from(p in Schema, cross_join: c in Schema2, select: {p.id, c.id}) |> normalize()
-      all(query)
-    end
+    query = from(p in Schema, cross_join: c in Schema2, select: {p.id, c.id}) |> normalize()
+    assert all(query) ==
+           "SELECT s0.\"id\", s1.\"id\" FROM \"schema\" AS s0 CROSS JOIN \"schema2\" AS s1"
   end
 
   test "join produces correct bindings" do
