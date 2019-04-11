@@ -41,12 +41,12 @@ defmodule Sqlite.Ecto2.Mixfile do
      {:db_connection, "~> 1.1"},
      {:decimal, "~> 1.5"},
      {:excoveralls, "~> 0.9", only: :test},
-     {:ex_doc, "~> 0.19", runtime: false, only: :docs},
+     {:ex_doc, "~> 0.20", runtime: false, only: :docs},
      {:ecto, "2.2.9"},
      {:poison, "~> 2.2 or ~> 3.0", optional: true},
      {:postgrex, "~> 0.13", optional: true},
      {:sbroker, "~> 1.0"},
-     {:sqlitex, "~> 1.5"}]
+     {:sqlitex, "~> 1.6"}]
   end
 
   defp description, do: "SQLite3 adapter for Ecto2"
