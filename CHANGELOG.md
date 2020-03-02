@@ -1,10 +1,17 @@
 # Changelog for v2.2.x Series
 
+## v2.4.1
+
+_02 March 2020_
+
+* Update sqlitex to 1.7.1
+* Update esqlite to 0.4.1
+
 ## v2.4.0
 
 _11 April 2019_
 
-* Update to sqlitex 1.6.0
+* Update sqlitex to 1.6.0
 
 ## v2.3.1
 
