@@ -3,6 +3,11 @@
 [![Hex.pm](https://img.shields.io/hexpm/v/sqlite_ecto2.svg)](https://hex.pm/packages/sqlite_ecto2)
 [![Hex.pm](https://img.shields.io/hexpm/dt/sqlite_ecto2.svg)](https://hex.pm/packages/sqlite_ecto2)
 
+# Notice
+
+This library is sparsely maintined. If you are starting a new project, you will probably want to look into using
+[exqlite](https://github.com/elixir-sqlite/exqlite) or it's matching Ecto Adatper [ecto_sqlite3](https://github.com/elixir-sqlite/ecto_sqlite3)
+
 # sqlite_ecto2
 
 `sqlite_ecto2` is an Ecto 2.2.x adapter that allows you to create and maintain SQLite3 databases.
